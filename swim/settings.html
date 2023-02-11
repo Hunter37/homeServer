@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Swimming settings</title>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.js"></script>
+
+<style>
+    body, html {
+        margin: 0;
+        height: 100%;
+    }
+
+    .root {
+        display: grid;
+        grid-template-rows: minmax(60px, auto) minmax(0, 100%);
+        height: 100%;
+    }
+</style>
+
+<body>
+<div class="root">
+    <div>
+        <button onclick="cache(true)" class="big">flush cache</button>
+        <pre id="json"></pre>
+        <div>
+            Find Swimmer:
+            <input id="sinput" style="width: 120px"/>
+            <button onclick="load()" class="big">load</button>
+            <button onclick="save()" class="big">save</button>
+        </div>
+    </div>
+
+    <div id="jsoneditor"></div>
+</div>
+</body>
+
+<script>
+
+    async function cache(flush) {
+        let response = await fetch('cache' + (flush ? '?flush' : ''));
+        if (response.ok) {
+            let data = await response.json()
+            document.getElementById('json').innerHTML = JSON.stringify(data, null, "    ")
+        }
+    }
+
+    cache(false)
+
+    editor = new JSONEditor(document.getElementById('jsoneditor'), {
+        mode: 'tree',
+        modes: ['code', 'tree'],
+    })
+
+    const sinputElem = document.getElementById('sinput');
+
+    async function load() {
+        let response = await fetch('swimmer?id=' + sinputElem.value)
+        if (response.ok) {
+            editor.set(await response.json())
+        } else {
+            alert(await response.text())
+        }
+    }
+
+    async function save() {
+        let response = await fetch('swimmer?id=' + sinputElem.value, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "text/json"
+            },
+            body: JSON.stringify(editor.get())
+        });
+        if (response.ok) {
+            alert("DONE")
+        } else {
+            alert(await response.text())
+        }
+    }
+
+</script>
+</html>

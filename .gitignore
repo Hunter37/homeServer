@@ -1,0 +1,15 @@
+# built binaries
+bin/
+
+# data file
+data.json
+
+# IDE files
+# .vscode/
+# .idea/
+
+# vendor
+vendor/
+
+# OS stuff
+.DS_Store
