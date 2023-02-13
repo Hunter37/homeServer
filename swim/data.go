@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -63,15 +64,31 @@ type Length map[int][]*Event
 
 type Stroke map[string]*Length
 
+type Ranking struct {
+	Level string `json:",omitempty"`
+	Rank  int    `json:",omitempty"`
+	Link  string `json:",omitempty"`
+}
+
+type Rankings struct {
+	Url    string    `json:",omitempty"`
+	Course string    `json:",omitempty"`
+	Stroke string    `json:",omitempty"`
+	Length int       `json:",omitempty"`
+	Ranks  []Ranking `json:",omitempty"`
+}
+
 type Swimmer struct {
 	ID       string     `json:",omitempty"`
 	Name     string     `json:",omitempty"`
 	Alias    string     `json:",omitempty"`
 	Gender   string     `json:",omitempty"`
 	Team     string     `json:",omitempty"`
+	Age      int        `json:",omitempty"`
 	Birthday *time.Time `json:",omitempty"`
 	SCY      Stroke     `json:",omitempty"`
 	LCM      Stroke     `json:",omitempty"`
+	Rankings []Rankings `json:",omitempty"`
 }
 
 func (s *Swimmer) MarshalJSON() ([]byte, error) {
@@ -146,26 +163,31 @@ func (d *Data) Load() error {
 	}
 }
 
-func (d *Data) Add(lscId, lsc, id, name, gender, team, course, stroke string, length int, event *Event) {
+func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
 	dlsc, ok := data[lscId]
 	if !ok {
-		dlsc = &Lsc{LSC: lsc, Swimmers: map[string]*Swimmer{}}
+		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
 		data[lscId] = dlsc
 	}
 
-	swimmer, ok := dlsc.Swimmers[id]
+	swimmer, ok := dlsc.Swimmers[sid]
 	if !ok {
 		swimmer = &Swimmer{
-			ID:     id,
+			ID:     sid,
 			Name:   name,
 			Gender: gender,
 			Team:   team,
+			Age:    age,
 			LCM:    map[string]*Length{},
 			SCY:    map[string]*Length{},
 		}
-		dlsc.Swimmers[id] = swimmer
+		dlsc.Swimmers[sid] = swimmer
 	}
 
+	return swimmer
+}
+
+func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event) {
 	strokes := swimmer.SCY
 	if strings.EqualFold("LCM", course) {
 		strokes = swimmer.LCM
@@ -202,7 +224,13 @@ func (d *Data) Add(lscId, lsc, id, name, gender, team, course, stroke string, le
 		}
 	}
 
-	(*lengths)[length] = append(events, event)
+	events = append(events, event)
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Date.After(events[j].Date)
+	})
+
+	(*lengths)[length] = events
 }
 
 func (d *Data) Find(id string) *Swimmer {
@@ -272,6 +300,70 @@ func (s *Swimmer) GetEventCount() int {
 	return cnt
 }
 
+func (s *Swimmer) GetBestEvent(course, stroke string, length int) *Event {
+	events := s.GetEvents(course, stroke, length)
+	if len(events) == 0 {
+		return nil
+	}
+	best := events[0]
+	for _, e := range events {
+		if e.Time < best.Time {
+			best = e
+		}
+	}
+	return best
+}
+
+func (s *Swimmer) GetEvents(course, stroke string, length int) []*Event {
+	strokes := s.SCY
+	if course == "LCM" {
+		strokes = s.LCM
+	}
+	lengthes := strokes[stroke]
+	if lengthes == nil {
+		return nil
+	}
+	return (*lengthes)[length]
+}
+
+func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) string {
+	events := s.GetEvents(course, stroke, length)
+
+	// todo : remove this?
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Date.After(events[j].Date)
+	})
+
+	var fast *Event
+	for i := len(events) - 1; i >= 0; i-- {
+		e := events[i]
+		if e == event {
+			if fast == nil {
+				return ""
+			} else {
+				a := e.Time
+				b := fast.Time
+				a = a/10000*6000 + a%10000
+				b = b/10000*6000 + b%10000
+				d := a - b
+				sign := "+"
+				if d == 0 {
+					return "0"
+				} else if d < 0 {
+					sign = "-"
+					d = -d
+				}
+				d = d/6000*10000 + d%6000
+				return fmt.Sprint(sign, formatSwimTime(d))
+			}
+		} else if fast == nil || fast.Time > e.Time {
+			fast = e
+		}
+	}
+
+	return ""
+}
+
 func filterStrokeKeys(strokes Stroke) []string {
 	allStrokes := []string{Free, Back, Breast, Fly, IM}
 	keys := make([]string, 0, len(allStrokes))
@@ -283,52 +375,16 @@ func filterStrokeKeys(strokes Stroke) []string {
 	return keys
 }
 
-//func DataMigration(){
-//	// data migration
-//	strokeMapping := map[string]string{
-//		"Freestyle":         Free,
-//		"Backstroke":        Back,
-//		"Breaststroke":      Breast,
-//		"Breaststoke":       Breast, // workaround for the typo "Breaststoke"
-//		"Butterfly":         Fly,
-//		"Individual Medley": IM,
-//		Free:              Free,
-//		Back:              Back,
-//		Breast:            Breast,
-//		Fly:               Fly,
-//		IM:                IM,
-//	}
-//
-//	for _, lsc := range data {
-//		for _, swimmer := range lsc.Swimmers {
-//			{
-//				var key []string
-//				for k, _ := range swimmer.SCY {
-//					key = append(key, k)
-//				}
-//
-//				for _, k := range key {
-//					if strokeMapping[k] != k {
-//						swimmer.SCY[strokeMapping[k]] = swimmer.SCY[k]
-//						delete(swimmer.SCY, k)
-//					}
-//				}
-//			}
-//			{
-//				var key []string
-//				for k, _ := range swimmer.LCM {
-//					key = append(key, k)
-//				}
-//
-//				for _, k := range key {
-//					if strokeMapping[k] != k {
-//						swimmer.LCM[strokeMapping[k]] = swimmer.LCM[k]
-//						delete(swimmer.LCM, k)
-//					}
-//				}
-//			}
-//		}
-//	}
-//
-//	data.Save()
-//}
+func timeMin(a, b time.Time) time.Time {
+	if a.After(b) {
+		return b
+	}
+	return a
+}
+
+func timeMax(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}

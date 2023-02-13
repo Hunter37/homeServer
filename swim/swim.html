@@ -178,7 +178,7 @@
         position: relative;
     }
 
-    .ct > .std, .ct > .pp {
+    .ct > .std, .ct > .dd {
         position: absolute;
         z-index: -1;
         bottom: 0;
@@ -187,8 +187,16 @@
         font-size: x-small;
     }
 
-    .ct > .pp {
+    .ct > .dd {
         right: 0;
+    }
+
+    .ct > .dd.dp {
+        color: #0A0
+    }
+
+    .ct > .dd.ad {
+        color: #A00
     }
 
     .ct > div {
@@ -345,10 +353,10 @@
                 continue
             }
 
-            if (row[table.Value[0]].startsWith('<')) {
+            if (table.TrClass == null || !row[table.TrClass]) {
                 html.push('<tr>');
             } else {
-                html.push('<tr class="d', row[table.Value[0]].toLowerCase(), '">');
+                html.push('<tr class="', row[table.TrClass].toLowerCase(), '">');
             }
             if (table.ShowOrder) {
                 html.push('<td>', ++index, '</td>');
