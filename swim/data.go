@@ -173,16 +173,17 @@ func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age in
 	swimmer, ok := dlsc.Swimmers[sid]
 	if !ok {
 		swimmer = &Swimmer{
-			ID:     sid,
-			Name:   name,
-			Gender: gender,
-			Team:   team,
-			Age:    age,
-			LCM:    map[string]*Length{},
-			SCY:    map[string]*Length{},
+			LCM: map[string]*Length{},
+			SCY: map[string]*Length{},
 		}
-		dlsc.Swimmers[sid] = swimmer
 	}
+
+	dlsc.Swimmers[sid] = swimmer
+	swimmer.ID = sid
+	swimmer.Name = name
+	swimmer.Gender = gender
+	swimmer.Team = team
+	swimmer.Age = age
 
 	return swimmer
 }
@@ -247,7 +248,7 @@ func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, even
 		strokes := *s.SCY[st]
 		for _, l := range sortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
-				call("Yards", st, l, event)
+				call("SCY", st, l, event)
 			}
 		}
 	}
@@ -255,7 +256,7 @@ func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, even
 		strokes := *s.LCM[st]
 		for _, l := range sortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
-				call("Meters", st, l, event)
+				call("LCM", st, l, event)
 			}
 		}
 	}

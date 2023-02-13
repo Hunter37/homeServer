@@ -83,10 +83,7 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 		} else if event.Age < ageMin {
 			ageMin = event.Age
 		}
-		name := fmt.Sprintf("SCY %s %d", stroke, length)
-		if course == "Meters" {
-			name = fmt.Sprintf("LCM %s %d", stroke, length)
-		}
+		name := fmt.Sprintf("%s %s %d", course, stroke, length)
 		if _, ok := eventMap[name]; !ok {
 			eventMap[name] = true
 			eventName = append(eventName, name)
@@ -252,6 +249,7 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 		Items:     items,
 		Value:     values,
 		LeftAlign: lAligns,
+		Title:     course + " Events",
 	}
 }
 

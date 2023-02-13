@@ -301,13 +301,11 @@ func getInfo(url string) *Table {
 	lastTable.Next = generateAgeBestTable(swimmer)
 	lastTable = lastTable.Next
 
-	lastTable.Next = generateEventsTable(swimmer, "Yards")
+	lastTable.Next = generateEventsTable(swimmer, "SCY")
 	lastTable = lastTable.Next
-	lastTable.Title = "SCY Events"
 
-	lastTable.Next = generateEventsTable(swimmer, "Meters")
+	lastTable.Next = generateEventsTable(swimmer, "LCM")
 	lastTable = lastTable.Next
-	lastTable.Title = "LCM Events"
 
 	return rankingTable
 }
