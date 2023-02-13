@@ -8,7 +8,7 @@ import (
 
 func generateRankTable(swimmer *Swimmer, url string) *Table {
 	header := make([]string, 0, 12)
-	header = append(header, "Crs", "Strk", "Dist", "Time", "Date", "Count")
+	header = append(header, "Course", "Stroke", "Dist", "Time", "Date", "Count")
 	var longest *[]Ranking
 	for _, ranks := range swimmer.Rankings {
 		if longest == nil || len(*longest) < len(ranks.Ranks) {
@@ -47,7 +47,7 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 	}
 
 	combineRows(items, 0, "age")
-	combineRows(items, 1, "age")
+	combineRows(items, 1, "hd")
 
 	left, right := swimmer.GetBirthday()
 	headerLen := len(header)
@@ -95,7 +95,7 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 	})
 
 	header := make([]string, 0, ageMax-ageMin+1)
-	header = append(header, `<th rowspan="2">Crs</th>`, `<th rowspan="2">Strk</th>`, `<th rowspan="2">Dist</th>`)
+	header = append(header, `<th rowspan="2">Course</th>`, `<th rowspan="2">Stroke</th>`, `<th rowspan="2">Dist</th>`)
 	for age := ageMax; age >= ageMin; age-- {
 		header = append(header, fmt.Sprintf(`<th colspan="3">%d</th>`, age))
 	}
@@ -126,7 +126,7 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 	}
 
 	combineRows(items, 0, "age")
-	combineRows(items, 1, "age")
+	combineRows(items, 1, "hd")
 
 	return &Table{
 		Header:  header,
@@ -276,7 +276,7 @@ func combineRows(items [][]string, col int, tdClass string) {
 
 		lastValue = row[col]
 		if row[col] != ">" {
-			row[col] = fmt.Sprintf(`<td rowspan="%d" class="%s">%s</td>`, count, tdClass, row[col])
+			row[col] = fmt.Sprintf(`<td rowspan="%d" class="%s %s">%s</td>`, count, tdClass, strings.ToLower(row[col]), row[col])
 		}
 		lastRow = row
 	}

@@ -102,6 +102,10 @@
         background-color: inherit;
     }
 
+    .hd.free {
+        background-color: #FDD;
+    }
+
     .d50.free {
         background-color: #FF000030;
     }
@@ -126,6 +130,10 @@
         background-color: #FF000008;
     }
 
+    .hd.back {
+        background-color: #CEF;
+    }
+
     .d50.back {
         background-color: #0AF4;
     }
@@ -136,6 +144,10 @@
 
     .d200.back {
         background-color: #0AF2;
+    }
+
+    .hd.breast {
+        background-color: #DFD;
     }
 
     .d50.breast {
@@ -150,6 +162,10 @@
         background-color: #0F72;
     }
 
+    .hd.fly {
+        background-color: #FFD;
+    }
+
     .d50.fly {
         background-color: #FF03;
     }
@@ -160,6 +176,10 @@
 
     .d200.fly {
         background-color: #FF01;
+    }
+
+    .hd.im {
+        background-color: #BFF;
     }
 
     .d100.im {
@@ -349,7 +369,7 @@
         let index = 0
         for (const row of table.Items) {
             let date = birthdayMap.get(row[table.FilterColumn]);
-            if (!!date && filterDate != 'NaN'  && date <= filterDate) {
+            if (!!date && filterDate != 'NaN' && date <= filterDate) {
                 continue
             }
 

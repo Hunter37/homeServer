@@ -228,7 +228,8 @@ func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event
 	events = append(events, event)
 
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].Date.After(events[j].Date)
+		return events[i].Date.After(events[j].Date) ||
+			events[i].Date == events[j].Date && events[i].Time < events[j].Time
 	})
 
 	(*lengths)[length] = events
@@ -332,7 +333,8 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 
 	// todo : remove this?
 	sort.Slice(events, func(i, j int) bool {
-		return events[i].Date.After(events[j].Date)
+		return events[i].Date.After(events[j].Date) ||
+			events[i].Date == events[j].Date && events[i].Time < events[j].Time
 	})
 
 	var fast *Event
@@ -357,7 +359,7 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 				d = d/6000*10000 + d%6000
 				return fmt.Sprint(sign, formatSwimTime(d))
 			}
-		} else if fast == nil || fast.Time > e.Time {
+		} else if fast == nil || fast.Time > e.Time && e.Date != event.Date {
 			fast = e
 		}
 	}
