@@ -72,16 +72,21 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 func generateAgeBestTable(swimmer *Swimmer) *Table {
 	ageMin := 100
 	ageMax := 0
-	eventName := make([]string, 0, 30)
-	eventMap := make(map[string]bool, 30)
-	eventAgeMap := make(map[string]*Event, 30*5)
+
+	// build maps
+	eventName := make([]string, 0, 38)
+	eventMap := make(map[string]bool, 38)
+	eventAgeMap := make(map[string]*Event, 38*5)
 	swimmer.ForEachEvent(func(course, stroke string, length int, event *Event) {
 		if event.Age > ageMax {
 			ageMax = event.Age
 		} else if event.Age < ageMin {
 			ageMin = event.Age
 		}
-		name := fmt.Sprintf("%d %s %s", length, course, stroke)
+		name := fmt.Sprintf("SCY %s %d", stroke, length)
+		if course == "Meters" {
+			name = fmt.Sprintf("LCM %s %d", stroke, length)
+		}
 		if _, ok := eventMap[name]; !ok {
 			eventMap[name] = true
 			eventName = append(eventName, name)
@@ -92,28 +97,25 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 		}
 	})
 
-	header := make([]string, 1, ageMax-ageMin+1)
+	header := make([]string, 0, ageMax-ageMin+1)
+	header = append(header, `<th rowspan="2">Crs</th>`, `<th rowspan="2">Strk</th>`, `<th rowspan="2">Dist</th>`)
 	for age := ageMax; age >= ageMin; age-- {
 		header = append(header, fmt.Sprintf(`<th colspan="3">%d</th>`, age))
 	}
-	headerLen := len(header)
+	headerLen := (len(header) - 2) * 3
 
-	subHeader := make([]string, 0, 3*headerLen-2)
-	subHeader = append(subHeader, `Event`)
-	for i := 1; i < headerLen; i++ {
-		subHeader = append(subHeader, []string{`Time`, `Std`, `Date`}...)
-	}
-
-	value := make([]int, 0, 3*headerLen-2)
-	for i := 0; i < 3*headerLen-2; i++ {
-		value = append(value, i)
+	subHeader := make([]string, 0, headerLen)
+	subHeader = append(subHeader, ">", ">", ">")
+	for i := 1; i < headerLen/3; i++ {
+		subHeader = append(subHeader, "Time", "Std", "Date")
 	}
 
 	items := make([][]string, 0, len(eventName))
 	items = append(items, subHeader)
 	for _, event := range eventName {
-		item := make([]string, 0, len(value))
-		item = append(item, event)
+		item := make([]string, 0, headerLen)
+		parts := strings.Split(event, " ")
+		item = append(item, parts...)
 		for age := ageMax; age >= ageMin; age-- {
 			key := fmt.Sprintf("%s %d", event, age)
 			if e, found := eventAgeMap[key]; found {
@@ -122,14 +124,16 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 				item = append(item, []string{"", "", ""}...)
 			}
 		}
-		item = append(item, fmt.Sprint("d", event))
-		items = append(items, compressRow(item))
+		item = append(item, fmt.Sprint("d", parts[2], " ", parts[1]))
+		items = append(items, item)
 	}
 
-	headerLen = 3*headerLen - 2
+	combineRows(items, 0, "age")
+	combineRows(items, 1, "age")
+
 	return &Table{
 		Header:  header,
-		Value:   value,
+		Value:   buildSequenceIntSlice(headerLen),
 		TrClass: &headerLen,
 		Items:   items,
 		Title:   "Best Age Time",
@@ -278,23 +282,6 @@ func combineRows(items [][]string, col int, tdClass string) {
 		}
 		lastRow = row
 	}
-}
-
-func compressRow(item []string) []string {
-	for i, val := range item {
-		val = strings.Replace(val, "Yards", "Yd", 1)
-		val = strings.Replace(val, "Meters", "M", 1)
-		val = strings.Replace(val, "style", "", 1)
-		val = strings.Replace(val, "stroke", "", 1)
-		val = strings.Replace(val, "stoke", "", 1)
-		val = strings.Replace(val, "Butterfly", Fly, 1)
-		val = strings.Replace(val, "Individual Medley", IM, 1)
-		if t, err := time.Parse("1/2/2006", val); err == nil {
-			val = t.Format("1/02/06")
-		}
-		item[i] = val
-	}
-	return item
 }
 
 func sprintBirthday(left, right time.Time) string {
