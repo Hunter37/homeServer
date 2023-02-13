@@ -135,7 +135,11 @@ type Lsc struct {
 	Swimmers map[string]*Swimmer `json:",omitempty"`
 }
 
-type Data map[string]*Lsc
+type Swimmers map[string]*Lsc
+
+type Data struct {
+	Swimmers Swimmers `json:",omitempty"`
+}
 
 var data = Data{}
 
@@ -163,11 +167,11 @@ func (d *Data) Load() error {
 	}
 }
 
-func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
-	dlsc, ok := data[lscId]
+func (d *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+	dlsc, ok := data.Swimmers[lscId]
 	if !ok {
 		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		data[lscId] = dlsc
+		data.Swimmers[lscId] = dlsc
 	}
 
 	swimmer, ok := dlsc.Swimmers[sid]
@@ -235,7 +239,7 @@ func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event
 	(*lengths)[length] = events
 }
 
-func (d *Data) Find(id string) *Swimmer {
+func (d *Swimmers) Find(id string) *Swimmer {
 	for _, lsc := range *d {
 		if swimmer, ok := lsc.Swimmers[id]; ok {
 			return swimmer

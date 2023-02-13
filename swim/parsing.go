@@ -40,7 +40,7 @@ func extractSiwmmerInfoFromPage(sid string, body string) *Swimmer {
 	lscName := regex.MatchOne(body, `LSC</th>[^>]*>([^<]+)</td>`, 1)
 	lscId := regex.MatchOne(body, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
-	swimmer := data.AddSwimmer(lscId, lscName, sid, name, gender, team, parseInt(age))
+	swimmer := data.Swimmers.AddSwimmer(lscId, lscName, sid, name, gender, team, parseInt(age))
 	return swimmer
 }
 

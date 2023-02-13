@@ -122,7 +122,7 @@ func cacheHandler(writer http.ResponseWriter, req *http.Request) {
 
 func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get("id")
-	swimmer := data.Find(id)
+	swimmer := data.Swimmers.Find(id)
 	if swimmer == nil {
 		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
 		return
@@ -371,7 +371,7 @@ func getRanks(text string) *Table {
 			link := m[0] + m[1] + "_meets.html"
 			bdayData := link
 
-			if swimmer := data.Find(sid); swimmer != nil {
+			if swimmer := data.Swimmers.Find(sid); swimmer != nil {
 				left, right := swimmer.GetBirthday()
 				setBrithday := struct {
 					Link string
