@@ -2,7 +2,7 @@
 bin/
 
 # data file
-data.json
+data*.json
 
 # IDE files
 # .vscode/

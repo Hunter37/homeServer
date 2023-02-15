@@ -206,7 +206,7 @@ func (d *Data) Load() error {
 				d.Swimmers[lsc].LSC, lsc), len(d.Swimmers[lsc].Swimmers)))
 			total += len(d.Swimmers[lsc].Swimmers)
 		}
-		utils.Log(fmt.Sprintf("total = %d", total))
+		utils.Log(fmt.Sprintf("total = %d\n", total))
 
 		return err
 	}

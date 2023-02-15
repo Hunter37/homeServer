@@ -384,8 +384,8 @@
             for (let i = 0; i < table.Value.length; ++i) {
                 let value = row[table.Value[i]] || '';
                 let tdElem = (table.LeftAlign && table.LeftAlign[i]) ? '<td class="left">' : '<td>';
-                if (value.startsWith('>')) {
-                } else if (value.startsWith('<')) {
+                if (typeof value == 'string' && value.startsWith('>')) {
+                } else if (typeof value == 'string' && value.startsWith('<')) {
                     html.push(value);
                 } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
                     let link = row[table.Link[i]]

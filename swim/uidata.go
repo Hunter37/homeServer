@@ -1,12 +1,12 @@
 package swim
 
 type Table struct {
-	Header       []string   // table header
-	Value        []int      // index of the text value in items
-	Link         []int      // index of the link in items
-	TrClass      *int       // index of the tr class in items
-	Action       []string   // action of the link
-	Items        [][]string // table data
+	Header       []string // table header
+	Value        []int    // index of the text value in items
+	Link         []int    // index of the link in items
+	TrClass      *int     // index of the tr class in items
+	Action       []string // action of the link
+	Items        [][]any  // table data
 	Additions    []*Element
 	ShowOrder    bool
 	LeftAlign    []bool
