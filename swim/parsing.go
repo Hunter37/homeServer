@@ -2,6 +2,7 @@ package swim
 
 import (
 	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -19,8 +20,6 @@ func extractSwimmerAllData(url string) (*Swimmer, error) {
 		utils.LogError(err)
 		return nil, err
 	}
-	//body = strings.Replace(body, "\n", "", -1)
-	//body = strings.Replace(body, "\r", "", -1)
 
 	swimmer := extractSiwmmerInfoFromPage(sid, body)
 
@@ -50,12 +49,14 @@ func extractEventsAndRanksFromPages(swimmer *Swimmer, body string) {
 
 	scy := make([]Rankings, 0, 18+17)
 	lcm := make([]Rankings, 0, 17)
-	for i, body := range pages {
+	for i, page := range pages {
+		page = removeFooter(removeHTMLSpace(page))
+
 		// extract all events data
-		extractEventDataFromPage(swimmer, body)
+		extractEventDataFromPage(swimmer, page)
 
 		// extract the rank of this page
-		for _, rank := range getRankDataFromPage(body) {
+		for _, rank := range getRankDataFromPage(page) {
 			rank.Url = urls[i]
 			if rank.Course == "LCM" {
 				lcm = append(lcm, rank)
@@ -75,8 +76,8 @@ func getAllEventLinks(body string) []string {
 }
 
 func extractEventDataFromPage(swimmer *Swimmer, body string) {
-	body = strings.Replace(body, "\n", "", -1)
-	body = strings.Replace(body, "\r", "", -1)
+	//body = strings.Replace(body, "\n", "", -1)
+	//body = strings.Replace(body, "\r", "", -1)
 
 	tables := regex.FindPartList(body, `<h3>`, `</table>`)
 	for _, table := range tables {
@@ -214,6 +215,144 @@ func getCellValues(cells []string, columns []int) []string {
 			value = regex.MatchOne(cells[i], `>([^<>]+)<`, 1)
 		}
 		result = append(result, strings.TrimSpace(value))
+	}
+	return result
+}
+
+func extractTopListFromPage(urls []string) {
+	pages := BatchGet(urls)
+	var imxTitle []string
+
+	for i, page := range pages {
+		page = removeFooter(removeHTMLSpace(page))
+
+		isImxList := false
+		columns := []int{1, 2, 3, 4, 5, 6}
+
+		imx := regex.FindInnerPart(page, `<h2>IM `, `</h2>`)
+		if len(imx) > 0 {
+			isImxList = true
+			columns = []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
+
+			table := regex.FindInnerPart(page, `<table`, "</table>")
+			if strings.Contains(table, `<th>LSC</th>`) {
+				columns = []int{1, 2, 4, 5, 6, 7, 8, 9, 10}
+			}
+		}
+
+		title, rows := findTable(page, columns, func(row string) []string {
+			m := regex.MatchRow(row, `(https://www.swimmingrank.com/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
+			if len(m) == 0 {
+				return []string{}
+			}
+			sid := m[1]
+			link := m[0] + m[1] + "_meets.html"
+
+			return []string{sid, link}
+		})
+
+		items := make([]ListItem, 0, 1000)
+		for _, row := range rows {
+			if isImxList {
+				imxTitle = title[3:8]
+				items = append(items, ListItem{
+					Sid:       row[9],
+					Url:       row[10],
+					Name:      row[0],
+					Age:       parseInt(row[1]),
+					Team:      row[2],
+					ImxScores: convertToIntSlice(row[3:8]),
+					Score:     intToPointer(parseInt(row[8])),
+				})
+			} else {
+				date, _ := time.Parse("1/02/06", row[4])
+				items = append(items, ListItem{
+					Sid:  row[6],
+					Url:  row[7],
+					Name: row[0],
+					Age:  parseInt(row[1]),
+					Team: row[2],
+					Time: intToPointer(parseSwimTime(row[3])),
+					Date: &date,
+					Meet: row[5],
+				})
+			}
+		}
+
+		subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
+		subTitle = regexp.MustCompile(`<[^>]*>`).ReplaceAllString(subTitle, " ")
+
+		tl := &TopList{
+			Level: strings.Replace(regex.FindInnerPart(page, "<h1>", "</h1>"), "Swimming", "", -1),
+			Title: subTitle,
+			List:  items,
+			Links: append(*parseMenuItems(page, "event_menu"), *parseMenuItems(page, "imx_menu")...),
+		}
+		if isImxList {
+			tl.ImxTitle = imxTitle
+		}
+
+		data.AddTopList(urls[i], tl)
+	}
+}
+
+func removeFooter(body string) string {
+	if index := strings.LastIndex(body, `<table border="0"`); index > 0 {
+		body = body[:index]
+	}
+	return body
+}
+
+func removeHTMLSpace(body string) string {
+	body = strings.Replace(body, "\n", "", -1)
+	body = strings.Replace(body, "\r", "", -1)
+	return regexp.MustCompile(`>\s+<`).ReplaceAllString(body, "><")
+}
+
+func parseMenuItems(body, htmlId string) *[]Link {
+	body = regex.FindInnerPart(body, `<div id="`+htmlId+`"`, "</div>")
+	list := regex.FindPartList(body, "<a ", "/a>")
+	links := make([]Link, 0, 25)
+	for _, item := range list {
+		link := Link{
+			Text: regex.FindInnerPart(item, `>`, `<`),
+			Url:  regex.FindInnerPart(item, `"`, `"`),
+		}
+
+		if strings.EqualFold(link.Text, "Current Season") {
+			continue
+		}
+
+		if !strings.Contains(link.Url, "imr.html") && !strings.Contains(link.Url, "imx.html") &&
+			!strings.Contains(link.Url, "_current.html") {
+			link.Url = strings.Replace(link.Url, ".html", "_current.html", 1)
+		}
+
+		if strings.EqualFold(link.Text, "IMR") {
+			if strings.Contains(link.Url, "lcm") {
+				link.Text = "LCM " + link.Text
+			} else {
+				link.Text = "SCY " + link.Text
+			}
+		}
+
+		links = append(links, link)
+	}
+	return &links
+}
+
+func intToPointer(n int) *int {
+	return &n
+}
+
+func convertToIntSlice(texts []string) []int {
+	result := make([]int, 0, len(texts))
+	for _, t := range texts {
+		if len(t) == 0 {
+			result = append(result, 0)
+		} else {
+			result = append(result, parseInt(t))
+		}
 	}
 	return result
 }

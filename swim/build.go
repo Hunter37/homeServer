@@ -1,9 +1,13 @@
 package swim
 
 import (
+	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
+
+	"homeServer/regex"
 )
 
 func generateRankTable(swimmer *Swimmer, url string) *Table {
@@ -253,6 +257,130 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 	}
 }
 
+func generateTopListTable(urls []string) *Table {
+	lists := data.TopLists
+	title := ""
+	subtitle := ""
+	for _, url := range urls {
+		list := lists[url]
+		title += " " + list.Level
+		if list.Title != subtitle {
+			subtitle += list.Title
+		}
+	}
+
+	isImxTable := len(lists[urls[0]].ImxTitle) > 0
+
+	header := []string{"Name", "Time", "Date", "Age", "Birthday", "LSC", "Team", "Meet"}
+	link := []int{8, -1, -1, -1, 9}
+	action := []string{ActionSearch, "", "", "", ActionBirthday}
+	lalign := []bool{true, false, false, false, true, true, true, true}
+	filterCol := 8
+
+	if isImxTable {
+		header = make([]string, 0, 11)
+		header = append(header, "Name", "Score")
+		header = append(header, lists[urls[0]].ImxTitle...)
+		header = append(header, "Age", "Birthday", "LSC", "Team")
+		link = []int{11, -1, -1, -1, -1, -1, -1, -1, 12}
+		action = []string{ActionSearch, "", "", "", "", "", "", "", ActionBirthday}
+		lalign = []bool{true, false, false, false, false, false, false, false, true, true, true}
+		filterCol = 11
+	}
+
+	maxAge := 0
+	items := make([][]string, 0, 1000)
+	for _, url := range urls {
+		list := lists[url]
+		for _, row := range list.List {
+			bdayData := row.Url
+			lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
+			if swimmer := data.Swimmers.Find(row.Sid); swimmer != nil {
+				left, right := swimmer.GetBirthday()
+				setBrithday := struct {
+					Link string
+					Birthday
+				}{
+					Link: row.Url,
+					Birthday: Birthday{
+						Right:   right.Format("2006-01-02"),
+						Display: sprintBirthday(left, right),
+					},
+				}
+				b, _ := json.Marshal(setBrithday)
+				bdayData = string(b)
+			}
+
+			if isImxTable {
+				item := make([]string, 0, 12)
+				item = append(item, row.Name, fmt.Sprint(*row.Score))
+				item = append(item, convertToStringSlice(row.ImxScores)...)
+				item = append(item, fmt.Sprint(row.Age), "Find out", lsc, row.Team, row.Url, bdayData)
+				items = append(items, item)
+			} else {
+				items = append(items, []string{row.Name, formatSwimTime(*row.Time), row.Date.Format("1/02/06"),
+					fmt.Sprint(row.Age), "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
+			}
+
+			if maxAge < row.Age {
+				maxAge = row.Age
+			}
+		}
+	}
+
+	if isImxTable {
+		sort.Slice(items, func(i, j int) bool {
+			return parseSwimTime(items[i][1]) > parseSwimTime(items[j][1]) ||
+				parseSwimTime(items[i][1]) == parseSwimTime(items[j][1]) && parseInt(items[i][7]) > parseInt(items[j][7])
+		})
+	} else {
+		sort.Slice(items, func(i, j int) bool {
+			return parseSwimTime(items[i][1]) < parseSwimTime(items[j][1]) ||
+				parseSwimTime(items[i][1]) == parseSwimTime(items[j][1]) && parseInt(items[i][3]) < parseInt(items[j][3])
+		})
+	}
+
+	return &Table{
+		Title:        fmt.Sprintf("<h2>%s</h2><h3>%s</h3>", title, subtitle),
+		Header:       header,
+		Link:         link,
+		Action:       action,
+		LeftAlign:    lalign,
+		Items:        items,
+		ShowOrder:    true,
+		FilterColumn: filterCol,
+		Age:          maxAge,
+		Additions:    buildAdditionMenus(urls),
+	}
+}
+
+func buildAdditionMenus(urls []string) []*Element {
+	elements := make([]*Element, 0, 30)
+	textToElement := make(map[string]*Element, 30)
+	for _, url := range urls {
+		list := data.TopLists[url]
+		for _, link := range list.Links {
+			if e, ok := textToElement[link.Text]; ok {
+				e.Link += "," + link.Url
+			} else {
+				e := &Element{Text: link.Text, Link: link.Url, Action: ActionSearch}
+				textToElement[link.Text] = e
+				elements = append(elements, e)
+			}
+		}
+	}
+
+	return elements
+}
+
+func convertToStringSlice[K any](input []K) []string {
+	result := make([]string, 0, len(input))
+	for _, t := range input {
+		result = append(result, fmt.Sprint(t))
+	}
+	return result
+}
+
 func buildSequenceIntSlice(length int) []int {
 	slice := make([]int, 0, length)
 	for i := 0; i < length; i++ {
@@ -293,4 +421,12 @@ func sprintBirthday(left, right time.Time) string {
 	}
 
 	return fmt.Sprintf("%s - %s", left.Format("2006/01/02"), rightPart)
+}
+
+func createErrorTable(text string) *Table {
+	return &Table{
+		Header: []string{"ERROR"},
+		Value:  []int{0},
+		Items:  [][]string{{text}},
+	}
 }

@@ -139,6 +139,41 @@ type Swimmers map[string]*Lsc
 
 type Data struct {
 	Swimmers Swimmers `json:",omitempty"`
+	TopLists TopLists `json:",omitempty"`
+}
+
+type TopLists map[string]*TopList
+
+type TopList struct {
+	Level string     `json:",omitempty"`
+	Title string     `json:",omitempty"`
+	List  []ListItem `json:",omitempty"`
+	Links []Link     `json:",omitempty"`
+
+	// imx list
+	ImxTitle []string `json:",omitempty"`
+}
+
+type ListItem struct {
+	Sid  string `json:",omitempty"`
+	Url  string `json:",omitempty"`
+	Name string `json:",omitempty"`
+	Age  int    `json:",omitempty"`
+	Team string `json:",omitempty"`
+
+	// stroke list
+	Time *int       `json:",omitempty"`
+	Date *time.Time `json:",omitempty"`
+	Meet string     `json:",omitempty"`
+
+	// imx list
+	ImxScores []int `json:",omitempty"`
+	Score     *int  `json:",omitempty"`
+}
+
+type Link struct {
+	Text string `json:",omitempty"`
+	Url  string `json:",omitempty"`
 }
 
 var data = Data{}
@@ -165,6 +200,13 @@ func (d *Data) Load() error {
 	} else {
 		return json.Unmarshal(str, d)
 	}
+}
+
+func (d *Data) AddTopList(url string, toplist *TopList) {
+	if d.TopLists == nil {
+		d.TopLists = make(map[string]*TopList)
+	}
+	d.TopLists[url] = toplist
 }
 
 func (d *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
