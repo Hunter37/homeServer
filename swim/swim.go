@@ -234,40 +234,10 @@ func getSearchResult(name string) *Table {
 	body = removeHTMLSpace(removeFooter(body))
 
 	_, items := findTable(body, []int{1, 2, 3}, func(row string) []string {
-		return regex.MatchRow(row, `(https://www.swimmingrank.com/[^']+/strokes/strokes_([^']+)/[^']+_meets.html)`, []int{2, 1})
+		return regex.MatchRow(row, `https://www.swimmingrank.com/[^/]+/strokes/strokes_([^/]+)/([^/]+)_meets.html`, []int{1, 2, 0})
 	})
 
-	if len(items) == 0 {
-		return createErrorTable("Cannot found " + name)
-	}
-	filterdItems := make([][]string, 0, len(items))
-	for _, row := range items {
-		if strings.EqualFold(row[0], name) {
-			filterdItems = append(filterdItems, row)
-		}
-	}
-
-	if len(filterdItems) == 0 {
-		filterdItems = items
-	}
-
-	if len(filterdItems) == 1 {
-		return getInfo(filterdItems[0][4])
-	}
-
-	for _, row := range filterdItems {
-		row[3] = strings.ToUpper(row[3])
-	}
-
-	return &Table{
-		Header:    []string{},
-		Value:     []int{0, 1, 2, 3},
-		Link:      []int{4},
-		Action:    []string{ActionSearch},
-		Items:     filterdItems,
-		ShowOrder: true,
-		LeftAlign: []bool{true, false, true},
-	}
+	return generateSearchTable(name, items)
 }
 
 func getInfo(url string) *Table {

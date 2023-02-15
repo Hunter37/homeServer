@@ -198,7 +198,17 @@ func (d *Data) Load() error {
 	if str, err := os.ReadFile("data.json"); err != nil {
 		return err
 	} else {
-		return json.Unmarshal(str, d)
+		err = json.Unmarshal(str, d)
+
+		total := 0
+		for _, lsc := range sortedKeys(d.Swimmers) {
+			utils.Log(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
+				d.Swimmers[lsc].LSC, lsc), len(d.Swimmers[lsc].Swimmers)))
+			total += len(d.Swimmers[lsc].Swimmers)
+		}
+		utils.Log(fmt.Sprintf("total = %d", total))
+
+		return err
 	}
 }
 
@@ -209,11 +219,22 @@ func (d *Data) AddTopList(url string, toplist *TopList) {
 	d.TopLists[url] = toplist
 }
 
-func (d *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
-	dlsc, ok := data.Swimmers[lscId]
+func (d *Data) GetSwimmerUrl(swimmer *Swimmer) string {
+	for path, lsc := range d.Swimmers {
+		if _, ok := lsc.Swimmers[swimmer.ID]; ok {
+			parts := strings.Split(path, "/")
+			return fmt.Sprintf(`https://www.swimmingrank.com/%s/strokes/strokes_%s/%s_meets.html`, parts[0], parts[1], swimmer.ID)
+		}
+	}
+
+	return ""
+}
+
+func (ss *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+	dlsc, ok := (*ss)[lscId]
 	if !ok {
 		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		data.Swimmers[lscId] = dlsc
+		(*ss)[lscId] = dlsc
 	}
 
 	swimmer, ok := dlsc.Swimmers[sid]
@@ -232,6 +253,31 @@ func (d *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, ag
 	swimmer.Age = age
 
 	return swimmer
+}
+
+func (ss *Swimmers) Find(id string) *Swimmer {
+	for _, lsc := range *ss {
+		if swimmer, ok := lsc.Swimmers[id]; ok {
+			return swimmer
+		}
+	}
+	return nil
+}
+
+func (ss *Swimmers) FindAlias(alias string) []*Swimmer {
+	result := make([]*Swimmer, 0, 1)
+	alias = strings.ToLower(strings.TrimSpace(alias))
+	for _, lsc := range *ss {
+		for _, swimmer := range lsc.Swimmers {
+			if len(swimmer.Alias) > 0 {
+				salias := strings.ToLower(swimmer.Alias)
+				if strings.Index(salias, alias) >= 0 {
+					result = append(result, swimmer)
+				}
+			}
+		}
+	}
+	return result
 }
 
 func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event) {
@@ -279,15 +325,6 @@ func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event
 	})
 
 	(*lengths)[length] = events
-}
-
-func (d *Swimmers) Find(id string) *Swimmer {
-	for _, lsc := range *d {
-		if swimmer, ok := lsc.Swimmers[id]; ok {
-			return swimmer
-		}
-	}
-	return nil
 }
 
 func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, event *Event)) {

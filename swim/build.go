@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"homeServer/regex"
+	"homeServer/utils"
 )
 
 func generateRankTable(swimmer *Swimmer, url string) *Table {
@@ -52,6 +53,10 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 
 	combineRows(items, 0, "age")
 	combineRows(items, 1, "hd")
+	name := swimmer.Name
+	if len(swimmer.Alias) > 0 {
+		name = fmt.Sprintf("%s (%s)", name, swimmer.Alias)
+	}
 
 	left, right := swimmer.GetBirthday()
 	headerLen := len(header)
@@ -63,7 +68,7 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 		TrClass: &headerLen,
 		Action:  []string{"", "", ActionHref, "", "", "", ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch},
 		Additions: []*Element{
-			{Text: swimmer.Name, Link: url},
+			{Text: name, Link: url},
 			{Text: swimmer.Gender},
 			{Text: fmt.Sprint(swimmer.Age)},
 			{Text: swimmer.Team},
@@ -351,6 +356,55 @@ func generateTopListTable(urls []string) *Table {
 		FilterColumn: filterCol,
 		Age:          maxAge,
 		Additions:    buildAdditionMenus(urls),
+	}
+}
+
+func generateSearchTable(name string, items [][]string) *Table {
+	// items : name | age | team | lsc | sid | url
+	exist := make(map[string]bool, len(items))
+	for _, item := range items {
+		exist[item[4]] = true
+	}
+
+	for _, s := range data.Swimmers.FindAlias(name) {
+		if _, ok := exist[s.ID]; !ok {
+			url := data.GetSwimmerUrl(s)
+			items = utils.Insert(items, 0, []string{fmt.Sprintf("%s (%s)", s.Name, s.Alias),
+				fmt.Sprint(s.Age), s.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), s.ID, url})
+		}
+	}
+
+	if len(items) == 0 {
+		return createErrorTable("Cannot found " + name)
+	}
+
+	filterdItems := make([][]string, 0, len(items))
+	for _, row := range items {
+		if _, ok := exist[row[4]]; !ok || strings.EqualFold(row[0], name) {
+			filterdItems = append(filterdItems, row)
+		}
+	}
+
+	if len(filterdItems) == 0 {
+		filterdItems = items
+	}
+
+	if len(filterdItems) == 1 {
+		return getInfo(filterdItems[0][5])
+	}
+
+	for _, row := range filterdItems {
+		row[3] = strings.ToUpper(row[3])
+	}
+
+	return &Table{
+		Header:    []string{},
+		Value:     []int{0, 1, 2, 3},
+		Link:      []int{5},
+		Action:    []string{ActionSearch},
+		Items:     filterdItems,
+		ShowOrder: true,
+		LeftAlign: []bool{true, false, true},
 	}
 }
 

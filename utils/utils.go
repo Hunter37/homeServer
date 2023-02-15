@@ -16,7 +16,7 @@ func GetColumn(list [][]string, col int) []string {
 	return result
 }
 
-func Insert(list []string, index int, value string) []string {
+func Insert[K any](list []K, index int, value K) []K {
 	if len(list) == index {
 		return append(list, value)
 	}
@@ -82,5 +82,5 @@ func CleanTempTime() {
 	}
 }
 
-//hack
+// hack
 var needNewLine = false
