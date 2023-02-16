@@ -70,10 +70,10 @@ func settingsPageHandler(writer http.ResponseWriter, req *http.Request) {
 }
 
 func dataPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := json.Marshal(data)
+	body, err := json.Marshal(mainData)
 	utils.LogError(err)
 	if err == nil {
-		err = data.Save()
+		err = mainData.Save()
 		utils.LogError(err)
 	}
 
@@ -118,8 +118,14 @@ func cacheHandler(writer http.ResponseWriter, req *http.Request) {
 
 func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get("id")
-	swimmer := data.Swimmers.Find(id)
-	if swimmer == nil {
+	var sid string
+	mainData.Find(id, true, func(swimmer *Swimmer, _ string) {
+		if swimmer != nil {
+			sid = swimmer.ID
+		}
+	})
+
+	if len(sid) == 0 {
 		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
 		return
 	}
@@ -146,16 +152,21 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if swimmer.ID != s.ID {
+		if sid != s.ID {
 			gzipWrite(writer, []byte("Swimmer id is wrong"), http.StatusNotFound)
 			return
 		}
 
-		*swimmer = s
-		data.Save()
+		mainData.Find(sid, true, func(swimmer *Swimmer, _ string) {
+			*swimmer = s
+		})
+		mainData.Save()
 	}
 
-	body, _ := json.Marshal(swimmer)
+	var body []byte
+	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+		body, _ = json.Marshal(swimmer)
+	})
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)
@@ -202,13 +213,18 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 }
 
 func birthday(link string) (time.Time, time.Time) {
-	swimmer, err := extractSwimmerAllData(link)
+	sid, err := extractSwimmerAllData(link)
 	if err != nil {
 		utils.LogError(err)
 		return time.Now(), time.Now()
 	}
 
-	return swimmer.GetBirthday()
+	var left time.Time
+	var right time.Time
+	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+		left, right = swimmer.GetBirthday()
+	})
+	return left, right
 }
 
 func search(text string) *Table {
@@ -241,24 +257,27 @@ func getSearchResult(name string) *Table {
 }
 
 func getInfo(url string) *Table {
-	swimmer, err := extractSwimmerAllData(url)
+	sid, err := extractSwimmerAllData(url)
 	if err != nil {
 		return createErrorTable(err.Error())
 	}
 
-	rankingTable := generateRankTable(swimmer, url)
-	lastTable := rankingTable
+	var mainTable *Table
+	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+		mainTable = generateRankTable(swimmer, url)
+		lastTable := mainTable
 
-	lastTable.Next = generateAgeBestTable(swimmer)
-	lastTable = lastTable.Next
+		lastTable.Next = generateAgeBestTable(swimmer)
+		lastTable = lastTable.Next
 
-	lastTable.Next = generateEventsTable(swimmer, "SCY")
-	lastTable = lastTable.Next
+		lastTable.Next = generateEventsTable(swimmer, "SCY")
+		lastTable = lastTable.Next
 
-	lastTable.Next = generateEventsTable(swimmer, "LCM")
-	lastTable = lastTable.Next
+		lastTable.Next = generateEventsTable(swimmer, "LCM")
+		lastTable = lastTable.Next
+	})
 
-	return rankingTable
+	return mainTable
 }
 
 func getRanks(text string) *Table {

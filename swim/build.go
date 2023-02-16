@@ -258,7 +258,7 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 }
 
 func generateTopListTable(urls []string) *Table {
-	lists := data.TopLists
+	lists := mainData.TopLists
 	title := ""
 	subtitle := ""
 	for _, url := range urls {
@@ -295,21 +295,24 @@ func generateTopListTable(urls []string) *Table {
 		for _, row := range list.List {
 			bdayData := row.Url
 			lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
-			if swimmer := data.Swimmers.Find(row.Sid); swimmer != nil {
-				left, right := swimmer.GetBirthday()
-				setBrithday := struct {
-					Link string
-					Birthday
-				}{
-					Link: row.Url,
-					Birthday: Birthday{
-						Right:   right.Format("2006-01-02"),
-						Display: sprintBirthday(left, right),
-					},
+
+			mainData.Find(row.Sid, false, func(swimmer *Swimmer, _ string) {
+				if swimmer != nil {
+					left, right := swimmer.GetBirthday()
+					setBrithday := struct {
+						Link string
+						Birthday
+					}{
+						Link: row.Url,
+						Birthday: Birthday{
+							Right:   right.Format("2006-01-02"),
+							Display: sprintBirthday(left, right),
+						},
+					}
+					b, _ := json.Marshal(setBrithday)
+					bdayData = string(b)
 				}
-				b, _ := json.Marshal(setBrithday)
-				bdayData = string(b)
-			}
+			})
 
 			if isImxTable {
 				item := make([]any, 0, 12)
@@ -361,11 +364,12 @@ func generateSearchTable(name string, items [][]string) *Table {
 		exist[item[4]] = true
 	}
 
-	for _, s := range data.Swimmers.FindAlias(name) {
-		if _, ok := exist[s.ID]; !ok {
-			url := data.GetSwimmerUrl(s)
-			items = utils.Insert(items, 0, []string{fmt.Sprintf("%s (%s)", s.Name, s.Alias),
-				fmt.Sprint(s.Age), s.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), s.ID, url})
+	for _, sid := range mainData.FindAlias(name) {
+		if _, ok := exist[sid]; !ok {
+			mainData.Find(sid, false, func(swimmer *Swimmer, url string) {
+				items = utils.Insert(items, 0, []string{fmt.Sprintf("%s (%s)", swimmer.Name, swimmer.Alias),
+					fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
+			})
 		}
 	}
 
@@ -409,7 +413,7 @@ func buildAdditionMenus(urls []string) []*Element {
 	elements := make([]*Element, 0, 30)
 	textToElement := make(map[string]*Element, 30)
 	for _, url := range urls {
-		list := data.TopLists[url]
+		list := mainData.TopLists[url]
 		for _, link := range list.Links {
 			if e, ok := textToElement[link.Text]; ok {
 				e.Link += "," + link.Url

@@ -12,23 +12,23 @@ import (
 	"homeServer/utils"
 )
 
-func extractSwimmerAllData(url string) (*Swimmer, error) {
+func extractSwimmerAllData(url string) (string, error) {
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
 
 	body, err := HttpGet(url)
 	if err != nil {
 		utils.LogError(err)
-		return nil, err
+		return "", err
 	}
 
-	swimmer := extractSiwmmerInfoFromPage(sid, body)
+	extractSiwmmerInfoFromPage(sid, body)
 
-	extractEventsAndRanksFromPages(swimmer, body)
+	extractEventsAndRanksFromPages(sid, body)
 
-	return swimmer, nil
+	return sid, nil
 }
 
-func extractSiwmmerInfoFromPage(sid string, body string) *Swimmer {
+func extractSiwmmerInfoFromPage(sid string, body string) {
 	name := regex.FindInnerPart(body, `<h1>`, `</h1>`)
 	ageTable := regex.FindInnerPart(body, `<th>Age</th>`, `</tr>`)
 	age := regex.MatchOne(ageTable, `>([^<>]+)</`, 1)
@@ -39,11 +39,10 @@ func extractSiwmmerInfoFromPage(sid string, body string) *Swimmer {
 	lscName := regex.MatchOne(body, `LSC</th>[^>]*>([^<]+)</td>`, 1)
 	lscId := regex.MatchOne(body, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
-	swimmer := data.Swimmers.AddSwimmer(lscId, lscName, sid, name, gender, team, parseInt(age))
-	return swimmer
+	mainData.AddSwimmer(lscId, lscName, sid, name, gender, team, parseInt(age))
 }
 
-func extractEventsAndRanksFromPages(swimmer *Swimmer, body string) {
+func extractEventsAndRanksFromPages(sid, body string) {
 	urls := getAllEventLinks(body)
 	pages := BatchGet(urls)
 
@@ -53,7 +52,7 @@ func extractEventsAndRanksFromPages(swimmer *Swimmer, body string) {
 		page = removeFooter(removeHTMLSpace(page))
 
 		// extract all events data
-		extractEventDataFromPage(swimmer, page)
+		extractEventDataFromPage(sid, page)
 
 		// extract the rank of this page
 		for _, rank := range getRankDataFromPage(page) {
@@ -66,7 +65,9 @@ func extractEventsAndRanksFromPages(swimmer *Swimmer, body string) {
 		}
 	}
 
-	swimmer.Rankings = append(scy, lcm...)
+	mainData.Find(sid, true, func(swimmer *Swimmer, _ string) {
+		swimmer.Rankings = append(scy, lcm...)
+	})
 }
 
 func getAllEventLinks(body string) []string {
@@ -75,7 +76,7 @@ func getAllEventLinks(body string) []string {
 	return urls
 }
 
-func extractEventDataFromPage(swimmer *Swimmer, body string) {
+func extractEventDataFromPage(sid, body string) {
 	//body = strings.Replace(body, "\n", "", -1)
 	//body = strings.Replace(body, "\r", "", -1)
 
@@ -117,7 +118,7 @@ func extractEventDataFromPage(swimmer *Swimmer, body string) {
 				Meet:       row[6],
 			}
 
-			swimmer.AddEvent(course, stroke, length, dataEvent)
+			mainData.AddEvent(sid, course, stroke, length, dataEvent)
 		}
 	}
 }
@@ -221,62 +222,62 @@ func getCellValues(cells []string, columns []int) []string {
 
 func extractTopListFromPage(urls []string) {
 	pages := BatchGet(urls)
-	var imxTitle []string
 
 	for i, page := range pages {
 		page = removeFooter(removeHTMLSpace(page))
 
-		isImxList := false
-		columns := []int{1, 2, 3, 4, 5, 6}
-
-		imx := regex.FindInnerPart(page, `<h2>IM `, `</h2>`)
-		if len(imx) > 0 {
-			isImxList = true
-			columns = []int{1, 2, 3, 4, 5, 6, 7, 8, 9}
-
-			table := regex.FindInnerPart(page, `<table`, "</table>")
-			if strings.Contains(table, `<th>LSC</th>`) {
-				columns = []int{1, 2, 4, 5, 6, 7, 8, 9, 10}
-			}
-		}
-
-		title, rows := findTable(page, columns, func(row string) []string {
+		title, rows := findTable(page, nil, func(row string) []string {
 			m := regex.MatchRow(row, `(https://www.swimmingrank.com/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
 			if len(m) == 0 {
 				return []string{}
 			}
 			sid := m[1]
 			link := m[0] + m[1] + "_meets.html"
-
 			return []string{sid, link}
 		})
 
+		index := func(v string) int {
+			for i, s := range title {
+				if strings.Contains(strings.ToLower(s), strings.ToLower(v)) {
+					return i
+				}
+			}
+			return -1
+		}
+
+		sidIndex := len(title)
+		urlIndex := len(title) + 1
+		nameIndex := index("Swimmer")
+		ageIndex := index("Age")
+		teamIndex := index("Club")
+		if teamIndex < 0 {
+			teamIndex = index("Team")
+		}
+		timeIndex := index("Time")
+		dateIndex := index("Date")
+		meetIndex := index("Meet")
+		scoreIndex := index("Score")
+
 		items := make([]ListItem, 0, 1000)
 		for _, row := range rows {
-			if isImxList {
-				imxTitle = title[3:8]
-				items = append(items, ListItem{
-					Sid:       row[9],
-					Url:       row[10],
-					Name:      row[0],
-					Age:       parseInt(row[1]),
-					Team:      row[2],
-					ImxScores: convertToIntSlice(row[3:8]),
-					Score:     intToPointer(parseInt(row[8])),
-				})
-			} else {
-				date, _ := time.Parse("1/02/06", row[4])
-				items = append(items, ListItem{
-					Sid:  row[6],
-					Url:  row[7],
-					Name: row[0],
-					Age:  parseInt(row[1]),
-					Team: row[2],
-					Time: intToPointer(parseSwimTime(row[3])),
-					Date: &date,
-					Meet: row[5],
-				})
+			item := ListItem{
+				Sid:  row[sidIndex],
+				Url:  row[urlIndex],
+				Name: row[nameIndex],
+				Age:  parseInt(row[ageIndex]),
+				Team: row[teamIndex],
 			}
+			if scoreIndex > -1 {
+				item.Score = intToPointer(parseInt(row[scoreIndex]))
+				item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
+			} else {
+				date, _ := time.Parse("1/02/06", row[dateIndex])
+				item.Time = intToPointer(parseSwimTime(row[timeIndex]))
+				item.Date = &date
+				item.Meet = row[meetIndex]
+			}
+
+			items = append(items, item)
 		}
 
 		subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
@@ -288,11 +289,11 @@ func extractTopListFromPage(urls []string) {
 			List:  items,
 			Links: append(*parseMenuItems(page, "event_menu"), *parseMenuItems(page, "imx_menu")...),
 		}
-		if isImxList {
-			tl.ImxTitle = imxTitle
+		if scoreIndex > -1 {
+			tl.ImxTitle = title[scoreIndex-5 : scoreIndex]
 		}
 
-		data.AddTopList(urls[i], tl)
+		mainData.AddTopList(urls[i], tl)
 	}
 }
 
@@ -306,7 +307,9 @@ func removeFooter(body string) string {
 func removeHTMLSpace(body string) string {
 	body = strings.Replace(body, "\n", "", -1)
 	body = strings.Replace(body, "\r", "", -1)
-	return regexp.MustCompile(`>\s+<`).ReplaceAllString(body, "><")
+	body = regexp.MustCompile(`>\s+`).ReplaceAllString(body, ">")
+	body = regexp.MustCompile(`\s+<`).ReplaceAllString(body, "<")
+	return body
 }
 
 func parseMenuItems(body, htmlId string) *[]Link {

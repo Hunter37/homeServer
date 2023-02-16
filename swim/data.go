@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"homeServer/utils"
@@ -177,17 +178,22 @@ type Link struct {
 	Url  string `json:",omitempty"`
 }
 
-var data = Data{}
+var mainData = Data{}
+
+var mutex = sync.RWMutex{}
 
 func init() {
-	data.Load()
+	mainData.Load()
 }
 
 func CleanUp() {
-	data.Save()
+	mainData.Save()
 }
 
 func (d *Data) Save() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if str, err := json.Marshal(d); err != nil {
 		return err
 	} else {
@@ -196,6 +202,9 @@ func (d *Data) Save() error {
 }
 
 func (d *Data) Load() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if str, err := os.ReadFile("data.json"); err != nil {
 		return err
 	} else {
@@ -214,28 +223,23 @@ func (d *Data) Load() error {
 }
 
 func (d *Data) AddTopList(url string, toplist *TopList) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	if d.TopLists == nil {
 		d.TopLists = make(map[string]*TopList)
 	}
 	d.TopLists[url] = toplist
 }
 
-func (d *Data) GetSwimmerUrl(swimmer *Swimmer) string {
-	for path, lsc := range d.Swimmers {
-		if _, ok := lsc.Swimmers[swimmer.ID]; ok {
-			parts := strings.Split(path, "/")
-			return fmt.Sprintf(`https://www.swimmingrank.com/%s/strokes/strokes_%s/%s_meets.html`, parts[0], parts[1], swimmer.ID)
-		}
-	}
+func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+	mutex.Lock()
+	defer mutex.Unlock()
 
-	return ""
-}
-
-func (ss *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
-	dlsc, ok := (*ss)[lscId]
+	dlsc, ok := d.Swimmers[lscId]
 	if !ok {
 		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		(*ss)[lscId] = dlsc
+		d.Swimmers[lscId] = dlsc
 	}
 
 	swimmer, ok := dlsc.Swimmers[sid]
@@ -256,24 +260,41 @@ func (ss *Swimmers) AddSwimmer(lscId, lscName, sid, name, gender, team string, a
 	return swimmer
 }
 
-func (ss *Swimmers) Find(id string) *Swimmer {
-	for _, lsc := range *ss {
-		if swimmer, ok := lsc.Swimmers[id]; ok {
-			return swimmer
+func (d *Data) Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
+	if write {
+		mutex.Lock()
+		defer mutex.Unlock()
+	} else {
+		mutex.RLock()
+		defer mutex.RUnlock()
+	}
+
+	var swimmer *Swimmer
+	var url string
+	for path, lsc := range d.Swimmers {
+		if s, ok := lsc.Swimmers[sid]; ok {
+			swimmer = s
+			parts := strings.Split(path, "/")
+			url = fmt.Sprintf(`https://www.swimmingrank.com/%s/strokes/strokes_%s/%s_meets.html`, parts[0], parts[1], sid)
+			break
 		}
 	}
-	return nil
+
+	call(swimmer, url)
 }
 
-func (ss *Swimmers) FindAlias(alias string) []*Swimmer {
-	result := make([]*Swimmer, 0, 1)
+func (d *Data) FindAlias(alias string) []string {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	result := make([]string, 0, 1)
 	alias = strings.ToLower(strings.TrimSpace(alias))
-	for _, lsc := range *ss {
-		for _, swimmer := range lsc.Swimmers {
+	for _, lsc := range d.Swimmers {
+		for sid, swimmer := range lsc.Swimmers {
 			if len(swimmer.Alias) > 0 {
 				salias := strings.ToLower(swimmer.Alias)
 				if strings.Index(salias, alias) >= 0 {
-					result = append(result, swimmer)
+					result = append(result, sid)
 				}
 			}
 		}
@@ -281,51 +302,53 @@ func (ss *Swimmers) FindAlias(alias string) []*Swimmer {
 	return result
 }
 
-func (swimmer *Swimmer) AddEvent(course, stroke string, length int, event *Event) {
-	strokes := swimmer.SCY
-	if strings.EqualFold("LCM", course) {
-		strokes = swimmer.LCM
-	}
+func (d *Data) AddEvent(sid, course, stroke string, length int, event *Event) {
+	d.Find(sid, true, func(swimmer *Swimmer, _ string) {
+		strokes := swimmer.SCY
+		if strings.EqualFold("LCM", course) {
+			strokes = swimmer.LCM
+		}
 
-	strokeMapping := map[string]string{
-		"Freestyle":         Free,
-		"Backstroke":        Back,
-		"Breaststroke":      Breast,
-		"Breaststoke":       Breast, // workaround for the typo "Breaststoke"
-		"Butterfly":         Fly,
-		"Individual Medley": IM,
-	}
-	if shorter, ok := strokeMapping[stroke]; ok {
-		stroke = shorter
-	} else {
-		utils.LogError(errors.New("invalid stroke: [" + stroke + "]"))
-	}
+		strokeMapping := map[string]string{
+			"Freestyle":         Free,
+			"Backstroke":        Back,
+			"Breaststroke":      Breast,
+			"Breaststoke":       Breast, // workaround for the typo "Breaststoke"
+			"Butterfly":         Fly,
+			"Individual Medley": IM,
+		}
+		if shorter, ok := strokeMapping[stroke]; ok {
+			stroke = shorter
+		} else {
+			utils.LogError(errors.New("invalid stroke: [" + stroke + "]"))
+		}
 
-	lengths, ok := strokes[stroke]
-	if !ok {
-		lengths = &Length{}
-		strokes[stroke] = lengths
-	}
+		lengths, ok := strokes[stroke]
+		if !ok {
+			lengths = &Length{}
+			strokes[stroke] = lengths
+		}
 
-	events, ok := (*lengths)[length]
-	if !ok {
-		events = []*Event{}
-	} else {
-		for _, ent := range events {
-			if ent.Date == event.Date && ent.Time == event.Time {
-				return
+		events, ok := (*lengths)[length]
+		if !ok {
+			events = []*Event{}
+		} else {
+			for _, ent := range events {
+				if ent.Date == event.Date && ent.Time == event.Time {
+					return
+				}
 			}
 		}
-	}
 
-	events = append(events, event)
+		events = append(events, event)
 
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Date.After(events[j].Date) ||
-			events[i].Date == events[j].Date && events[i].Time < events[j].Time
+		sort.Slice(events, func(i, j int) bool {
+			return events[i].Date.After(events[j].Date) ||
+				events[i].Date == events[j].Date && events[i].Time < events[j].Time
+		})
+
+		(*lengths)[length] = events
 	})
-
-	(*lengths)[length] = events
 }
 
 func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, event *Event)) {
@@ -414,12 +437,6 @@ func (s *Swimmer) GetEvents(course, stroke string, length int) []*Event {
 
 func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) string {
 	events := s.GetEvents(course, stroke, length)
-
-	// todo : remove this?
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Date.After(events[j].Date) ||
-			events[i].Date == events[j].Date && events[i].Time < events[j].Time
-	})
 
 	var fast *Event
 	for i := len(events) - 1; i >= 0; i-- {
