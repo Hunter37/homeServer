@@ -369,53 +369,55 @@
             }
         }
 
-        let index = 0
-        for (const row of table.Items) {
-            let date = birthdayMap.get(row[table.FilterColumn]);
-            if (!!date && filterDate != 'NaN' && date <= filterDate) {
-                continue
-            }
+        if (table.Items) {
+            let index = 0
+            for (const row of table.Items) {
+                let date = birthdayMap.get(row[table.FilterColumn]);
+                if (!!date && filterDate != 'NaN' && date <= filterDate) {
+                    continue
+                }
 
-            if (table.TrClass == null || !row[table.TrClass]) {
-                html.push('<tr>');
-            } else {
-                html.push('<tr class="', row[table.TrClass].toLowerCase(), '">');
-            }
-            if (table.ShowOrder) {
-                html.push('<td>', ++index, '</td>');
-            }
-            for (let i = 0; i < table.Value.length; ++i) {
-                let value = row[table.Value[i]] || '';
-                let tdElem = (table.LeftAlign && table.LeftAlign[i]) ? '<td class="left">' : '<td>';
-                if (typeof value == 'string' && value.startsWith('>')) {
-                } else if (typeof value == 'string' && value.startsWith('<')) {
-                    html.push(value);
-                } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
-                    let link = row[table.Link[i]]
-                    if (table.Action && table.Action[i] != 'href') {
-                        if (table.Action[i] == 'birthday') {
-                            if (link.startsWith('{')) {
-                                let object = JSON.parse(row[table.Link[i]])
-                                birthdayMap.set(object.Link, object.Right);
-                                birthdayDisplayMap.set(object.Link, object.Display);
-                                link = object.Link
-                            }
-                            if (birthdayDisplayMap.get(link)) {
-                                html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
+                if (table.TrClass == null || !row[table.TrClass]) {
+                    html.push('<tr>');
+                } else {
+                    html.push('<tr class="', row[table.TrClass].toLowerCase(), '">');
+                }
+                if (table.ShowOrder) {
+                    html.push('<td>', ++index, '</td>');
+                }
+                for (let i = 0; i < table.Value.length; ++i) {
+                    let value = row[table.Value[i]] || '';
+                    let tdElem = (table.LeftAlign && table.LeftAlign[i]) ? '<td class="left">' : '<td>';
+                    if (typeof value == 'string' && value.startsWith('>')) {
+                    } else if (typeof value == 'string' && value.startsWith('<')) {
+                        html.push(value);
+                    } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
+                        let link = row[table.Link[i]]
+                        if (table.Action && table.Action[i] != 'href') {
+                            if (table.Action[i] == 'birthday') {
+                                if (link.startsWith('{')) {
+                                    let object = JSON.parse(row[table.Link[i]])
+                                    birthdayMap.set(object.Link, object.Right);
+                                    birthdayDisplayMap.set(object.Link, object.Display);
+                                    link = object.Link
+                                }
+                                if (birthdayDisplayMap.get(link)) {
+                                    html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
+                                } else {
+                                    html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                                }
                             } else {
                                 html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
                             }
                         } else {
-                            html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                            html.push(tdElem, '<a href="', link, '" target="_blank">', value, '</a></td>');
                         }
                     } else {
-                        html.push(tdElem, '<a href="', link, '" target="_blank">', value, '</a></td>');
+                        html.push(tdElem, value, '</td>');
                     }
-                } else {
-                    html.push(tdElem, value, '</td>');
                 }
+                html.push('</tr>');
             }
-            html.push('</tr>');
         }
 
         html.push('</tbody></table>');
