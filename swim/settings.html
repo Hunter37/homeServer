@@ -57,6 +57,12 @@
 
     const sinputElem = document.getElementById('sinput');
 
+    sinputElem.addEventListener('keypress', (event) => {
+        if (event.key == 'Enter') {
+            load();
+        }
+    });
+
     async function load() {
         let response = await fetch('swimmer?id=' + sinputElem.value)
         if (response.ok) {

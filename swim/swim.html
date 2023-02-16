@@ -333,6 +333,9 @@
                 } else {
                     html.push('<span>', element.Text, '</span>');
                 }
+                if (element.Log) {
+                    console.log(element.Log)
+                }
             }
             html.push('</div></div>');
         }
@@ -344,7 +347,7 @@
         }
 
         html.push('<table style="border-collapse:collapse"><tbody>');
-        if (table.Header.length > 0) {
+        if (table.Header) {
             html.push('<tr>');
             if (table.ShowOrder) {
                 html.push('<th></th>');

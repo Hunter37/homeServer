@@ -81,6 +81,7 @@ type Rankings struct {
 type Swimmer struct {
 	ID       string     `json:",omitempty"`
 	Name     string     `json:",omitempty"`
+	Middle   string     `json:",omitempty"`
 	Alias    string     `json:",omitempty"`
 	Gender   string     `json:",omitempty"`
 	Team     string     `json:",omitempty"`

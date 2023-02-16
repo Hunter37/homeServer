@@ -54,6 +54,9 @@
             let result = await usaSwimming(first, last, day.toLocaleString('en-US'), token);
             if (result.length > 0) {
                 console.log(result);
+                console.log('"Birthday":"' + result[0].birthDate.substring(0, 10).replaceAll('-','/') + '",')
+                console.log('"Alias":"' + result[0].preferredName + '",')
+                console.log('"Middle":"' + result[0].middleName + '",')
                 return result;
             }
         }

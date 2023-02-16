@@ -53,10 +53,6 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 
 	combineRows(items, 0, "age")
 	combineRows(items, 1, "hd")
-	name := swimmer.Name
-	if len(swimmer.Alias) > 0 {
-		name = fmt.Sprintf("%s (%s)", name, swimmer.Alias)
-	}
 
 	left, right := swimmer.GetBirthday()
 	headerLen := len(header)
@@ -68,12 +64,13 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 		TrClass: &headerLen,
 		Action:  []string{"", "", ActionHref, "", "", "", ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch},
 		Additions: []*Element{
-			{Text: name, Link: url},
+			{Text: swimmer.Name, Link: url},
 			{Text: swimmer.Gender},
 			{Text: fmt.Sprint(swimmer.Age)},
 			{Text: swimmer.Team},
 			{Text: "Birthday: " + sprintBirthday(left, right)},
 			{Text: fmt.Sprintf("Total Event: %d", swimmer.GetEventCount())},
+			{Log: fmt.Sprintf("%s (%s)     Alias:%s     ID=%s", swimmer.Name, swimmer.Middle, swimmer.Alias, swimmer.ID)},
 		},
 	}
 }
