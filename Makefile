@@ -2,22 +2,26 @@ export LANGUAGES := go
 
 .DEFAULT_GOAL := all
 
-.PHONY: prepare clean dependencies lint utest format all
-
+.PHONY: clean
 clean:
 	rm -f go.sum
 
+.PHONY: dependencies
 dependencies:
 	go mod tidy
 	go mod vendor
 
-lint: dependencies
-	golangci-lint run
-
-utest: dependencies
-	go test -v ./...
-
+.PHONY: format
 format: dependencies
 	golangci-lint run --fix
 
-all: clean format utest
+.PHONY: utest
+utest: dependencies
+	go test -v ./...
+
+.PHONY: build
+build: dependencies
+	go build
+
+.PHONY: all
+all: clean format utest build
