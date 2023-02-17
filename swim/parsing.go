@@ -220,8 +220,9 @@ func getCellValues(cells []string, columns []int) []string {
 	return result
 }
 
-func extractTopListFromPage(urls []string) {
+func extractTopListFromPage(urls []string) []string {
 	pages := BatchGet(urls)
+	links := make([]string, 0, 1000)
 
 	for i, page := range pages {
 		page = removeFooter(removeHTMLSpace(page))
@@ -278,6 +279,7 @@ func extractTopListFromPage(urls []string) {
 			}
 
 			items = append(items, item)
+			links = append(links, item.Url)
 		}
 
 		subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
@@ -295,6 +297,8 @@ func extractTopListFromPage(urls []string) {
 
 		mainData.AddTopList(urls[i], tl)
 	}
+
+	return links
 }
 
 func removeFooter(body string) string {

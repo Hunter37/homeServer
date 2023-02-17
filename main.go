@@ -152,6 +152,8 @@ func main() {
 	}
 	utils.Log(fmt.Sprintf("%v %v\n", utils.GetLogTime(), host))
 
+	swim.Start()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", routerHandler)
 	svr := &http.Server{
@@ -171,8 +173,8 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		swim.CleanUp()
-		fmt.Println("Bye!")
+		swim.Stop()
+		utils.Log("\nBye!\n")
 		os.Exit(1)
 	}()
 
@@ -216,7 +218,8 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 }
 
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
-	utils.LogTempTime(HttpCache().ItemCount())
+	//utils.LogTempTime(HttpCache().ItemCount())
+	utils.LogTempTime()
 	writer.Header().Set("Connection", "close")
 	writer.WriteHeader(http.StatusOK)
 }
@@ -246,6 +249,6 @@ func restart() {
 			os.Args[0], cmd.Process.Pid)
 	}
 
-	swim.CleanUp()
+	swim.Stop()
 	os.Exit(-1)
 }

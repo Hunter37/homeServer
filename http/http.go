@@ -10,34 +10,13 @@ import (
 	"time"
 
 	"homeServer/utils"
-
-	"github.com/patrickmn/go-cache"
 )
 
 var (
-	hc        = http.Client{Timeout: time.Minute}
-	httpCache = cache.New(12*time.Hour, 24*time.Hour)
+	hc = http.Client{Timeout: time.Minute}
 )
 
-func HttpPost(url, content string) (string, error) {
-	cacheKey := url + ":" + content
-	if data, found := httpCache.Get(cacheKey); found {
-		return data.(string), nil
-	}
-
-	body, err := httpPost(url, content)
-	if err == nil {
-		httpCache.Set(cacheKey, body, 0)
-	}
-
-	return body, err
-}
-
-func HttpCache() *cache.Cache {
-	return httpCache
-}
-
-func httpPost(url, body string) (string, error) {
+func HttpPost(url, body string) (string, error) {
 	if strings.Contains(url, ";") {
 		utils.LogError(fmt.Errorf("bad url: %v", url))
 	}
@@ -59,18 +38,6 @@ func httpPost(url, body string) (string, error) {
 }
 
 func HttpGet(url string) (string, error) {
-	if data, found := httpCache.Get(url); found {
-		return data.(string), nil
-	}
-	body, err := retryHttpGet(url)
-	if err == nil {
-		httpCache.Set(url, body, 0)
-	}
-
-	return body, err
-}
-
-func retryHttpGet(url string) (string, error) {
 	var body string
 	var err error
 	for i := 0; i < 3; i++ {

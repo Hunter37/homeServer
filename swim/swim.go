@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -26,6 +28,8 @@ const (
 	Breast = "Breast"
 	Fly    = "Fly"
 	IM     = "IM"
+
+	timeout = 2 * time.Hour
 )
 
 var (
@@ -38,7 +42,6 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/swim/data":     dataPageHandler,
 	"/swim/search":   searchHandler,
 	"/swim/birthday": birthdayHandler,
-	"/swim/cache":    cacheHandler,
 	"/swim/swimmer":  swimmerHandler,
 }
 
@@ -89,27 +92,6 @@ func searchHandler(writer http.ResponseWriter, req *http.Request) {
 	body, err := json.Marshal(table)
 	if err != nil {
 		utils.LogError(err)
-	}
-
-	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func cacheHandler(writer http.ResponseWriter, req *http.Request) {
-	httpCache := HttpCache()
-	if req.URL.Query().Has("flush") {
-		httpCache.Flush()
-	}
-
-	data := map[string]any{
-		"action": "cache-flush",
-		"items":  httpCache.ItemCount(),
-		"time":   utils.GetLogTime(),
-	}
-	body, err := json.Marshal(data)
-	if err != nil {
-		utils.LogError(err)
-		gzipWrite(writer, body, http.StatusNotFound)
 	}
 
 	writer.Header().Set("Content-Type", "text/json")
@@ -212,11 +194,21 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 	gzipWrite(writer, body, http.StatusOK)
 }
 
-func birthday(link string) (time.Time, time.Time) {
-	sid, err := extractSwimmerAllData(link)
-	if err != nil {
-		utils.LogError(err)
-		return time.Now(), time.Now()
+func birthday(url string) (time.Time, time.Time) {
+	needDownload := false
+	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
+	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
+	})
+
+	if needDownload {
+		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+		var err error
+		sid, err = extractSwimmerAllData(url)
+		if err != nil {
+			utils.LogError(err)
+			return time.Now(), time.Now()
+		}
 	}
 
 	var left time.Time
@@ -229,6 +221,8 @@ func birthday(link string) (time.Time, time.Time) {
 
 func search(text string) *Table {
 	text = strings.TrimSpace(text)
+	text = regexp.MustCompile("#.*$").ReplaceAllString(text, "")
+
 	if strings.Index(text, "https://") == 0 {
 		if strings.Contains(text, `/strokes/`) {
 			return getInfo(text)
@@ -257,9 +251,20 @@ func getSearchResult(name string) *Table {
 }
 
 func getInfo(url string) *Table {
-	sid, err := extractSwimmerAllData(url)
-	if err != nil {
-		return createErrorTable(err.Error())
+	needDownload := false
+	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
+	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
+	})
+
+	if needDownload {
+		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+
+		var err error
+		sid, err = extractSwimmerAllData(url)
+		if err != nil {
+			return createErrorTable(err.Error())
+		}
 	}
 
 	var mainTable *Table
@@ -282,6 +287,21 @@ func getInfo(url string) *Table {
 
 func getRanks(text string) *Table {
 	urls := strings.Split(text, ",")
-	extractTopListFromPage(urls)
+
+	needDownload := make([]string, 0, len(urls))
+	mainData.FindTopLists(urls, false, func(topList []*TopList) {
+		for i, list := range topList {
+			if list == nil || list.Update.Add(timeout).Before(time.Now()) {
+				needDownload = append(needDownload, urls[i])
+			}
+		}
+	})
+
+	for _, url := range needDownload {
+		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+	}
+
+	extractTopListFromPage(needDownload)
+
 	return generateTopListTable(urls)
 }

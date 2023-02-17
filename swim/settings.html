@@ -16,22 +16,22 @@
 
     .root {
         display: grid;
-        grid-template-rows: minmax(60px, auto) minmax(0, 100%);
+        grid-template-rows: minmax(40px, auto) minmax(0, 100%);
         height: 100%;
+    }
+
+    .top {
+        margin: 10px;
     }
 </style>
 
 <body>
 <div class="root">
-    <div>
-        <button onclick="cache(true)" class="big">flush cache</button>
-        <pre id="json"></pre>
-        <div>
-            Find Swimmer:
-            <input id="sinput" style="width: 120px"/>
-            <button onclick="load()" class="big">load</button>
-            <button onclick="save()" class="big">save</button>
-        </div>
+    <div class="top">
+        Find Swimmer:
+        <input id="sinput" style="width: 120px"/>
+        <button onclick="load()" class="big">load</button>
+        <button onclick="save()" class="big">save</button>
     </div>
 
     <div id="jsoneditor"></div>
@@ -39,16 +39,6 @@
 </body>
 
 <script>
-
-    async function cache(flush) {
-        let response = await fetch('cache' + (flush ? '?flush' : ''));
-        if (response.ok) {
-            let data = await response.json()
-            document.getElementById('json').innerHTML = JSON.stringify(data, null, "    ")
-        }
-    }
-
-    cache(false)
 
     editor = new JSONEditor(document.getElementById('jsoneditor'), {
         mode: 'tree',

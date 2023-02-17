@@ -258,78 +258,93 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 }
 
 func generateTopListTable(urls []string) *Table {
-	lists := mainData.TopLists
-	title := ""
-	subtitle := ""
-	for _, url := range urls {
-		list := lists[url]
-		title += " " + list.Level
-		if list.Title != subtitle {
-			subtitle += list.Title
-		}
-	}
-
-	isImxTable := len(lists[urls[0]].ImxTitle) > 0
-
 	header := []string{"Name", "Time", "Date", "Age", "Birthday", "LSC", "Team", "Meet"}
 	link := []int{8, -1, -1, -1, 9}
 	action := []string{ActionSearch, "", "", "", ActionBirthday}
 	lalign := []bool{true, false, false, false, true, true, true, true}
 	filterCol := 8
-
-	if isImxTable {
-		header = make([]string, 0, 11)
-		header = append(header, "Name", "Score")
-		header = append(header, lists[urls[0]].ImxTitle...)
-		header = append(header, "Age", "Birthday", "LSC", "Team")
-		link = []int{11, -1, -1, -1, -1, -1, -1, -1, 12}
-		action = []string{ActionSearch, "", "", "", "", "", "", "", ActionBirthday}
-		lalign = []bool{true, false, false, false, false, false, false, false, true, true, true}
-		filterCol = 11
-	}
-
-	maxAge := 0
+	isImxTable := false
 	items := make([][]any, 0, 1000)
-	for _, url := range urls {
-		list := lists[url]
-		for _, row := range list.List {
-			bdayData := row.Url
-			lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
+	title := ""
+	subtitle := ""
+	maxAge := 0
+	elements := make([]*Element, 0, 30)
+	textToElement := make(map[string]*Element, 30)
 
-			mainData.Find(row.Sid, false, func(swimmer *Swimmer, _ string) {
-				if swimmer != nil {
-					left, right := swimmer.GetBirthday()
-					setBrithday := struct {
-						Link string
-						Birthday
-					}{
-						Link: row.Url,
-						Birthday: Birthday{
-							Right:   right.Format("2006-01-02"),
-							Display: sprintBirthday(left, right),
-						},
-					}
-					b, _ := json.Marshal(setBrithday)
-					bdayData = string(b)
-				}
-			})
-
-			if isImxTable {
-				item := make([]any, 0, 12)
-				item = append(item, row.Name, *row.Score)
-				item = append(item, ToAnySlice(row.ImxScores)...)
-				item = append(item, row.Age, "Find out", lsc, row.Team, row.Url, bdayData)
-				items = append(items, item)
-			} else {
-				items = append(items, []any{row.Name, formatSwimTime(*row.Time), row.Date.Format("1/02/06"),
-					row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
-			}
-
-			if maxAge < row.Age {
-				maxAge = row.Age
+	mainData.FindTopLists(urls, false, func(topList []*TopList) {
+		// build title and subtitle
+		for i, _ := range urls {
+			list := topList[i]
+			title += " " + list.Level
+			if list.Title != subtitle {
+				subtitle += list.Title
 			}
 		}
-	}
+
+		isImxTable = len(topList[0].ImxTitle) > 0
+		if isImxTable {
+			header = make([]string, 0, 11)
+			header = append(header, "Name", "Score")
+			header = append(header, topList[0].ImxTitle...)
+			header = append(header, "Age", "Birthday", "LSC", "Team")
+			link = []int{11, -1, -1, -1, -1, -1, -1, -1, 12}
+			action = []string{ActionSearch, "", "", "", "", "", "", "", ActionBirthday}
+			lalign = []bool{true, false, false, false, false, false, false, false, true, true, true}
+			filterCol = 11
+		}
+
+		for i, _ := range urls {
+			list := topList[i]
+			for _, row := range list.List {
+				bdayData := row.Url
+				lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
+
+				mainData.Find(row.Sid, false, func(swimmer *Swimmer, _ string) {
+					if swimmer != nil {
+						left, right := swimmer.GetBirthday()
+						setBrithday := struct {
+							Link string
+							Birthday
+						}{
+							Link: row.Url,
+							Birthday: Birthday{
+								Right:   right.Format("2006-01-02"),
+								Display: sprintBirthday(left, right),
+							},
+						}
+						b, _ := json.Marshal(setBrithday)
+						bdayData = string(b)
+					}
+				})
+
+				if isImxTable {
+					item := make([]any, 0, 12)
+					item = append(item, row.Name, *row.Score)
+					item = append(item, ToAnySlice(row.ImxScores)...)
+					item = append(item, row.Age, "Find out", lsc, row.Team, row.Url, bdayData)
+					items = append(items, item)
+				} else {
+					items = append(items, []any{row.Name, formatSwimTime(*row.Time), row.Date.Format("1/02/06"),
+						row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
+				}
+
+				if maxAge < row.Age {
+					maxAge = row.Age
+				}
+			}
+
+			// build addition menus
+			for _, mlink := range list.Links {
+				if e, ok := textToElement[mlink.Text]; ok {
+					e.Link += "," + mlink.Url
+				} else {
+					e := &Element{Text: mlink.Text, Link: mlink.Url, Action: ActionSearch}
+					textToElement[mlink.Text] = e
+					elements = append(elements, e)
+				}
+			}
+		}
+	})
 
 	if isImxTable {
 		sort.Slice(items, func(i, j int) bool {
@@ -353,7 +368,7 @@ func generateTopListTable(urls []string) *Table {
 		ShowOrder:    true,
 		FilterColumn: filterCol,
 		Age:          maxAge,
-		Additions:    buildAdditionMenus(urls),
+		Additions:    elements,
 	}
 }
 
@@ -407,25 +422,6 @@ func generateSearchTable(name string, items [][]string) *Table {
 		ShowOrder: true,
 		LeftAlign: []bool{true, false, true},
 	}
-}
-
-func buildAdditionMenus(urls []string) []*Element {
-	elements := make([]*Element, 0, 30)
-	textToElement := make(map[string]*Element, 30)
-	for _, url := range urls {
-		list := mainData.TopLists[url]
-		for _, link := range list.Links {
-			if e, ok := textToElement[link.Text]; ok {
-				e.Link += "," + link.Url
-			} else {
-				e := &Element{Text: link.Text, Link: link.Url, Action: ActionSearch}
-				textToElement[link.Text] = e
-				elements = append(elements, e)
-			}
-		}
-	}
-
-	return elements
 }
 
 func buildSequenceIntSlice(length int) []int {

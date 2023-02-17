@@ -91,6 +91,8 @@ type Swimmer struct {
 	SCY      Stroke     `json:",omitempty"`
 	LCM      Stroke     `json:",omitempty"`
 	Rankings []Rankings `json:",omitempty"`
+
+	Update time.Time `json:",omitempty"`
 }
 
 func (s *Swimmer) MarshalJSON() ([]byte, error) {
@@ -154,6 +156,8 @@ type TopList struct {
 
 	// imx list
 	ImxTitle []string `json:",omitempty"`
+
+	Update time.Time `json:",omitempty"`
 }
 
 type ListItem struct {
@@ -182,11 +186,17 @@ var mainData = Data{}
 
 var mutex = sync.RWMutex{}
 
-func init() {
+var stop func()
+
+func Start() {
 	mainData.Load()
+	stop = StartBackgroundDownloadPool()
 }
 
-func CleanUp() {
+func Stop() {
+	if stop != nil {
+		stop()
+	}
 	mainData.Save()
 }
 
@@ -197,7 +207,13 @@ func (d *Data) Save() error {
 	if str, err := json.Marshal(d); err != nil {
 		return err
 	} else {
-		return os.WriteFile("data.json", str, 0o600)
+		err = os.WriteFile("data.json", str, 0o600)
+		if err != nil {
+			utils.LogError(err, "Main data save failed!")
+		} else {
+			utils.Log(utils.GetLogTime() + " Main data saved!")
+		}
+		return err
 	}
 }
 
@@ -222,6 +238,25 @@ func (d *Data) Load() error {
 	}
 }
 
+func (d *Data) FindTopLists(urls []string, write bool, call func(topList []*TopList)) {
+	if write {
+		mutex.Lock()
+		defer mutex.Unlock()
+	} else {
+		mutex.RLock()
+		defer mutex.RUnlock()
+	}
+
+	lists := make([]*TopList, len(urls))
+	for i, url := range urls {
+		if list, ok := d.TopLists[url]; ok {
+			lists[i] = list
+		}
+	}
+
+	call(lists)
+}
+
 func (d *Data) AddTopList(url string, toplist *TopList) {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -229,35 +264,8 @@ func (d *Data) AddTopList(url string, toplist *TopList) {
 	if d.TopLists == nil {
 		d.TopLists = make(map[string]*TopList)
 	}
+	toplist.Update = time.Now()
 	d.TopLists[url] = toplist
-}
-
-func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	dlsc, ok := d.Swimmers[lscId]
-	if !ok {
-		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		d.Swimmers[lscId] = dlsc
-	}
-
-	swimmer, ok := dlsc.Swimmers[sid]
-	if !ok {
-		swimmer = &Swimmer{
-			LCM: map[string]*Length{},
-			SCY: map[string]*Length{},
-		}
-	}
-
-	dlsc.Swimmers[sid] = swimmer
-	swimmer.ID = sid
-	swimmer.Name = name
-	swimmer.Gender = gender
-	swimmer.Team = team
-	swimmer.Age = age
-
-	return swimmer
 }
 
 func (d *Data) Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
@@ -300,6 +308,35 @@ func (d *Data) FindAlias(alias string) []string {
 		}
 	}
 	return result
+}
+
+func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	dlsc, ok := d.Swimmers[lscId]
+	if !ok {
+		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
+		d.Swimmers[lscId] = dlsc
+	}
+
+	swimmer, ok := dlsc.Swimmers[sid]
+	if !ok {
+		swimmer = &Swimmer{
+			LCM: map[string]*Length{},
+			SCY: map[string]*Length{},
+		}
+	}
+
+	dlsc.Swimmers[sid] = swimmer
+	swimmer.ID = sid
+	swimmer.Name = name
+	swimmer.Gender = gender
+	swimmer.Team = team
+	swimmer.Age = age
+	swimmer.Update = time.Now()
+
+	return swimmer
 }
 
 func (d *Data) AddEvent(sid, course, stroke string, length int, event *Event) {
