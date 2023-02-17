@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"strings"
 	"syscall"
@@ -46,7 +45,7 @@ func main() {
 	}
 
 	go func() {
-		for true {
+		for {
 			time.Sleep(60 * time.Second)
 			healthCheck()
 		}
@@ -118,20 +117,20 @@ func appleIconHandler(writer http.ResponseWriter, req *http.Request) {
 	writer.WriteHeader(http.StatusMovedPermanently)
 }
 
-func restart(swimStop func()) {
-	cmd := exec.Command(os.Args[0], host)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	err := cmd.Start()
-	if err != nil {
-		utils.LogError(err)
-	} else {
-		fmt.Printf("%v \033[41mStart new process: %v %v\033[0m\n",
-			time.Now().Format("2006-01-02 15:04.000 (MST)"),
-			os.Args[0], cmd.Process.Pid)
-	}
-
-	swimStop()
-	os.Exit(-1)
-}
+//func restart(swimStop func()) {
+//	cmd := exec.Command(os.Args[0], host)
+//	cmd.Stdout = os.Stdout
+//	cmd.Stderr = os.Stderr
+//	cmd.Stdin = os.Stdin
+//	err := cmd.Start()
+//	if err != nil {
+//		utils.LogError(err)
+//	} else {
+//		fmt.Printf("%v \033[41mStart new process: %v %v\033[0m\n",
+//			time.Now().Format("2006-01-02 15:04.000 (MST)"),
+//			os.Args[0], cmd.Process.Pid)
+//	}
+//
+//	swimStop()
+//	os.Exit(-1)
+//}

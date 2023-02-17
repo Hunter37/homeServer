@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -36,7 +37,9 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 }
 
 func Start() func() {
-	model.Load()
+	if err := model.Load(); err != nil {
+		log.Fatal("main data load failed!")
+	}
 	stopPool := StartBackgroundDownloadPool()
 
 	return func() {
@@ -145,7 +148,9 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 func gzipWrite(writer http.ResponseWriter, body []byte, statusCode int) {
 	if len(body) <= 256 {
 		writer.WriteHeader(statusCode)
-		writer.Write(body)
+		if _, err := writer.Write(body); err != nil {
+			utils.LogError(err)
+		}
 		return
 	}
 
@@ -153,14 +158,18 @@ func gzipWrite(writer http.ResponseWriter, body []byte, statusCode int) {
 	if err != nil {
 		utils.LogError(err)
 		writer.WriteHeader(statusCode)
-		writer.Write(body)
+		if _, err := writer.Write(body); err != nil {
+			utils.LogError(err)
+		}
 		return
 	}
 	defer gzipWriter.Close()
 
 	writer.Header().Set("Content-Encoding", "gzip")
 	writer.WriteHeader(statusCode)
-	gzipWriter.Write(body)
+	if _, err := gzipWriter.Write(body); err != nil {
+		utils.LogError(err)
+	}
 }
 
 func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
@@ -267,7 +276,6 @@ func getInfo(url string) *Table {
 		lastTable = lastTable.Next
 
 		lastTable.Next = generateEventsTable(swimmer, "LCM")
-		lastTable = lastTable.Next
 	})
 
 	return mainTable

@@ -210,7 +210,7 @@ func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 		}
 	}
 
-	values := make([]int, col, col)
+	values := make([]int, col)
 	for i := 0; i < col; i++ {
 		values[i] = i
 	}
@@ -274,7 +274,7 @@ func generateTopListTable(urls []string) *Table {
 
 	model.FindTopLists(urls, false, func(topList []*model.TopList) {
 		// build title and subtitle
-		for i, _ := range urls {
+		for i := range urls {
 			list := topList[i]
 			title += " " + list.Level
 			if list.Title != subtitle {
@@ -294,7 +294,7 @@ func generateTopListTable(urls []string) *Table {
 			filterCol = 11
 		}
 
-		for i, _ := range urls {
+		for i := range urls {
 			list := topList[i]
 			for _, row := range list.List {
 				bdayData := row.Url

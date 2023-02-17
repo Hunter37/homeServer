@@ -2,7 +2,6 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -194,20 +193,19 @@ var mainData = Data{}
 
 var mutex = sync.RWMutex{}
 
-func Save() error {
+func Save() {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if str, err := json.Marshal(mainData); err != nil {
-		return err
-	} else {
+	str, err := json.Marshal(mainData)
+	if err == nil {
 		err = os.WriteFile("data.json", str, 0o600)
-		if err != nil {
-			utils.LogError(err, "Main data save failed!")
-		} else {
-			utils.Log(utils.GetLogTime() + " Main data saved!")
-		}
-		return err
+	}
+
+	if err != nil {
+		utils.LogError(err, "Main data save failed!")
+	} else {
+		utils.Log(utils.GetLogTime() + " Main data saved!")
 	}
 }
 
@@ -295,7 +293,7 @@ func FindAlias(alias string) []string {
 		for sid, swimmer := range lsc.Swimmers {
 			if len(swimmer.Alias) > 0 {
 				salias := strings.ToLower(swimmer.Alias)
-				if strings.Index(salias, alias) >= 0 {
+				if strings.Contains(salias, alias) {
 					result = append(result, sid)
 				}
 			}
@@ -351,7 +349,7 @@ func AddEvent(sid, course, stroke string, length int, event *Event) {
 		if shorter, ok := strokeMapping[stroke]; ok {
 			stroke = shorter
 		} else {
-			utils.LogError(errors.New("invalid stroke: [" + stroke + "]"))
+			utils.LogError(fmt.Errorf("invalid stroke: [%s]", stroke))
 		}
 
 		lengths, ok := strokes[stroke]
@@ -416,8 +414,8 @@ func (s *Swimmer) GetBirthday() (time.Time, time.Time) {
 			right = *s.Birthday
 			left = right
 		} else {
-			utils.LogError(errors.New(fmt.Sprintf("Wrong B-day SID=%s Bday=%s Left=%s Right=%s",
-				s.ID, s.Birthday.Format("2006/01/02"), left.Format("2006/01/02"), right.Format("2006/01/02"))))
+			utils.LogError(fmt.Errorf("Wrong B-day SID=%s Bday=%s Left=%s Right=%s",
+				s.ID, s.Birthday.Format("2006/01/02"), left.Format("2006/01/02"), right.Format("2006/01/02")))
 		}
 	}
 

@@ -2,7 +2,6 @@ package swim
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -40,7 +39,7 @@ func (dj *DownloadJob) Do() {
 	}
 
 	if strings.Contains(dj.url, `/strokes/`) {
-		utils.LogError(errors.New("Wrong url!"), dj.url)
+		utils.LogError(fmt.Errorf("wrong url :%s", dj.url))
 		return
 	}
 
@@ -113,7 +112,7 @@ func StartBackgroundDownloadPool() func() {
 				}
 
 				if len(parts) != 2 {
-					utils.LogError(errors.New("Wrong line: "), line)
+					utils.LogError(fmt.Errorf("wrong line: %s", line))
 					continue
 				}
 

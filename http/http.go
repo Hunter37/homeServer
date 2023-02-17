@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -28,7 +27,7 @@ func HttpPost(url, body string) (string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", errors.New(fmt.Sprintf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body))
+		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -75,7 +74,7 @@ func httpGet(url string) (string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return "", errors.New(fmt.Sprintf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body))
+		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -1,7 +1,7 @@
 package swim
 
 import (
-	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -83,7 +83,7 @@ func extractEventDataFromPage(sid, body string) {
 		event := regex.FindInnerPart(table, `<h3>`, `</h3>`)
 		parts := strings.SplitN(event, " ", 3)
 		if len(parts) != 3 {
-			utils.LogError(errors.New("wrong event name: [" + event + "]"))
+			utils.LogError(fmt.Errorf("wrong event name: [%s]", event))
 			continue
 		}
 		course := "SCY"
@@ -135,7 +135,7 @@ func getRankDataFromPage(body string) []model.Rankings {
 	for i, r := range ranks {
 		parts := strings.Split(r[0], " ")
 		if len(parts) != 3 {
-			utils.LogError(errors.New("Event type name is wrong in rank table" + r[0]))
+			utils.LogError(fmt.Errorf("event type name is wrong in rank table :%s", r[0]))
 			return rankings
 		}
 		course := "SCY"

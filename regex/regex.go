@@ -71,8 +71,8 @@ func FindPart(body, begin, end string) string {
 }
 
 func FindPartList(body, begin, end string) []string {
-	result := make([]string, 0, 0)
-	for true {
+	result := make([]string, 0)
+	for {
 		b := strings.Index(body, begin)
 		if b < 0 {
 			break

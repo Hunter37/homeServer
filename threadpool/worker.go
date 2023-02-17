@@ -43,8 +43,8 @@ func (w *worker) Process(work Work) {
 }
 
 func (w *worker) Start() {
+	w.done.Add(1) // wait for me
 	go func() {
-		w.done.Add(1) // wait for me
 		for {
 			w.readyPool <- w.work //hey i am ready to work on new job
 			select {
