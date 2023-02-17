@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"homeServer/regex"
+	"homeServer/swim/model"
 	"homeServer/utils"
 )
 
-func generateRankTable(swimmer *Swimmer, url string) *Table {
+func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header := make([]string, 0, 12)
 	header = append(header, "Course", "Stroke", "Dist", "Time", "Date", "Count")
-	var longest *[]Ranking
+	var longest *[]model.Ranking
 	for _, ranks := range swimmer.Rankings {
 		if longest == nil || len(*longest) < len(ranks.Ranks) {
 			longest = &(ranks.Ranks)
@@ -29,7 +30,7 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 		event := swimmer.GetBestEvent(ranks.Course, ranks.Stroke, ranks.Length)
 		item := make([]any, 0, 12)
 		item = append(item, ranks.Course, ranks.Stroke, ranks.Length,
-			formatSwimTime(event.Time), event.Date.Format("1/02/06"),
+			model.FormatSwimTime(event.Time), event.Date.Format("1/02/06"),
 			len(swimmer.GetEvents(ranks.Course, ranks.Stroke, ranks.Length)))
 		for i := 0; i < len(*longest); i++ {
 			if i < len(ranks.Ranks) {
@@ -75,15 +76,15 @@ func generateRankTable(swimmer *Swimmer, url string) *Table {
 	}
 }
 
-func generateAgeBestTable(swimmer *Swimmer) *Table {
+func generateAgeBestTable(swimmer *model.Swimmer) *Table {
 	ageMin := 100
 	ageMax := 0
 
 	// build maps
 	eventName := make([]string, 0, 38)
 	eventMap := make(map[string]bool, 38)
-	eventAgeMap := make(map[string]*Event, 38*5)
-	swimmer.ForEachEvent(func(course, stroke string, length int, event *Event) {
+	eventAgeMap := make(map[string]*model.Event, 38*5)
+	swimmer.ForEachEvent(func(course, stroke string, length int, event *model.Event) {
 		if event.Age > ageMax {
 			ageMax = event.Age
 		} else if event.Age < ageMin {
@@ -122,7 +123,7 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 		for age := ageMax; age >= ageMin; age-- {
 			key := fmt.Sprintf("%s %d", event, age)
 			if e, found := eventAgeMap[key]; found {
-				item = append(item, []any{formatSwimTime(e.Time), e.Standard, e.Date.Format("1/02/06")}...)
+				item = append(item, []any{model.FormatSwimTime(e.Time), e.Standard, e.Date.Format("1/02/06")}...)
 			} else {
 				item = append(item, []any{"", "", ""}...)
 			}
@@ -143,9 +144,9 @@ func generateAgeBestTable(swimmer *Swimmer) *Table {
 	}
 }
 
-func generateEventsTable(swimmer *Swimmer, course string) *Table {
+func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 	// build map [date+stroke+length] -> event
-	dlsMap := make(map[string]*Event, 300)
+	dlsMap := make(map[string]*model.Event, 300)
 	header := make([]string, 2, 10)
 	header[0] = `<th rowspan="2">Age</th>`
 	header[1] = `<th rowspan="2">Date</th>`
@@ -155,18 +156,18 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 	lAligns := make([]bool, 2, 30)
 	preStroke := ""
 	strokeMap := map[string]map[int]bool{
-		Free:   map[int]bool{},
-		Breast: map[int]bool{},
-		Back:   map[int]bool{},
-		Fly:    map[int]bool{},
-		IM:     map[int]bool{},
+		model.Free:   map[int]bool{},
+		model.Breast: map[int]bool{},
+		model.Back:   map[int]bool{},
+		model.Fly:    map[int]bool{},
+		model.IM:     map[int]bool{},
 	}
 	dateMap := make(map[string]bool, 300)
 	lenghtStrokeMap := make(map[string]bool, 24)
 	lengthStrokes := make([]string, 0, 24)
 
 	// build maps
-	swimmer.ForEachEvent(func(c, s string, l int, event *Event) {
+	swimmer.ForEachEvent(func(c, s string, l int, event *model.Event) {
 		if c == course {
 			date := event.Date.Format("2006/01/02")
 			dls := fmt.Sprint(date, " ", l, " ", s)
@@ -216,7 +217,7 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 
 	items := make([][]any, 0, 50)
 	items = append(items, subHeader)
-	for _, date := range sortedKeys(dateMap, true) {
+	for _, date := range utils.SortedKeys(dateMap, true) {
 		row := make([]any, 2, 24)
 		d, _ := time.Parse("2006/01/02", date)
 		row[1] = d.Format("1/02/06")
@@ -227,13 +228,13 @@ func generateEventsTable(swimmer *Swimmer, course string) *Table {
 			dls := fmt.Sprint(date, " ", ls)
 			if event, ok := dlsMap[dls]; ok {
 				parts := strings.Split(ls, " ")
-				delta := swimmer.GetDelta(course, parts[1], parseInt(parts[0]), event)
+				delta := swimmer.GetDelta(course, parts[1], model.ParseInt(parts[0]), event)
 				class := "dp"
 				if strings.Contains(delta, "+") {
 					class = "ad"
 				}
 				row = append(row, fmt.Sprintf(`<td class="ct d%s"><div>%s</div><div class="std">%s</div><div class="dd %s">%s</div></td>`,
-					strings.ToLower(ls), formatSwimTime(event.Time), event.Standard, class, delta))
+					strings.ToLower(ls), model.FormatSwimTime(event.Time), event.Standard, class, delta))
 				meet = event.Meet
 				team = event.Team
 				row[0] = event.Age
@@ -271,7 +272,7 @@ func generateTopListTable(urls []string) *Table {
 	elements := make([]*Element, 0, 30)
 	textToElement := make(map[string]*Element, 30)
 
-	mainData.FindTopLists(urls, false, func(topList []*TopList) {
+	model.FindTopLists(urls, false, func(topList []*model.TopList) {
 		// build title and subtitle
 		for i, _ := range urls {
 			list := topList[i]
@@ -299,7 +300,7 @@ func generateTopListTable(urls []string) *Table {
 				bdayData := row.Url
 				lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
 
-				mainData.Find(row.Sid, false, func(swimmer *Swimmer, _ string) {
+				model.Find(row.Sid, false, func(swimmer *model.Swimmer, _ string) {
 					if swimmer != nil {
 						left, right := swimmer.GetBirthday()
 						setBrithday := struct {
@@ -324,7 +325,7 @@ func generateTopListTable(urls []string) *Table {
 					item = append(item, row.Age, "Find out", lsc, row.Team, row.Url, bdayData)
 					items = append(items, item)
 				} else {
-					items = append(items, []any{row.Name, formatSwimTime(*row.Time), row.Date.Format("1/02/06"),
+					items = append(items, []any{row.Name, model.FormatSwimTime(*row.Time), row.Date.Format("1/02/06"),
 						row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
 				}
 
@@ -352,9 +353,10 @@ func generateTopListTable(urls []string) *Table {
 				items[i][1].(int) == items[j][1].(int) && items[i][7].(int) > items[j][7].(int)
 		})
 	} else {
+		time := func(v any) int { return model.ParseSwimTime(fmt.Sprint(v)) }
 		sort.Slice(items, func(i, j int) bool {
-			return parseSwimTime(fmt.Sprint(items[i][1])) < parseSwimTime(fmt.Sprint(items[j][1])) ||
-				parseSwimTime(fmt.Sprint(items[i][1])) == parseSwimTime(fmt.Sprint(items[j][1])) && items[i][3].(int) < items[j][3].(int)
+			return time(items[i][1]) < time(items[j][1]) ||
+				time(items[i][1]) == time(items[j][1]) && items[i][3].(int) < items[j][3].(int)
 		})
 	}
 
@@ -379,9 +381,9 @@ func generateSearchTable(name string, items [][]string) *Table {
 		exist[item[4]] = true
 	}
 
-	for _, sid := range mainData.FindAlias(name) {
+	for _, sid := range model.FindAlias(name) {
 		if _, ok := exist[sid]; !ok {
-			mainData.Find(sid, false, func(swimmer *Swimmer, url string) {
+			model.Find(sid, false, func(swimmer *model.Swimmer, url string) {
 				items = utils.Insert(items, 0, []string{fmt.Sprintf("%s (%s)", swimmer.Name, swimmer.Alias),
 					fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
 			})

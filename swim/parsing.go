@@ -9,6 +9,7 @@ import (
 
 	. "homeServer/http"
 	"homeServer/regex"
+	"homeServer/swim/model"
 	"homeServer/utils"
 )
 
@@ -39,15 +40,15 @@ func extractSiwmmerInfoFromPage(sid string, body string) {
 	lscName := regex.MatchOne(body, `LSC</th>[^>]*>([^<]+)</td>`, 1)
 	lscId := regex.MatchOne(body, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
-	mainData.AddSwimmer(lscId, lscName, sid, name, gender, team, parseInt(age))
+	model.AddSwimmer(lscId, lscName, sid, name, gender, team, model.ParseInt(age))
 }
 
 func extractEventsAndRanksFromPages(sid, body string) {
 	urls := getAllEventLinks(body)
 	pages := BatchGet(urls)
 
-	scy := make([]Rankings, 0, 18+17)
-	lcm := make([]Rankings, 0, 17)
+	scy := make([]model.Rankings, 0, 18+17)
+	lcm := make([]model.Rankings, 0, 17)
 	for i, page := range pages {
 		page = removeFooter(removeHTMLSpace(page))
 
@@ -65,7 +66,7 @@ func extractEventsAndRanksFromPages(sid, body string) {
 		}
 	}
 
-	mainData.Find(sid, true, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, true, func(swimmer *model.Swimmer, _ string) {
 		swimmer.Rankings = append(scy, lcm...)
 	})
 }
@@ -103,24 +104,24 @@ func extractEventDataFromPage(sid, body string) {
 			}
 			powerPoint := 0
 			if len(row[4]) > 0 {
-				powerPoint = parseInt(row[4])
+				powerPoint = model.ParseInt(row[4])
 			}
-			dataEvent := &Event{
+			dataEvent := &model.Event{
 				Date:       date,
-				Age:        parseInt(row[1]),
-				Time:       parseSwimTime(row[2]),
+				Age:        model.ParseInt(row[1]),
+				Time:       model.ParseSwimTime(row[2]),
 				Standard:   row[3],
 				PowerPoint: powerPoint,
 				Team:       row[5],
 				Meet:       row[6],
 			}
 
-			mainData.AddEvent(sid, course, stroke, length, dataEvent)
+			model.AddEvent(sid, course, stroke, length, dataEvent)
 		}
 	}
 }
 
-func getRankDataFromPage(body string) []Rankings {
+func getRankDataFromPage(body string) []model.Rankings {
 	table := regex.FindPart(body, `<h2>Rankings by Career Best</h2>`, `</table>`)
 
 	links := make([][]string, 0)
@@ -130,7 +131,7 @@ func getRankDataFromPage(body string) []Rankings {
 		return nil
 	})
 
-	rankings := make([]Rankings, 0, 2)
+	rankings := make([]model.Rankings, 0, 2)
 	for i, r := range ranks {
 		parts := strings.Split(r[0], " ")
 		if len(parts) != 3 {
@@ -141,15 +142,15 @@ func getRankDataFromPage(body string) []Rankings {
 		if parts[1] == "M" {
 			course = "LCM"
 		}
-		ranks := Rankings{
+		ranks := model.Rankings{
 			Course: course,
 			Stroke: parts[2],
-			Length: parseInt(parts[0]),
-			Ranks:  make([]Ranking, 0, 6),
+			Length: model.ParseInt(parts[0]),
+			Ranks:  make([]model.Ranking, 0, 6),
 		}
 		for j := 4; j < len(r); j++ {
 			if n, err := strconv.Atoi(r[j]); err == nil {
-				rank := Ranking{
+				rank := model.Ranking{
 					Level: header[j],
 					Rank:  n,
 					Link:  links[i][j-4],
@@ -162,12 +163,6 @@ func getRankDataFromPage(body string) []Rankings {
 	}
 
 	return rankings
-}
-
-func parseInt(str string) int {
-	n, err := strconv.Atoi(str)
-	utils.LogError(err)
-	return n
 }
 
 func findTable(body string, columns []int, addition func(row string) []string) ([]string, [][]string) {
@@ -256,21 +251,21 @@ func extractTopListFromPage(urls []string) []string {
 		meetIndex := index("Meet")
 		scoreIndex := index("Score")
 
-		items := make([]ListItem, 0, 1000)
+		items := make([]model.ListItem, 0, 1000)
 		for _, row := range rows {
-			item := ListItem{
+			item := model.ListItem{
 				Sid:  row[sidIndex],
 				Url:  row[urlIndex],
 				Name: row[nameIndex],
-				Age:  parseInt(row[ageIndex]),
+				Age:  model.ParseInt(row[ageIndex]),
 				Team: row[teamIndex],
 			}
 			if scoreIndex > -1 {
-				item.Score = intToPointer(parseInt(row[scoreIndex]))
+				item.Score = intToPointer(model.ParseInt(row[scoreIndex]))
 				item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
 			} else {
 				date, _ := time.Parse("1/02/06", row[dateIndex])
-				item.Time = intToPointer(parseSwimTime(row[timeIndex]))
+				item.Time = intToPointer(model.ParseSwimTime(row[timeIndex]))
 				item.Date = &date
 				item.Meet = row[meetIndex]
 			}
@@ -282,7 +277,7 @@ func extractTopListFromPage(urls []string) []string {
 		subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
 		subTitle = regexp.MustCompile(`<[^>]*>`).ReplaceAllString(subTitle, " ")
 
-		tl := &TopList{
+		tl := &model.TopList{
 			Level: strings.Replace(regex.FindInnerPart(page, "<h1>", "</h1>"), "Swimming", "", -1),
 			Title: subTitle,
 			List:  items,
@@ -292,7 +287,7 @@ func extractTopListFromPage(urls []string) []string {
 			tl.ImxTitle = title[scoreIndex-5 : scoreIndex]
 		}
 
-		mainData.AddTopList(urls[i], tl)
+		model.AddTopList(urls[i], tl)
 	}
 
 	return links
@@ -313,12 +308,12 @@ func removeHTMLSpace(body string) string {
 	return body
 }
 
-func parseMenuItems(body, htmlId string) *[]Link {
+func parseMenuItems(body, htmlId string) *[]model.Link {
 	body = regex.FindInnerPart(body, `<div id="`+htmlId+`"`, "</div>")
 	list := regex.FindPartList(body, "<a ", "/a>")
-	links := make([]Link, 0, 25)
+	links := make([]model.Link, 0, 25)
 	for _, item := range list {
-		link := Link{
+		link := model.Link{
 			Text: regex.FindInnerPart(item, `>`, `<`),
 			Url:  regex.FindInnerPart(item, `"`, `"`),
 		}
@@ -355,7 +350,7 @@ func convertToIntSlice(texts []string) []int {
 		if len(t) == 0 {
 			result = append(result, 0)
 		} else {
-			result = append(result, parseInt(t))
+			result = append(result, model.ParseInt(t))
 		}
 	}
 	return result

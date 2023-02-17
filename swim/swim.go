@@ -15,6 +15,7 @@ import (
 
 	. "homeServer/http"
 	"homeServer/regex"
+	"homeServer/swim/model"
 	"homeServer/utils"
 )
 
@@ -23,26 +24,25 @@ const (
 	ActionSearch   = "search"
 	ActionBirthday = "birthday"
 
-	Free   = "Free"
-	Back   = "Back"
-	Breast = "Breast"
-	Fly    = "Fly"
-	IM     = "IM"
-
 	timeout = 2 * time.Hour
-)
-
-var (
-	LeftAlignCols = map[string]bool{"Swimmer": true, "Team": true, "Swim Meet": true, "Birthday": true, "Club": true}
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/swim":          mainPageHandler,
 	"/swim/settings": settingsPageHandler,
-	"/swim/data":     dataPageHandler,
 	"/swim/search":   searchHandler,
 	"/swim/birthday": birthdayHandler,
 	"/swim/swimmer":  swimmerHandler,
+}
+
+func Start() func() {
+	model.Load()
+	stopPool := StartBackgroundDownloadPool()
+
+	return func() {
+		stopPool()
+		model.Save()
+	}
 }
 
 func SwimHandler(writer http.ResponseWriter, req *http.Request) {
@@ -72,18 +72,6 @@ func settingsPageHandler(writer http.ResponseWriter, req *http.Request) {
 	gzipWrite(writer, body, http.StatusOK)
 }
 
-func dataPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := json.Marshal(mainData)
-	utils.LogError(err)
-	if err == nil {
-		err = mainData.Save()
-		utils.LogError(err)
-	}
-
-	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
 func searchHandler(writer http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
 	term := query["input"][0]
@@ -101,7 +89,7 @@ func searchHandler(writer http.ResponseWriter, req *http.Request) {
 func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 	id := req.URL.Query().Get("id")
 	var sid string
-	mainData.Find(id, true, func(swimmer *Swimmer, _ string) {
+	model.Find(id, true, func(swimmer *model.Swimmer, _ string) {
 		if swimmer != nil {
 			sid = swimmer.ID
 		}
@@ -119,7 +107,7 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		var s Swimmer
+		var s model.Swimmer
 		if err = json.Unmarshal(b, &s); err != nil {
 			gzipWrite(writer, []byte("Request body is not json object"), http.StatusNotFound)
 			return
@@ -139,14 +127,14 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		mainData.Find(sid, true, func(swimmer *Swimmer, _ string) {
+		model.Find(sid, true, func(swimmer *model.Swimmer, _ string) {
 			*swimmer = s
 		})
-		mainData.Save()
+		model.Save()
 	}
 
 	var body []byte
-	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
 		body, _ = json.Marshal(swimmer)
 	})
 
@@ -197,7 +185,7 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 func birthday(url string) (time.Time, time.Time) {
 	needDownload := false
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
-	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
 		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
 	})
 
@@ -213,7 +201,7 @@ func birthday(url string) (time.Time, time.Time) {
 
 	var left time.Time
 	var right time.Time
-	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
 		left, right = swimmer.GetBirthday()
 	})
 	return left, right
@@ -253,7 +241,7 @@ func getSearchResult(name string) *Table {
 func getInfo(url string) *Table {
 	needDownload := false
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
-	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
 		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
 	})
 
@@ -268,7 +256,7 @@ func getInfo(url string) *Table {
 	}
 
 	var mainTable *Table
-	mainData.Find(sid, false, func(swimmer *Swimmer, _ string) {
+	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
 		mainTable = generateRankTable(swimmer, url)
 		lastTable := mainTable
 
@@ -289,7 +277,7 @@ func getRanks(text string) *Table {
 	urls := strings.Split(text, ",")
 
 	needDownload := make([]string, 0, len(urls))
-	mainData.FindTopLists(urls, false, func(topList []*TopList) {
+	model.FindTopLists(urls, false, func(topList []*model.TopList) {
 		for i, list := range topList {
 			if list == nil || list.Update.Add(timeout).Before(time.Now()) {
 				needDownload = append(needDownload, urls[i])

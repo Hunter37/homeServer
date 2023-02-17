@@ -1,4 +1,4 @@
-package swim
+package model
 
 import (
 	"encoding/json"
@@ -11,6 +11,14 @@ import (
 	"time"
 
 	"homeServer/utils"
+)
+
+const (
+	Free   = "Free"
+	Back   = "Back"
+	Breast = "Breast"
+	Fly    = "Fly"
+	IM     = "IM"
 )
 
 type Event struct {
@@ -32,7 +40,7 @@ func (e *Event) MarshalJSON() ([]byte, error) {
 		*EventWrapper
 	}{
 		Date:         e.Date.Format("2006/01/02"),
-		Time:         formatSwimTime(e.Time),
+		Time:         FormatSwimTime(e.Time),
 		EventWrapper: (*EventWrapper)(e),
 	})
 }
@@ -56,7 +64,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	e.Time = parseSwimTime(aux.Time)
+	e.Time = ParseSwimTime(aux.Time)
 
 	return nil
 }
@@ -186,25 +194,11 @@ var mainData = Data{}
 
 var mutex = sync.RWMutex{}
 
-var stop func()
-
-func Start() {
-	mainData.Load()
-	stop = StartBackgroundDownloadPool()
-}
-
-func Stop() {
-	if stop != nil {
-		stop()
-	}
-	mainData.Save()
-}
-
-func (d *Data) Save() error {
+func Save() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if str, err := json.Marshal(d); err != nil {
+	if str, err := json.Marshal(mainData); err != nil {
 		return err
 	} else {
 		err = os.WriteFile("data.json", str, 0o600)
@@ -217,20 +211,20 @@ func (d *Data) Save() error {
 	}
 }
 
-func (d *Data) Load() error {
+func Load() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
 	if str, err := os.ReadFile("data.json"); err != nil {
 		return err
 	} else {
-		err = json.Unmarshal(str, d)
+		err = json.Unmarshal(str, &mainData)
 
 		total := 0
-		for _, lsc := range sortedKeys(d.Swimmers) {
+		for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
 			utils.Log(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
-				d.Swimmers[lsc].LSC, lsc), len(d.Swimmers[lsc].Swimmers)))
-			total += len(d.Swimmers[lsc].Swimmers)
+				mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
+			total += len(mainData.Swimmers[lsc].Swimmers)
 		}
 		utils.Log(fmt.Sprintf("total = %d\n", total))
 
@@ -238,7 +232,7 @@ func (d *Data) Load() error {
 	}
 }
 
-func (d *Data) FindTopLists(urls []string, write bool, call func(topList []*TopList)) {
+func FindTopLists(urls []string, write bool, call func(topList []*TopList)) {
 	if write {
 		mutex.Lock()
 		defer mutex.Unlock()
@@ -249,7 +243,7 @@ func (d *Data) FindTopLists(urls []string, write bool, call func(topList []*TopL
 
 	lists := make([]*TopList, len(urls))
 	for i, url := range urls {
-		if list, ok := d.TopLists[url]; ok {
+		if list, ok := mainData.TopLists[url]; ok {
 			lists[i] = list
 		}
 	}
@@ -257,18 +251,18 @@ func (d *Data) FindTopLists(urls []string, write bool, call func(topList []*TopL
 	call(lists)
 }
 
-func (d *Data) AddTopList(url string, toplist *TopList) {
+func AddTopList(url string, toplist *TopList) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if d.TopLists == nil {
-		d.TopLists = make(map[string]*TopList)
+	if mainData.TopLists == nil {
+		mainData.TopLists = make(map[string]*TopList)
 	}
 	toplist.Update = time.Now()
-	d.TopLists[url] = toplist
+	mainData.TopLists[url] = toplist
 }
 
-func (d *Data) Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
+func Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
 	if write {
 		mutex.Lock()
 		defer mutex.Unlock()
@@ -279,7 +273,7 @@ func (d *Data) Find(sid string, write bool, call func(swimmer *Swimmer, url stri
 
 	var swimmer *Swimmer
 	var url string
-	for path, lsc := range d.Swimmers {
+	for path, lsc := range mainData.Swimmers {
 		if s, ok := lsc.Swimmers[sid]; ok {
 			swimmer = s
 			parts := strings.Split(path, "/")
@@ -291,13 +285,13 @@ func (d *Data) Find(sid string, write bool, call func(swimmer *Swimmer, url stri
 	call(swimmer, url)
 }
 
-func (d *Data) FindAlias(alias string) []string {
+func FindAlias(alias string) []string {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
 	result := make([]string, 0, 1)
 	alias = strings.ToLower(strings.TrimSpace(alias))
-	for _, lsc := range d.Swimmers {
+	for _, lsc := range mainData.Swimmers {
 		for sid, swimmer := range lsc.Swimmers {
 			if len(swimmer.Alias) > 0 {
 				salias := strings.ToLower(swimmer.Alias)
@@ -310,14 +304,14 @@ func (d *Data) FindAlias(alias string) []string {
 	return result
 }
 
-func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	dlsc, ok := d.Swimmers[lscId]
+	dlsc, ok := mainData.Swimmers[lscId]
 	if !ok {
 		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		d.Swimmers[lscId] = dlsc
+		mainData.Swimmers[lscId] = dlsc
 	}
 
 	swimmer, ok := dlsc.Swimmers[sid]
@@ -339,8 +333,8 @@ func (d *Data) AddSwimmer(lscId, lscName, sid, name, gender, team string, age in
 	return swimmer
 }
 
-func (d *Data) AddEvent(sid, course, stroke string, length int, event *Event) {
-	d.Find(sid, true, func(swimmer *Swimmer, _ string) {
+func AddEvent(sid, course, stroke string, length int, event *Event) {
+	Find(sid, true, func(swimmer *Swimmer, _ string) {
 		strokes := swimmer.SCY
 		if strings.EqualFold("LCM", course) {
 			strokes = swimmer.LCM
@@ -391,7 +385,7 @@ func (d *Data) AddEvent(sid, course, stroke string, length int, event *Event) {
 func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, event *Event)) {
 	for _, st := range filterStrokeKeys(s.SCY) {
 		strokes := *s.SCY[st]
-		for _, l := range sortedKeys(strokes) {
+		for _, l := range utils.SortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
 				call("SCY", st, l, event)
 			}
@@ -399,7 +393,7 @@ func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, even
 	}
 	for _, st := range filterStrokeKeys(s.LCM) {
 		strokes := *s.LCM[st]
-		for _, l := range sortedKeys(strokes) {
+		for _, l := range utils.SortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
 				call("LCM", st, l, event)
 			}
@@ -495,7 +489,7 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 					d = -d
 				}
 				d = d/6000*10000 + d%6000
-				return fmt.Sprint(sign, formatSwimTime(d))
+				return fmt.Sprint(sign, FormatSwimTime(d))
 			}
 		} else if fast == nil || fast.Time > e.Time && e.Date != event.Date {
 			fast = e

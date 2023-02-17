@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"homeServer/swim/model"
 	"homeServer/threadpool"
 	"homeServer/utils"
 )
@@ -107,7 +108,7 @@ func StartBackgroundDownloadPool() func() {
 
 				parts := strings.Split(line, ",")
 				if len(parts) == 1 {
-					minutes = parseInt(parts[0])
+					minutes = model.ParseInt(parts[0])
 					continue
 				}
 
@@ -116,7 +117,7 @@ func StartBackgroundDownloadPool() func() {
 					continue
 				}
 
-				job := NewDownloadJob(&lock, &visited, pool, strings.TrimSpace(parts[1]), parseInt(parts[0]))
+				job := NewDownloadJob(&lock, &visited, pool, strings.TrimSpace(parts[1]), model.ParseInt(parts[0]))
 				if job != nil {
 					pool.Enqueue(job)
 				}

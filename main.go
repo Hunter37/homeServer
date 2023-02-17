@@ -2,13 +2,10 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
-	"reflect"
 	"strings"
 	"syscall"
 	"time"
@@ -24,114 +21,6 @@ var (
 	host = "c1469969.eero.online:3737" //"73.19.5.132:3737"
 )
 
-func test() {
-	// server
-	go func() {
-		mux := http.NewServeMux()
-		mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-			writer.Header().Set("Connection", "close")
-			writer.WriteHeader(http.StatusOK)
-			writer.Write([]byte("Hello"))
-			time.Sleep(10 * time.Minute)
-			writer.Write([]byte("World"))
-		})
-		svr := &http.Server{
-			Handler: mux,
-			Addr:    ":8081",
-		}
-
-		go func() {
-			time.Sleep(1 * time.Second)
-			svr.Close()
-		}()
-
-		if err := svr.ListenAndServe(); err != nil {
-			log.Println("Failed to start HTTP server")
-		}
-	}()
-
-	// client
-	func() {
-		client := http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Get("http://localhost:8081/")
-		fmt.Println(resp, reflect.TypeOf(err), err)
-	}()
-
-	time.Sleep(2 * time.Second)
-	fmt.Println()
-}
-
-func test1() {
-	// server
-	go func() {
-		listener, err := net.Listen("tcp", ":8083")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer listener.Close()
-
-		conn, err := listener.Accept()
-		if err != nil {
-			log.Fatal("server", err)
-			os.Exit(1)
-		}
-		data := make([]byte, 1)
-		if _, err := conn.Read(data); err != nil {
-			log.Fatal("server", err)
-		}
-
-		conn.Close()
-	}()
-
-	time.Sleep(3 * time.Second) // wait for server to run
-
-	// client
-	func() {
-		client := http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Get("http://localhost:8083/")
-		fmt.Println(resp, reflect.TypeOf(err), err)
-		//conn, err := net.Dial("tcp", "localhost:8083")
-		//if err != nil {
-		//	log.Fatal("client", err)
-		//}
-		//
-		//if _, err := conn.Write([]byte("ab")); err != nil {
-		//	log.Printf("client: %v", err)
-		//}
-		//
-		//time.Sleep(1 * time.Second) // wait for close on the server side
-		//
-		//data := make([]byte, 1)
-		//if _, err := conn.Read(data); err != nil {
-		//	log.Printf("client: %v", err)
-		//	if errors.Is(err, syscall.ECONNRESET) {
-		//		log.Print("This is connection reset by peer error")
-		//	}
-		//}
-	}()
-	fmt.Println()
-}
-
-func test2() {
-	client := http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get("http://localhost:8089/")
-	fmt.Println(resp, reflect.TypeOf(err), err)
-	fmt.Println()
-}
-
-func test3() {
-	for i := 0; i < 108; i++ {
-		fmt.Printf("\033[%dm%3v\033[0m ", i, i)
-	}
-
-	fmt.Println()
-	for true {
-		utils.LogTempTime()
-		time.Sleep(time.Second / 10)
-	}
-}
-
 var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/favicon.ico":          iconHandler,
 	"/health":               healthHandler,
@@ -140,19 +29,13 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 }
 
 func main() {
-	//test()
-	//test1()
-	//test2()
-	//test3()
 	if len(os.Args) > 1 {
 		host = os.Args[1]
 		time.Sleep(time.Second)
-		//} else {
-		//	restart()
 	}
 	utils.Log(fmt.Sprintf("%v %v\n", utils.GetLogTime(), host))
 
-	swim.Start()
+	swimStop := swim.Start()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", routerHandler)
@@ -173,7 +56,7 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		swim.Stop()
+		swimStop()
 		utils.Log("\nBye!\n")
 		os.Exit(1)
 	}()
@@ -198,7 +81,7 @@ func healthCheck() {
 			utils.Log(fmt.Sprintf("\033[31m%v\033[0m\n", utils.GetLogTime()))
 		} else {
 			utils.LogError(err)
-			//restart()
+			//restart(swimStop)
 		}
 	}
 }
@@ -218,7 +101,6 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 }
 
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
-	//utils.LogTempTime(HttpCache().ItemCount())
 	utils.LogTempTime()
 	writer.Header().Set("Connection", "close")
 	writer.WriteHeader(http.StatusOK)
@@ -235,7 +117,8 @@ func appleIconHandler(writer http.ResponseWriter, req *http.Request) {
 	writer.Header().Set("Location", "https://www.usaswimming.org/ResourcePackages/Usas/assets/dist/images/ShieldWebsiteMain.png")
 	writer.WriteHeader(http.StatusMovedPermanently)
 }
-func restart() {
+
+func restart(swimStop func()) {
 	cmd := exec.Command(os.Args[0], host)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -249,6 +132,6 @@ func restart() {
 			os.Args[0], cmd.Process.Pid)
 	}
 
-	swim.Stop()
+	swimStop()
 	os.Exit(-1)
 }
