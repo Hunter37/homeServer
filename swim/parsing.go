@@ -77,9 +77,6 @@ func getAllEventLinks(body string) []string {
 }
 
 func extractEventDataFromPage(sid, body string) {
-	//body = strings.Replace(body, "\n", "", -1)
-	//body = strings.Replace(body, "\r", "", -1)
-
 	tables := regex.FindPartList(body, `<h3>`, `</table>`)
 	for _, table := range tables {
 		event := regex.FindInnerPart(table, `<h3>`, `</h3>`)
@@ -128,7 +125,7 @@ func getRankDataFromPage(body string) []Rankings {
 
 	links := make([][]string, 0)
 	header, ranks := findTable(table, nil, func(row string) []string {
-		link := regex.MatchColumn(row, `href='([^']+)'">`, 1)
+		link := regex.MatchColumn(row, `href='([^']+.html)[^']*'">`, 1)
 		links = append(links, link)
 		return nil
 	})
