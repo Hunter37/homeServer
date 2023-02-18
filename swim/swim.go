@@ -139,10 +139,10 @@ func getInfo(url string) *Table {
 		lastTable.Next = generateAgeBestTable(swimmer)
 		lastTable = lastTable.Next
 
-		lastTable.Next = generateEventsTable(swimmer, "SCY")
+		lastTable.Next = generateEventsTable(swimmer, model.SCY)
 		lastTable = lastTable.Next
 
-		lastTable.Next = generateEventsTable(swimmer, "LCM")
+		lastTable.Next = generateEventsTable(swimmer, model.LCM)
 	})
 
 	return mainTable
@@ -168,7 +168,7 @@ func getRanks(text string) *Table {
 	for _, url := range needDownload {
 		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
 	}
-	extractTopListFromPage(needDownload)
+	extractTopListsFromPages(needDownload)
 
 	cached := make([]string, 0, len(urls))
 	model.FindTopLists(urls, false, func(topList []*model.TopList) {

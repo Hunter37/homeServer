@@ -13,6 +13,8 @@ import (
 )
 
 const (
+	SCY    = "SCY"
+	LCM    = "LCM"
 	Free   = "Free"
 	Back   = "Back"
 	Breast = "Breast"
@@ -349,7 +351,7 @@ func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimme
 func AddEvent(sid, course, stroke string, length int, event *Event) {
 	Find(sid, true, func(swimmer *Swimmer, _ string) {
 		strokes := swimmer.SCY
-		if strings.EqualFold("LCM", course) {
+		if strings.EqualFold(LCM, course) {
 			strokes = swimmer.LCM
 		}
 
@@ -400,7 +402,7 @@ func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, even
 		strokes := *s.SCY[st]
 		for _, l := range utils.SortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
-				call("SCY", st, l, event)
+				call(SCY, st, l, event)
 			}
 		}
 	}
@@ -408,7 +410,7 @@ func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, even
 		strokes := *s.LCM[st]
 		for _, l := range utils.SortedKeys(strokes) {
 			for _, event := range (strokes)[l] {
-				call("LCM", st, l, event)
+				call(LCM, st, l, event)
 			}
 		}
 	}
@@ -469,7 +471,7 @@ func (s *Swimmer) GetBestEvent(course, stroke string, length int) *Event {
 
 func (s *Swimmer) GetEvents(course, stroke string, length int) []*Event {
 	strokes := s.SCY
-	if course == "LCM" {
+	if course == LCM {
 		strokes = s.LCM
 	}
 	lengthes := strokes[stroke]

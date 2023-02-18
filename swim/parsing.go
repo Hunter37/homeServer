@@ -29,36 +29,36 @@ func extractSwimmerAllData(url string) (string, error) {
 	return sid, nil
 }
 
-func extractSiwmmerInfoFromPage(sid string, body string) {
-	name := regex.FindInnerPart(body, `<h1>`, `</h1>`)
-	ageTable := regex.FindInnerPart(body, `<th>Age</th>`, `</tr>`)
+func extractSiwmmerInfoFromPage(sid string, page string) {
+	name := regex.FindInnerPart(page, `<h1>`, `</h1>`)
+	ageTable := regex.FindInnerPart(page, `<th>Age</th>`, `</tr>`)
 	age := regex.MatchOne(ageTable, `>([^<>]+)</`, 1)
-	genderTable := regex.FindInnerPart(body, `<th>Sex</th>`, `</tr>`)
+	genderTable := regex.FindInnerPart(page, `<th>Sex</th>`, `</tr>`)
 	gender := regex.MatchOne(genderTable, `>([^<>]+)</`, 1)
-	teamTable := regex.FindInnerPart(body, `<th>Team</th>`, `</tr>`)
+	teamTable := regex.FindInnerPart(page, `<th>Team</th>`, `</tr>`)
 	team := regex.MatchOne(teamTable, `>([^<>]+)</`, 1)
-	lscName := regex.MatchOne(body, `LSC</th>[^>]*>([^<]+)</td>`, 1)
-	lscId := regex.MatchOne(body, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
+	lscName := regex.MatchOne(page, `LSC</th>[^>]*>([^<]+)</td>`, 1)
+	lscId := regex.MatchOne(page, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
 	model.AddSwimmer(lscId, lscName, sid, name, gender, team, model.ParseInt(age))
 }
 
-func extractEventsAndRanksFromPages(sid, body string) {
-	urls := getAllEventLinks(body)
+func extractEventsAndRanksFromPages(sid, page string) {
+	urls := getAllEventLinks(page)
 	pages := BatchGet(urls)
 
-	scy := make([]model.Rankings, 0, 18+17)
-	lcm := make([]model.Rankings, 0, 17)
+	scy := make([]model.Rankings, 0, 22)
+	lcm := make([]model.Rankings, 0, 18)
 	for i, page := range pages {
+		url := urls[i]
 		page = removeFooter(removeHTMLSpace(page))
 
 		// extract all events data
 		extractEventDataFromPage(sid, page)
 
 		// extract the rank of this page
-		for _, rank := range getRankDataFromPage(page) {
-			rank.Url = urls[i]
-			if rank.Course == "LCM" {
+		for _, rank := range getRankDataFromPage(url, page) {
+			if rank.Course == model.LCM {
 				lcm = append(lcm, rank)
 			} else {
 				scy = append(scy, rank)
@@ -86,9 +86,9 @@ func extractEventDataFromPage(sid, body string) {
 			utils.LogError(fmt.Errorf("wrong event name: [%s]", event))
 			continue
 		}
-		course := "SCY"
+		course := model.SCY
 		if strings.Contains(parts[1], "Meters") {
-			course = "LCM"
+			course = model.LCM
 		}
 		length, err := strconv.Atoi(parts[0])
 		utils.LogError(err)
@@ -121,8 +121,8 @@ func extractEventDataFromPage(sid, body string) {
 	}
 }
 
-func getRankDataFromPage(body string) []model.Rankings {
-	table := regex.FindPart(body, `<h2>Rankings by Career Best</h2>`, `</table>`)
+func getRankDataFromPage(url, page string) []model.Rankings {
+	table := regex.FindPart(page, `<h2>Rankings by Career Best</h2>`, `</table>`)
 
 	links := make([][]string, 0)
 	header, ranks := findTable(table, nil, func(row string) []string {
@@ -138,11 +138,12 @@ func getRankDataFromPage(body string) []model.Rankings {
 			utils.LogError(fmt.Errorf("event type name is wrong in rank table :%s", r[0]))
 			return rankings
 		}
-		course := "SCY"
+		course := model.SCY
 		if parts[1] == "M" {
-			course = "LCM"
+			course = model.LCM
 		}
 		ranks := model.Rankings{
+			Url:    url,
 			Course: course,
 			Stroke: parts[2],
 			Length: model.ParseInt(parts[0]),
@@ -212,84 +213,88 @@ func getCellValues(cells []string, columns []int) []string {
 	return result
 }
 
-func extractTopListFromPage(urls []string) []string {
+func extractTopListsFromPages(urls []string) {
 	pages := BatchGet(urls)
-	links := make([]string, 0, 1000)
 
 	for i, page := range pages {
-		page = removeFooter(removeHTMLSpace(page))
+		extractTopListFromPage(urls[i], page)
+	}
+}
 
-		title, rows := findTable(page, nil, func(row string) []string {
-			m := regex.MatchRow(row, `(https://www.swimmingrank.com/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
-			if len(m) == 0 {
-				return []string{}
+func extractTopListFromPage(url, page string) []string {
+	links := make([]string, 0, 1000)
+
+	page = removeFooter(removeHTMLSpace(page))
+
+	title, rows := findTable(page, nil, func(row string) []string {
+		m := regex.MatchRow(row, `(https://www.swimmingrank.com/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
+		if len(m) == 0 {
+			return []string{}
+		}
+		sid := m[1]
+		link := m[0] + m[1] + "_meets.html"
+		return []string{sid, link}
+	})
+
+	index := func(v string) int {
+		for i, s := range title {
+			if strings.Contains(strings.ToLower(s), strings.ToLower(v)) {
+				return i
 			}
-			sid := m[1]
-			link := m[0] + m[1] + "_meets.html"
-			return []string{sid, link}
-		})
-
-		index := func(v string) int {
-			for i, s := range title {
-				if strings.Contains(strings.ToLower(s), strings.ToLower(v)) {
-					return i
-				}
-			}
-			return -1
 		}
-
-		sidIndex := len(title)
-		urlIndex := len(title) + 1
-		nameIndex := index("Swimmer")
-		ageIndex := index("Age")
-		teamIndex := index("Club")
-		if teamIndex < 0 {
-			teamIndex = index("Team")
-		}
-		timeIndex := index("Time")
-		dateIndex := index("Date")
-		meetIndex := index("Meet")
-		scoreIndex := index("Score")
-
-		items := make([]model.ListItem, 0, 1000)
-		for _, row := range rows {
-			item := model.ListItem{
-				Sid:  row[sidIndex],
-				Url:  row[urlIndex],
-				Name: row[nameIndex],
-				Age:  model.ParseInt(row[ageIndex]),
-				Team: row[teamIndex],
-			}
-			if scoreIndex > -1 {
-				item.Score = intToPointer(model.ParseInt(row[scoreIndex]))
-				item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
-			} else {
-				date, _ := time.Parse("1/02/06", row[dateIndex])
-				item.Time = intToPointer(model.ParseSwimTime(row[timeIndex]))
-				item.Date = &date
-				item.Meet = row[meetIndex]
-			}
-
-			items = append(items, item)
-			links = append(links, item.Url)
-		}
-
-		subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
-		subTitle = regexp.MustCompile(`<[^>]*>`).ReplaceAllString(subTitle, " ")
-
-		tl := &model.TopList{
-			Level: strings.Replace(regex.FindInnerPart(page, "<h1>", "</h1>"), "Swimming", "", -1),
-			Title: subTitle,
-			List:  items,
-			Links: append(*parseMenuItems(page, "event_menu"), *parseMenuItems(page, "imx_menu")...),
-		}
-		if scoreIndex > -1 {
-			tl.ImxTitle = title[scoreIndex-5 : scoreIndex]
-		}
-
-		model.AddTopList(urls[i], tl)
+		return -1
 	}
 
+	sidIndex := len(title)
+	urlIndex := len(title) + 1
+	nameIndex := index("Swimmer")
+	ageIndex := index("Age")
+	teamIndex := index("Club")
+	if teamIndex < 0 {
+		teamIndex = index("Team")
+	}
+	timeIndex := index("Time")
+	dateIndex := index("Date")
+	meetIndex := index("Meet")
+	scoreIndex := index("Score")
+
+	items := make([]model.ListItem, 0, 1000)
+	for _, row := range rows {
+		item := model.ListItem{
+			Sid:  row[sidIndex],
+			Url:  row[urlIndex],
+			Name: row[nameIndex],
+			Age:  model.ParseInt(row[ageIndex]),
+			Team: row[teamIndex],
+		}
+		if scoreIndex > -1 {
+			item.Score = intToPointer(model.ParseInt(row[scoreIndex]))
+			item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
+		} else {
+			date, _ := time.Parse("1/02/06", row[dateIndex])
+			item.Time = intToPointer(model.ParseSwimTime(row[timeIndex]))
+			item.Date = &date
+			item.Meet = row[meetIndex]
+		}
+
+		items = append(items, item)
+		links = append(links, item.Url)
+	}
+
+	subTitle := regex.MatchOne(page, "<h2>(.+)</h2>", 1)
+	subTitle = regexp.MustCompile(`<[^>]*>`).ReplaceAllString(subTitle, " ")
+
+	tl := &model.TopList{
+		Level: strings.Replace(regex.FindInnerPart(page, "<h1>", "</h1>"), "Swimming", "", -1),
+		Title: subTitle,
+		List:  items,
+		Links: append(*parseMenuItems(page, "event_menu"), *parseMenuItems(page, "imx_menu")...),
+	}
+	if scoreIndex > -1 {
+		tl.ImxTitle = title[scoreIndex-5 : scoreIndex]
+	}
+
+	model.AddTopList(url, tl)
 	return links
 }
 
@@ -329,9 +334,9 @@ func parseMenuItems(body, htmlId string) *[]model.Link {
 
 		if strings.EqualFold(link.Text, "IMR") {
 			if strings.Contains(link.Url, "lcm") {
-				link.Text = "LCM " + link.Text
+				link.Text = model.LCM + " " + link.Text
 			} else {
-				link.Text = "SCY " + link.Text
+				link.Text = model.SCY + " " + link.Text
 			}
 		}
 

@@ -14,73 +14,41 @@ import (
 )
 
 type DownloadJob struct {
-	url string
-	top int
-
 	lock    *sync.Mutex
 	visited *map[string]bool
 	pool    *threadpool.Pool
+	url     string
 }
 
-func (dj *DownloadJob) Do() {
-	defer func() {
-		count := dj.pool.RunningWorkerCount()
-		if count == 1 {
-			// this is the last one
-			utils.Log(fmt.Sprintf("%s \033[36m%s [%d]\033[0m\n", utils.GetLogTime(), "Background download finished", len(*dj.visited)))
-		}
-	}()
+func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *DownloadJob)) {
+	currentJob.lock.Lock()
+	defer currentJob.lock.Unlock()
 
-	if strings.Contains(dj.url, `_meets.html`) {
-		if _, err := extractSwimmerAllData(dj.url); err != nil {
-			utils.LogError(err, "Failed to extract data from: "+dj.url)
-		}
-		return
-	}
+	if _, ok := (*currentJob.visited)[url]; !ok {
+		(*currentJob.visited)[url] = true
 
-	if strings.Contains(dj.url, `/strokes/`) {
-		utils.LogError(fmt.Errorf("wrong url :%s", dj.url))
-		return
-	}
-
-	urls := extractTopListFromPage([]string{dj.url})
-	for _, url := range urls {
-		if dj.top == 0 {
-			break
-		}
-		dj.top--
-
-		job := NewDownloadJob(dj.lock, dj.visited, dj.pool, url, 1)
-		if job != nil {
-			dj.pool.Enqueue(job)
-		}
-	}
-}
-
-func NewDownloadJob(lock *sync.Mutex, visited *map[string]bool, pool *threadpool.Pool, url string, top int) *DownloadJob {
-	lock.Lock()
-	defer lock.Unlock()
-
-	if _, ok := (*visited)[url]; !ok {
-		(*visited)[url] = true
-
-		return &DownloadJob{
-			top:     top,
+		dj := &DownloadJob{
+			lock:    currentJob.lock,
+			visited: currentJob.visited,
+			pool:    currentJob.pool,
 			url:     url,
-			lock:    lock,
-			visited: visited,
-			pool:    pool,
 		}
-	}
 
-	return nil
+		call(dj)
+	}
+}
+
+func CheckLastJob(dj *DownloadJob) {
+	count := dj.pool.RunningWorkerCount()
+	if count == 1 {
+		// this is the last one
+		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]\033[0m\n", utils.GetLogTime(), "Background download finished", len(*dj.visited)))
+	}
 }
 
 func StartBackgroundDownloadPool() func() {
-	pool := threadpool.NewWorkerPool(10, 500)
+	pool := threadpool.NewWorkerPool(5, 10000)
 	pool.Start()
-
-	timer := &time.Timer{}
 
 	quit := make(chan bool)
 	go func() {
@@ -94,7 +62,10 @@ func StartBackgroundDownloadPool() func() {
 			utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Start background downloading"))
 
 			visited := make(map[string]bool, 0)
-			lock := sync.Mutex{}
+			dJob := &DownloadJob{
+				lock:    &sync.Mutex{},
+				visited: &visited,
+				pool:    pool}
 
 			minutes := 60
 			scanner := bufio.NewScanner(listFile)
@@ -107,40 +78,37 @@ func StartBackgroundDownloadPool() func() {
 
 				parts := strings.Split(line, ",")
 				if len(parts) == 1 {
-					minutes = model.ParseInt(parts[0])
+					if strings.Contains(line, "_meets.html") {
+						url := strings.TrimSpace(line)
+						NewDownloadJob(dJob, url, func(job *DownloadJob) {
+							job.pool.Enqueue(&SwimmerJob{DownloadJob: *job})
+						})
+					} else {
+						minutes = model.ParseInt(parts[0])
+					}
 					continue
-				}
-
-				if len(parts) != 2 {
-					utils.LogError(fmt.Errorf("wrong line: %s", line))
+				} else if len(parts) == 2 {
+					top := model.ParseInt(parts[0])
+					url := strings.TrimSpace(parts[1])
+					NewDownloadJob(dJob, url, func(job *DownloadJob) {
+						job.pool.Enqueue(&TopListJob{DownloadJob: *job, top: top})
+					})
 					continue
-				}
-
-				job := NewDownloadJob(&lock, &visited, pool, strings.TrimSpace(parts[1]), model.ParseInt(parts[0]))
-				if job != nil {
-					pool.Enqueue(job)
 				}
 			}
 
-			timeout := time.Minute * time.Duration(minutes)
-			timeoutCh := make(chan bool, 1)
-			timer = time.AfterFunc(timeout, func() {
-				timeoutCh <- true
-			})
-
 			select {
-			case <-timeoutCh:
+			case <-time.After(time.Minute * time.Duration(minutes)):
 				continue
 			case <-quit:
-				utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Stop background download pool"))
+				utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Stop background download thread"))
 				return
 			}
 		}
 	}()
 
 	return func() {
-		timer.Stop()
-		pool.Stop()
 		quit <- true
+		pool.Stop()
 	}
 }

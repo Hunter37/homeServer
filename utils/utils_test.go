@@ -15,3 +15,20 @@ func TestColor(t *testing.T) {
 		fmt.Printf("\033[%dm%4d\033[0m  ", i, i)
 	}
 }
+
+func TestChannel(t *testing.T) {
+	ch := make(chan int, 2)
+
+	enqueue := func(v int) bool {
+		select {
+		case ch <- v:
+			return true
+		default:
+			return false
+		}
+	}
+
+	for i := 0; i < 3; i++ {
+		fmt.Println(enqueue(i))
+	}
+}
