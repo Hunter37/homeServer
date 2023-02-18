@@ -151,6 +151,7 @@ type Swimmers map[string]*Lsc
 type Data struct {
 	Swimmers Swimmers `json:",omitempty"`
 	TopLists TopLists `json:",omitempty"`
+	Settings Settings `json:",omitempty"`
 }
 
 type TopLists map[string]*TopList
@@ -218,13 +219,19 @@ func Load() error {
 	} else {
 		err = json.Unmarshal(str, &mainData)
 
-		total := 0
-		for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
-			utils.Log(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
-				mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
-			total += len(mainData.Swimmers[lsc].Swimmers)
+		if err == nil {
+			if len(mainData.Settings.SearchMode) == 0 {
+				mainData.Settings.SearchMode = CACHE
+			}
+
+			total := 0
+			for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
+				utils.Log(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
+					mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
+				total += len(mainData.Swimmers[lsc].Swimmers)
+			}
+			utils.Log(fmt.Sprintf("total = %d\n", total))
 		}
-		utils.Log(fmt.Sprintf("total = %d\n", total))
 
 		return err
 	}
@@ -283,19 +290,27 @@ func Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
 	call(swimmer, url)
 }
 
-func FindAlias(alias string) []string {
+func FindName(name string) []string {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
+	name = strings.ToLower(strings.TrimSpace(name))
+	matchName := func(full string) bool {
+		parts := strings.Split(strings.ToLower(full), " ")
+		for _, part := range parts {
+			if strings.Index(part, name) == 0 {
+				return true
+			}
+		}
+		return false
+	}
+
 	result := make([]string, 0, 1)
-	alias = strings.ToLower(strings.TrimSpace(alias))
+
 	for _, lsc := range mainData.Swimmers {
 		for sid, swimmer := range lsc.Swimmers {
-			if len(swimmer.Alias) > 0 {
-				salias := strings.ToLower(swimmer.Alias)
-				if strings.Contains(salias, alias) {
-					result = append(result, sid)
-				}
+			if matchName(swimmer.Alias) || matchName(swimmer.Name) {
+				result = append(result, sid)
 			}
 		}
 	}
@@ -497,6 +512,10 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 	return ""
 }
 
+func GetSettings() *Settings {
+	return &mainData.Settings
+}
+
 func filterStrokeKeys(strokes Stroke) []string {
 	allStrokes := []string{Free, Back, Breast, Fly, IM}
 	keys := make([]string, 0, len(allStrokes))
@@ -520,4 +539,31 @@ func timeMax(a, b time.Time) time.Time {
 		return a
 	}
 	return b
+}
+
+func DataMigration() {
+	//for _, lsc := range mainData.Swimmers {
+	//	var bad []string
+	//	for sid, swimmer := range lsc.Swimmers {
+	//		if swimmer.Age == 0 {
+	//			bad = append(bad, sid)
+	//		}
+	//	}
+	//	for _, sid := range bad {
+	//		delete(lsc.Swimmers, sid)
+	//		utils.Log("Deleted " + sid + "\n")
+	//	}
+	//}
+	//
+	//var bad []string
+	//for path, lsc := range mainData.Swimmers {
+	//	if len(lsc.Swimmers) == 0 {
+	//		bad = append(bad, path)
+	//	}
+	//}
+	//
+	//for _, path := range bad {
+	//	delete(mainData.Swimmers, path)
+	//	utils.Log("Deleted " + path + "\n")
+	//}
 }

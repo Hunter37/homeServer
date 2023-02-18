@@ -381,10 +381,14 @@ func generateSearchTable(name string, items [][]string) *Table {
 		exist[item[4]] = true
 	}
 
-	for _, sid := range model.FindAlias(name) {
+	for _, sid := range model.FindName(name) {
 		if _, ok := exist[sid]; !ok {
 			model.Find(sid, false, func(swimmer *model.Swimmer, url string) {
-				items = utils.Insert(items, 0, []string{fmt.Sprintf("%s (%s)", swimmer.Name, swimmer.Alias),
+				alias := ""
+				if len(swimmer.Alias) > 0 {
+					alias = fmt.Sprintf(" (%s)", swimmer.Alias)
+				}
+				items = utils.Insert(items, 0, []string{fmt.Sprint(swimmer.Name, alias),
 					fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
 			})
 		}
@@ -414,6 +418,10 @@ func generateSearchTable(name string, items [][]string) *Table {
 	for _, row := range filterdItems {
 		row[3] = strings.ToUpper(row[3].(string))
 	}
+
+	sort.Slice(filterdItems, func(i, j int) bool {
+		return fmt.Sprint(filterdItems[i][0]) < fmt.Sprint(filterdItems[j][0])
+	})
 
 	return &Table{
 		Header:    []string{},

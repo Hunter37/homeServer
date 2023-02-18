@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <title>Swimming settings</title>
 </head>
-
+<style>
+    .top div, .top button {
+        margin: 10px;
+        font: 14px Verdana;
+    }
+</style>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.js"></script>
 
@@ -28,10 +33,27 @@
 <body>
 <div class="root">
     <div class="top">
-        Find Swimmer:
-        <input id="sinput" style="width: 120px"/>
-        <button onclick="load()" class="big">load</button>
-        <button onclick="save()" class="big">save</button>
+        <fieldset>
+            <legend>Search mode:</legend>
+            <div>
+                <input type="radio" id="online" name="mode" value="online" onchange="searchMode(this)">
+                <label for="online">Online</label>
+            </div>
+            <div>
+                <input type="radio" id="cache" name="mode" value="cache" onchange="searchMode(this)">
+                <label for="cache">Cache</label>
+            </div>
+            <div>
+                <input type="radio" id="offline" name="mode" value="offline" onchange="searchMode(this)">
+                <label for="offline">Offline</label>
+            </div>
+        </fieldset>
+        <div>
+            Find Swimmer:
+            <input id="sinput" style="width: 120px"/>
+            <button onclick="load()" class="big">load</button>
+            <button onclick="save()" class="big">save</button>
+        </div>
     </div>
 
     <div id="jsoneditor"></div>
@@ -39,6 +61,20 @@
 </body>
 
 <script>
+
+    const modeElems = document.getElementsByName('mode');
+    async function searchMode(elem) {
+        if (!elem || elem.checked) {
+            let response = await fetch('mode' + (elem && elem.checked ? '?mode=' + elem.value : ''));
+            if (response.ok) {
+                let data = await response.json()
+                console.log(data)
+                document.getElementById(data.mode).checked = true
+            }
+        }
+    }
+
+    searchMode()
 
     editor = new JSONEditor(document.getElementById('jsoneditor'), {
         mode: 'tree',

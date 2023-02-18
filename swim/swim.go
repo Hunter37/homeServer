@@ -1,15 +1,9 @@
 package swim
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -28,167 +22,18 @@ const (
 	timeout = 2 * time.Hour
 )
 
-var router = map[string]func(http.ResponseWriter, *http.Request){
-	"/swim":          mainPageHandler,
-	"/swim/settings": settingsPageHandler,
-	"/swim/search":   searchHandler,
-	"/swim/birthday": birthdayHandler,
-	"/swim/swimmer":  swimmerHandler,
-}
-
 func Start() func() {
 	if err := model.Load(); err != nil {
 		log.Fatal("main data load failed!")
 	}
+
+	model.DataMigration()
 	stopPool := StartBackgroundDownloadPool()
 
 	return func() {
 		stopPool()
 		model.Save()
 	}
-}
-
-func SwimHandler(writer http.ResponseWriter, req *http.Request) {
-	if handler, ok := router[req.URL.Path]; ok {
-		utils.LogHttpCaller(req, true)
-		handler(writer, req)
-		return
-	}
-
-	utils.LogHttpCaller(req, false)
-	gzipWrite(writer, nil, http.StatusNotFound)
-}
-
-func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := os.ReadFile("swim/swim.html")
-	utils.LogError(err)
-
-	writer.Header().Set("Content-Type", "text/html")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func settingsPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := os.ReadFile("swim/settings.html")
-	utils.LogError(err)
-
-	writer.Header().Set("Content-Type", "text/html")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func searchHandler(writer http.ResponseWriter, req *http.Request) {
-	query := req.URL.Query()
-	term := query["input"][0]
-	table := search(term)
-
-	body, err := json.Marshal(table)
-	if err != nil {
-		utils.LogError(err)
-	}
-
-	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
-	id := req.URL.Query().Get("id")
-	var sid string
-	model.Find(id, true, func(swimmer *model.Swimmer, _ string) {
-		if swimmer != nil {
-			sid = swimmer.ID
-		}
-	})
-
-	if len(sid) == 0 {
-		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
-		return
-	}
-
-	if req.Method == http.MethodPut {
-		b, err := io.ReadAll(req.Body)
-		if err != nil {
-			gzipWrite(writer, []byte("Read request body failed"), http.StatusNotFound)
-			return
-		}
-
-		var s model.Swimmer
-		if err = json.Unmarshal(b, &s); err != nil {
-			gzipWrite(writer, []byte("Request body is not json object"), http.StatusNotFound)
-			return
-		}
-
-		text, _ := json.Marshal(&s)
-		text = bytes.Replace(text, []byte(`\u003c`), []byte("<"), -1)
-		text = bytes.Replace(text, []byte(`\u003e`), []byte(">"), -1)
-		text = bytes.Replace(text, []byte(`\u0026`), []byte("&"), -1)
-		if len(text) != len(b) {
-			gzipWrite(writer, []byte("Request json schema is wrong"), http.StatusNotFound)
-			return
-		}
-
-		if sid != s.ID {
-			gzipWrite(writer, []byte("Swimmer id is wrong"), http.StatusNotFound)
-			return
-		}
-
-		model.Find(sid, true, func(swimmer *model.Swimmer, _ string) {
-			*swimmer = s
-		})
-		model.Save()
-	}
-
-	var body []byte
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		body, _ = json.Marshal(swimmer)
-	})
-
-	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func gzipWrite(writer http.ResponseWriter, body []byte, statusCode int) {
-	if len(body) <= 256 {
-		writer.WriteHeader(statusCode)
-		if _, err := writer.Write(body); err != nil {
-			utils.LogError(err)
-		}
-		return
-	}
-
-	gzipWriter, err := gzip.NewWriterLevel(writer, gzip.BestCompression)
-	if err != nil {
-		utils.LogError(err)
-		writer.WriteHeader(statusCode)
-		if _, err := writer.Write(body); err != nil {
-			utils.LogError(err)
-		}
-		return
-	}
-	defer gzipWriter.Close()
-
-	writer.Header().Set("Content-Encoding", "gzip")
-	writer.WriteHeader(statusCode)
-	if _, err := gzipWriter.Write(body); err != nil {
-		utils.LogError(err)
-	}
-}
-
-func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
-	utils.LogHttpCaller(req, true)
-	query := req.URL.Query()
-	link := query["link"][0]
-
-	left, right := birthday(link)
-
-	body, err := json.Marshal(Birthday{
-		Display: sprintBirthday(left, right),
-		Right:   right.Format("2006-01-02"),
-	})
-	if err != nil {
-		utils.LogError(err)
-	}
-
-	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
 }
 
 func birthday(url string) (time.Time, time.Time) {
@@ -231,28 +76,50 @@ func search(text string) *Table {
 }
 
 func getSearchResult(name string) *Table {
-	body, err := HttpPost("https://swimmingrank.com/cgi-bin/main_search.cgi",
-		"searchstring="+url.QueryEscape(name))
-	if err != nil {
-		utils.LogError(err)
-		return createErrorTable(err.Error())
+	mode := model.GetSettings().SearchMode
+	items := make([][]string, 0)
+
+	if mode != model.OFFLINE {
+		body, err := HttpPost("https://swimmingrank.com/cgi-bin/main_search.cgi",
+			"searchstring="+url.QueryEscape(name))
+		if err != nil {
+			utils.LogError(err)
+			return createErrorTable(err.Error())
+		}
+
+		body = removeHTMLSpace(removeFooter(body))
+
+		_, items = findTable(body, []int{1, 2, 3}, func(row string) []string {
+			return regex.MatchRow(row, `https://www.swimmingrank.com/[^/]+/strokes/strokes_([^/]+)/([^/]+)_meets.html`, []int{1, 2, 0})
+		})
 	}
-
-	body = removeHTMLSpace(removeFooter(body))
-
-	_, items := findTable(body, []int{1, 2, 3}, func(row string) []string {
-		return regex.MatchRow(row, `https://www.swimmingrank.com/[^/]+/strokes/strokes_([^/]+)/([^/]+)_meets.html`, []int{1, 2, 0})
-	})
 
 	return generateSearchTable(name, items)
 }
 
 func getInfo(url string) *Table {
-	needDownload := false
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
-	})
+	mode := model.GetSettings().SearchMode
+
+	var errStr string
+	needDownload := false
+	if mode == model.ONLINE {
+		needDownload = true
+	} else {
+		model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
+			if mode == model.CACHE {
+				needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
+			} else { // model.OFFLINE
+				if swimmer == nil {
+					errStr = "Cannot find the swimmer in offline mode!"
+				}
+			}
+		})
+	}
+
+	if len(errStr) > 0 {
+		return createErrorTable(errStr)
+	}
 
 	if needDownload {
 		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
@@ -283,21 +150,38 @@ func getInfo(url string) *Table {
 
 func getRanks(text string) *Table {
 	urls := strings.Split(text, ",")
+	mode := model.GetSettings().SearchMode
 
 	needDownload := make([]string, 0, len(urls))
-	model.FindTopLists(urls, false, func(topList []*model.TopList) {
-		for i, list := range topList {
-			if list == nil || list.Update.Add(timeout).Before(time.Now()) {
-				needDownload = append(needDownload, urls[i])
+	if mode == model.ONLINE {
+		needDownload = urls
+	} else if mode == model.CACHE {
+		model.FindTopLists(urls, false, func(topList []*model.TopList) {
+			for i, list := range topList {
+				if list == nil || list.Update.Add(timeout).Before(time.Now()) {
+					needDownload = append(needDownload, urls[i])
+				}
 			}
-		}
-	})
+		})
+	}
 
 	for _, url := range needDownload {
 		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
 	}
-
 	extractTopListFromPage(needDownload)
 
-	return generateTopListTable(urls)
+	cached := make([]string, 0, len(urls))
+	model.FindTopLists(urls, false, func(topList []*model.TopList) {
+		for i, list := range topList {
+			if list != nil {
+				cached = append(cached, urls[i])
+			}
+		}
+	})
+
+	if len(cached) == 0 {
+		return createErrorTable("Cannot find the ranking info in offline mode.")
+	}
+
+	return generateTopListTable(cached)
 }
