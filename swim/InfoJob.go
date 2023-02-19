@@ -2,6 +2,7 @@ package swim
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"homeServer/http"
 	"homeServer/regex"
@@ -9,12 +10,13 @@ import (
 	"homeServer/utils"
 )
 
-type SwimmerJob struct {
+type InfoJob struct {
 	DownloadJob
 }
 
-func (job *SwimmerJob) Do() {
+func (job *InfoJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
+	atomic.AddInt32(job.infoJob, 1)
 
 	sid := regex.MatchOne(job.url, "/([^/]+)_meets.html", 1)
 
@@ -32,7 +34,7 @@ func (job *SwimmerJob) Do() {
 
 	for _, url := range urls {
 		NewDownloadJob(&job.DownloadJob, url, func(job *DownloadJob) {
-			job.pool.Enqueue(&StrokeJob{
+			job.pool.Enqueue(&EventJob{
 				DownloadJob: *job,
 				sid:         sid,
 				count:       &strokeJobCount,

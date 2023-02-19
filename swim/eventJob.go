@@ -10,7 +10,7 @@ import (
 	"homeServer/utils"
 )
 
-type StrokeJob struct {
+type EventJob struct {
 	DownloadJob
 	sid       string
 	count     *int32 // remaining stroke job related to this sid
@@ -28,8 +28,9 @@ var sortMap = map[string]int{
 	model.IM:     50000,
 }
 
-func (job *StrokeJob) Do() {
+func (job *EventJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
+	atomic.AddInt32(job.eventJob, 1)
 
 	page, err := http.HttpGet(job.url)
 	if err != nil {

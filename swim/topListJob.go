@@ -1,6 +1,8 @@
 package swim
 
 import (
+	"sync/atomic"
+
 	"homeServer/http"
 	"homeServer/utils"
 )
@@ -12,6 +14,7 @@ type TopListJob struct {
 
 func (job *TopListJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
+	atomic.AddInt32(job.listJob, 1)
 
 	page, err := http.HttpGet(job.url)
 	if err != nil {
@@ -27,7 +30,7 @@ func (job *TopListJob) Do() {
 		job.top--
 
 		NewDownloadJob(&job.DownloadJob, url, func(job *DownloadJob) {
-			job.pool.Enqueue(&SwimmerJob{DownloadJob: *job})
+			job.pool.Enqueue(&InfoJob{DownloadJob: *job})
 		})
 	}
 }

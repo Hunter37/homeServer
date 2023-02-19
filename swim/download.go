@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"homeServer/swim/model"
@@ -18,6 +19,10 @@ type DownloadJob struct {
 	visited *map[string]bool
 	pool    *threadpool.Pool
 	url     string
+
+	listJob  *int32
+	infoJob  *int32
+	eventJob *int32
 }
 
 func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *DownloadJob)) {
@@ -28,10 +33,13 @@ func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *Download
 		(*currentJob.visited)[url] = true
 
 		dj := &DownloadJob{
-			lock:    currentJob.lock,
-			visited: currentJob.visited,
-			pool:    currentJob.pool,
-			url:     url,
+			lock:     currentJob.lock,
+			visited:  currentJob.visited,
+			pool:     currentJob.pool,
+			url:      url,
+			listJob:  currentJob.listJob,
+			infoJob:  currentJob.infoJob,
+			eventJob: currentJob.eventJob,
 		}
 
 		call(dj)
@@ -42,8 +50,14 @@ func CheckLastJob(dj *DownloadJob) {
 	count := dj.pool.RunningWorkerCount()
 	if count == 1 {
 		// this is the last one
-		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]\033[0m\n", utils.GetLogTime(), "Background download finished", len(*dj.visited)))
+		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
+			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited)))
 	}
+}
+
+func createInt32() *int32 {
+	i := int32(0)
+	return &i
 }
 
 func StartBackgroundDownloadPool() func() {
@@ -63,9 +77,13 @@ func StartBackgroundDownloadPool() func() {
 
 			visited := make(map[string]bool, 0)
 			dJob := &DownloadJob{
-				lock:    &sync.Mutex{},
-				visited: &visited,
-				pool:    pool}
+				lock:     &sync.Mutex{},
+				visited:  &visited,
+				pool:     pool,
+				listJob:  createInt32(),
+				infoJob:  createInt32(),
+				eventJob: createInt32(),
+			}
 
 			minutes := 60
 			scanner := bufio.NewScanner(listFile)
@@ -81,7 +99,7 @@ func StartBackgroundDownloadPool() func() {
 					if strings.Contains(line, "_meets.html") {
 						url := strings.TrimSpace(line)
 						NewDownloadJob(dJob, url, func(job *DownloadJob) {
-							job.pool.Enqueue(&SwimmerJob{DownloadJob: *job})
+							job.pool.Enqueue(&InfoJob{DownloadJob: *job})
 						})
 					} else {
 						minutes = model.ParseInt(parts[0])
