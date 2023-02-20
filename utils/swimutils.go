@@ -1,11 +1,9 @@
-package model
+package utils
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	"homeServer/utils"
 )
 
 func FormatSwimTime(t int) string {
@@ -23,6 +21,6 @@ func ParseSwimTime(str string) int {
 
 func ParseInt(str string) int {
 	n, err := strconv.Atoi(str)
-	utils.LogError(err)
+	LogError(err)
 	return n
 }

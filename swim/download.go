@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"homeServer/swim/model"
 	"homeServer/threadpool"
 	"homeServer/utils"
 )
@@ -102,11 +101,11 @@ func StartBackgroundDownloadPool() func() {
 							job.pool.Enqueue(&InfoJob{DownloadJob: *job})
 						})
 					} else {
-						minutes = model.ParseInt(parts[0])
+						minutes = utils.ParseInt(parts[0])
 					}
 					continue
 				} else if len(parts) == 2 {
-					top := model.ParseInt(parts[0])
+					top := utils.ParseInt(parts[0])
 					url := strings.TrimSpace(parts[1])
 					NewDownloadJob(dJob, url, func(job *DownloadJob) {
 						job.pool.Enqueue(&TopListJob{DownloadJob: *job, top: top})

@@ -30,7 +30,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		event := swimmer.GetBestEvent(ranks.Course, ranks.Stroke, ranks.Length)
 		item := make([]any, 0, 12)
 		item = append(item, ranks.Course, ranks.Stroke, ranks.Length,
-			model.FormatSwimTime(event.Time), event.Date.Format("1/02/06"),
+			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"),
 			len(swimmer.GetEvents(ranks.Course, ranks.Stroke, ranks.Length)))
 		for i := 0; i < len(*longest); i++ {
 			if i < len(ranks.Ranks) {
@@ -119,11 +119,11 @@ func generateAgeBestTable(swimmer *model.Swimmer) *Table {
 	for _, event := range eventName {
 		item := make([]any, 0, headerLen)
 		parts := strings.Split(event, " ")
-		item = append(item, ToAnySlice(parts)...)
+		item = append(item, utils.ToAnySlice(parts)...)
 		for age := ageMax; age >= ageMin; age-- {
 			key := fmt.Sprintf("%s %d", event, age)
 			if e, found := eventAgeMap[key]; found {
-				item = append(item, []any{model.FormatSwimTime(e.Time), e.Standard, e.Date.Format("1/02/06")}...)
+				item = append(item, []any{utils.FormatSwimTime(e.Time), e.Standard, e.Date.Format("1/02/06")}...)
 			} else {
 				item = append(item, []any{"", "", ""}...)
 			}
@@ -228,13 +228,23 @@ func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 			dls := fmt.Sprint(date, " ", ls)
 			if event, ok := dlsMap[dls]; ok {
 				parts := strings.Split(ls, " ")
-				delta := swimmer.GetDelta(course, parts[1], model.ParseInt(parts[0]), event)
+				stroke := parts[1]
+				length := utils.ParseInt(parts[0])
+				delta := swimmer.GetDelta(course, stroke, length, event)
 				class := "dp"
 				if strings.Contains(delta, "+") {
 					class = "ad"
 				}
+
+				std := model.GetStandard(swimmer.Gender, event.Age, course, stroke, length, event.Time)
+				if length > 25 && std != event.Standard {
+					std = model.GetStandard(swimmer.Gender, event.Age, course, stroke, length, event.Time)
+
+					utils.LogError(fmt.Errorf("bad standard time: %v %v %v %v %v %v %v",
+						swimmer.Name, swimmer.Gender, event.Age, course, stroke, length, event.Time))
+				}
 				row = append(row, fmt.Sprintf(`<td class="ct d%s"><div>%s</div><div class="std">%s</div><div class="dd %s">%s</div></td>`,
-					strings.ToLower(ls), model.FormatSwimTime(event.Time), event.Standard, class, delta))
+					strings.ToLower(ls), utils.FormatSwimTime(event.Time), std, class, delta))
 				meet = event.Meet
 				team = event.Team
 				row[0] = event.Age
@@ -321,11 +331,11 @@ func generateTopListTable(urls []string) *Table {
 				if isImxTable {
 					item := make([]any, 0, 12)
 					item = append(item, row.Name, *row.Score)
-					item = append(item, ToAnySlice(row.ImxScores)...)
+					item = append(item, utils.ToAnySlice(row.ImxScores)...)
 					item = append(item, row.Age, "Find out", lsc, row.Team, row.Url, bdayData)
 					items = append(items, item)
 				} else {
-					items = append(items, []any{row.Name, model.FormatSwimTime(*row.Time), row.Date.Format("1/02/06"),
+					items = append(items, []any{row.Name, utils.FormatSwimTime(*row.Time), row.Date.Format("1/02/06"),
 						row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
 				}
 
@@ -353,7 +363,7 @@ func generateTopListTable(urls []string) *Table {
 				items[i][1].(int) == items[j][1].(int) && items[i][7].(int) > items[j][7].(int)
 		})
 	} else {
-		time := func(v any) int { return model.ParseSwimTime(fmt.Sprint(v)) }
+		time := func(v any) int { return utils.ParseSwimTime(fmt.Sprint(v)) }
 		sort.Slice(items, func(i, j int) bool {
 			return time(items[i][1]) < time(items[j][1]) ||
 				time(items[i][1]) == time(items[j][1]) && items[i][3].(int) < items[j][3].(int)
@@ -401,13 +411,13 @@ func generateSearchTable(name string, items [][]string) *Table {
 	filterdItems := make([][]any, 0, len(items))
 	for _, row := range items {
 		if _, ok := exist[row[4]]; !ok || strings.EqualFold(row[0], name) {
-			filterdItems = append(filterdItems, ToAnySlice(row))
+			filterdItems = append(filterdItems, utils.ToAnySlice(row))
 		}
 	}
 
 	if len(filterdItems) == 0 {
 		for _, row := range items {
-			filterdItems = append(filterdItems, ToAnySlice(row))
+			filterdItems = append(filterdItems, utils.ToAnySlice(row))
 		}
 	}
 
@@ -482,12 +492,4 @@ func createErrorTable(text string) *Table {
 		Value:  []int{0},
 		Items:  [][]any{{text}},
 	}
-}
-
-func ToAnySlice[K any](input []K) []any {
-	result := make([]any, 0, len(input))
-	for _, v := range input {
-		result = append(result, v)
-	}
-	return result
 }

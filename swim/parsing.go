@@ -40,7 +40,7 @@ func extractSiwmmerInfoFromPage(sid string, page string) {
 	lscName := regex.MatchOne(page, `LSC</th>[^>]*>([^<]+)</td>`, 1)
 	lscId := regex.MatchOne(page, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
-	model.AddSwimmer(lscId, lscName, sid, name, gender, team, model.ParseInt(age))
+	model.AddSwimmer(lscId, lscName, sid, name, gender, team, utils.ParseInt(age))
 }
 
 func extractEventsAndRanksFromPages(sid, page string) {
@@ -104,12 +104,12 @@ func extractEventDataFromPage(sid, body string) {
 			}
 			powerPoint := 0
 			if len(row[4]) > 0 {
-				powerPoint = model.ParseInt(row[4])
+				powerPoint = utils.ParseInt(row[4])
 			}
 			dataEvent := &model.Event{
 				Date:       date,
-				Age:        model.ParseInt(row[1]),
-				Time:       model.ParseSwimTime(row[2]),
+				Age:        utils.ParseInt(row[1]),
+				Time:       utils.ParseSwimTime(row[2]),
 				Standard:   row[3],
 				PowerPoint: powerPoint,
 				Team:       row[5],
@@ -146,7 +146,7 @@ func getRankDataFromPage(url, page string) []model.Rankings {
 			Url:    url,
 			Course: course,
 			Stroke: parts[2],
-			Length: model.ParseInt(parts[0]),
+			Length: utils.ParseInt(parts[0]),
 			Ranks:  make([]model.Ranking, 0, 6),
 		}
 		for j := 4; j < len(r); j++ {
@@ -264,15 +264,15 @@ func extractTopListFromPage(url, page string) []string {
 			Sid:  row[sidIndex],
 			Url:  row[urlIndex],
 			Name: row[nameIndex],
-			Age:  model.ParseInt(row[ageIndex]),
+			Age:  utils.ParseInt(row[ageIndex]),
 			Team: row[teamIndex],
 		}
 		if scoreIndex > -1 {
-			item.Score = intToPointer(model.ParseInt(row[scoreIndex]))
+			item.Score = intToPointer(utils.ParseInt(row[scoreIndex]))
 			item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
 		} else {
 			date, _ := time.Parse("1/02/06", row[dateIndex])
-			item.Time = intToPointer(model.ParseSwimTime(row[timeIndex]))
+			item.Time = intToPointer(utils.ParseSwimTime(row[timeIndex]))
 			item.Date = &date
 			item.Meet = row[meetIndex]
 		}
@@ -355,7 +355,7 @@ func convertToIntSlice(texts []string) []int {
 		if len(t) == 0 {
 			result = append(result, 0)
 		} else {
-			result = append(result, model.ParseInt(t))
+			result = append(result, utils.ParseInt(t))
 		}
 	}
 	return result

@@ -6,9 +6,7 @@ import (
 )
 
 func TestColor(t *testing.T) {
-	t.Parallel()
-
-	for i := 0; i < 256; i++ {
+	for i := 0; i < 110; i++ {
 		if i%10 == 0 {
 			fmt.Println()
 		}

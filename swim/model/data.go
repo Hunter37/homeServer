@@ -41,7 +41,7 @@ func (e *Event) MarshalJSON() ([]byte, error) {
 		*EventWrapper
 	}{
 		Date:         e.Date.Format("2006/01/02"),
-		Time:         FormatSwimTime(e.Time),
+		Time:         utils.FormatSwimTime(e.Time),
 		EventWrapper: (*EventWrapper)(e),
 	})
 }
@@ -65,7 +65,7 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	e.Time = ParseSwimTime(aux.Time)
+	e.Time = utils.ParseSwimTime(aux.Time)
 
 	return nil
 }
@@ -504,7 +504,7 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 					d = -d
 				}
 				d = d/6000*10000 + d%6000
-				return fmt.Sprint(sign, FormatSwimTime(d))
+				return fmt.Sprint(sign, utils.FormatSwimTime(d))
 			}
 		} else if fast == nil || fast.Time > e.Time && e.Date != event.Date {
 			fast = e

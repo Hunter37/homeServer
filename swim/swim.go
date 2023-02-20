@@ -44,7 +44,7 @@ func birthday(url string) (time.Time, time.Time) {
 	})
 
 	if needDownload {
-		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+		logDownloadUrl(url)
 		var err error
 		sid, err = extractSwimmerAllData(url)
 		if err != nil {
@@ -59,6 +59,10 @@ func birthday(url string) (time.Time, time.Time) {
 		left, right = swimmer.GetBirthday()
 	})
 	return left, right
+}
+
+func logDownloadUrl(url string) {
+	utils.Log(fmt.Sprintf("%s \033[94m%s\033[0m\n", utils.GetLogTime(), url))
 }
 
 func search(text string) *Table {
@@ -122,7 +126,7 @@ func getInfo(url string) *Table {
 	}
 
 	if needDownload {
-		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+		logDownloadUrl(url)
 
 		var err error
 		sid, err = extractSwimmerAllData(url)
@@ -166,7 +170,7 @@ func getRanks(text string) *Table {
 	}
 
 	for _, url := range needDownload {
-		utils.Log(fmt.Sprintf("%s \033[34m%s\033[0m\n", utils.GetLogTime(), url))
+		logDownloadUrl(url)
 	}
 	extractTopListsFromPages(needDownload)
 
