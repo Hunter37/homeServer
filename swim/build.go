@@ -13,8 +13,8 @@ import (
 )
 
 func generateRankTable(swimmer *model.Swimmer, url string) *Table {
-	header := make([]string, 0, 12)
-	header = append(header, "Course", "Stroke", "Dist", "Time", "Date", "Count")
+	header := make([]string, 0, 18)
+	header = append(header, "Course", "Stroke", "Dist", "Time", "Date")
 	var longest *[]model.Ranking
 	for _, ranks := range swimmer.Rankings {
 		if longest == nil || len(*longest) < len(ranks.Ranks) {
@@ -24,14 +24,16 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	for _, rank := range *longest {
 		header = append(header, rank.Level)
 	}
+	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
 
 	items := make([][]any, 0, len(swimmer.Rankings))
 	for _, ranks := range swimmer.Rankings {
 		event := swimmer.GetBestEvent(ranks.Course, ranks.Stroke, ranks.Length)
-		item := make([]any, 0, 12)
+		item := make([]any, 0, 18)
 		item = append(item, ranks.Course, ranks.Stroke, ranks.Length,
-			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"),
-			len(swimmer.GetEvents(ranks.Course, ranks.Stroke, ranks.Length)))
+			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"))
+
+		// add ranks
 		for i := 0; i < len(*longest); i++ {
 			if i < len(ranks.Ranks) {
 				item = append(item, ranks.Ranks[i].Rank)
@@ -39,6 +41,25 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 				item = append(item, "")
 			}
 		}
+
+		// add count
+		item = append(item, len(swimmer.GetEvents(ranks.Course, ranks.Stroke, ranks.Length)))
+
+		// add motivational standards
+		stds := model.GetStandards(swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
+		if len(stds) == 0 {
+			item = append(item, "", "", "", "", "", "")
+		} else {
+			item = append(item, utils.Convert(stds, func(t int) any {
+				class := "r"
+				if event.Time <= t {
+					class = "g"
+				}
+				return fmt.Sprintf(`<td class="%s">%s</td>`,
+					class, utils.FormatSwimTime(t))
+			})...)
+		}
+
 		// add trClass and first url
 		item = append(item, fmt.Sprintf("d%d %s", ranks.Length, ranks.Stroke), ranks.Url)
 		for i := 0; i < len(*longest); i++ {
@@ -61,9 +82,9 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		Header:  header,
 		Items:   items,
 		Value:   buildSequenceIntSlice(len(header)),
-		Link:    []int{-1, -1, headerLen + 1, -1, -1, -1, headerLen + 2, headerLen + 3, headerLen + 4, headerLen + 5, headerLen + 6, headerLen + 7},
+		Link:    []int{-1, -1, headerLen + 1, -1, -1, headerLen + 2, headerLen + 3, headerLen + 4, headerLen + 5, headerLen + 6, headerLen + 7},
 		TrClass: &headerLen,
-		Action:  []string{"", "", ActionHref, "", "", "", ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch},
+		Action:  []string{"", "", ActionHref, "", "", ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch, ActionSearch},
 		Additions: []*Element{
 			{Text: swimmer.Name, Link: url},
 			{Text: swimmer.Gender},
@@ -231,20 +252,21 @@ func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 				stroke := parts[1]
 				length := utils.ParseInt(parts[0])
 				delta := swimmer.GetDelta(course, stroke, length, event)
-				class := "dp"
+				class := ""
 				if strings.Contains(delta, "+") {
 					class = "ad"
+				} else if strings.Contains(delta, "-") {
+					class = "dp"
 				}
 
 				std := model.GetStandard(swimmer.Gender, event.Age, course, stroke, length, event.Time)
 				if length > 25 && std != event.Standard {
-					std = model.GetStandard(swimmer.Gender, event.Age, course, stroke, length, event.Time)
-
 					utils.LogError(fmt.Errorf("bad standard time: %v %v %v %v %v %v %v",
 						swimmer.Name, swimmer.Gender, event.Age, course, stroke, length, event.Time))
+					//std = model.GetStandard(swimmer.Gender, event.Age, course, stroke, length, event.Time)
 				}
-				row = append(row, fmt.Sprintf(`<td class="ct d%s"><div>%s</div><div class="std">%s</div><div class="dd %s">%s</div></td>`,
-					strings.ToLower(ls), utils.FormatSwimTime(event.Time), std, class, delta))
+				row = append(row, fmt.Sprintf(`<td class="ct d%s"><div class="%s">%s</div><div class="std">%s</div><div class="dd %s">%s</div></td>`,
+					strings.ToLower(ls), class, utils.FormatSwimTime(event.Time), std, class, delta))
 				meet = event.Meet
 				team = event.Team
 				row[0] = event.Age

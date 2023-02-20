@@ -23,25 +23,28 @@ var (
 	}
 )
 
-func init() {
-	standards = getMotivationalTimes("2021-2024AgeGroupMotivationTimes.txt")
-}
+func GetStandards(gender string, age int, course, stroke string, length int) []int {
+	if len(standards) == 0 {
+		standards = getMotivationalTimes("2021-2024AgeGroupMotivationTimes.txt")
+	}
 
-func GetStandard(gender string, age int, course, stroke string, length, time int) string {
-	var std string
 	if age < 10 {
 		age = 10
 	} else if age%2 == 1 {
 		age += 1
 	}
 	key := fmt.Sprint(gender, age, course, stroke, length)
-	if times, ok := standards[key]; ok {
-		for i, t := range times {
-			if time <= t {
-				std = stdmap[i]
-			} else {
-				break
-			}
+	return standards[key]
+}
+
+func GetStandard(gender string, age int, course, stroke string, length, time int) string {
+	var std string
+	times := GetStandards(gender, age, course, stroke, length)
+	for i, t := range times {
+		if time <= t {
+			std = stdmap[i]
+		} else {
+			break
 		}
 	}
 
@@ -92,7 +95,7 @@ func getMotivationalTimes(file string) map[string][]int {
 		length := parts[6]
 
 		convert := func(s []string) []int {
-			return utils.Convert[string, int](s, func(s string) int {
+			return utils.Convert(s, func(s string) int {
 				return utils.ParseSwimTime(s)
 			})
 		}

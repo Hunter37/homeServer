@@ -24,12 +24,16 @@ func SortedKeys[K Ordered, V any](m map[K]V, reverse ...bool) []K {
 	return keys
 }
 
-func ToAnySlice[K any](input []K) []any {
-	result := make([]any, 0, len(input))
-	for _, v := range input {
-		result = append(result, v)
+func Convert[K any, M any](s []K, c func(v K) M) []M {
+	result := make([]M, 0, len(s))
+	for _, v := range s {
+		result = append(result, c(v))
 	}
 	return result
+}
+
+func ToAnySlice[K any](input []K) []any {
+	return Convert(input, func(v K) any { return v })
 }
 
 func Reverse[K any](s []K) []K {
@@ -37,14 +41,6 @@ func Reverse[K any](s []K) []K {
 		s[i], s[j] = s[j], s[i]
 	}
 	return s
-}
-
-func Convert[K any, M any](s []K, c func(v K) M) []M {
-	result := make([]M, 0, len(s))
-	for _, v := range s {
-		result = append(result, c(v))
-	}
-	return result
 }
 
 func Insert[K any](list []K, index int, value K) []K {
