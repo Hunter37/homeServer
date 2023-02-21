@@ -24,3 +24,18 @@ func ParseInt(str string) int {
 	LogError(err)
 	return n
 }
+
+func CalculateSwimTimeDelta(a, b int) string {
+	a = a/10000*6000 + a%10000
+	b = b/10000*6000 + b%10000
+	d := a - b
+	sign := "+"
+	if d == 0 {
+		return "0"
+	} else if d < 0 {
+		sign = "-"
+		d = -d
+	}
+	d = d/6000*10000 + d%6000
+	return fmt.Sprint(sign, FormatSwimTime(d))
+}

@@ -21,8 +21,10 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			longest = &(ranks.Ranks)
 		}
 	}
-	for _, rank := range *longest {
-		header = append(header, rank.Level)
+	if longest != nil {
+		for _, rank := range *longest {
+			header = append(header, rank.Level)
+		}
 	}
 	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
 
@@ -55,8 +57,8 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 				if event.Time <= t {
 					class = "g"
 				}
-				return fmt.Sprintf(`<td class="%s">%s</td>`,
-					class, utils.FormatSwimTime(t))
+				return fmt.Sprintf(`<td class="%s">%s<div>%s</div></td>`,
+					class, utils.FormatSwimTime(t), utils.CalculateSwimTimeDelta(t, event.Time))
 			})...)
 		}
 

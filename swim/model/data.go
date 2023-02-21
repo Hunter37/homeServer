@@ -488,23 +488,11 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 	for i := len(events) - 1; i >= 0; i-- {
 		e := events[i]
 		if e == event {
+			etime := e.Time
 			if fast == nil {
 				return ""
 			} else {
-				a := e.Time
-				b := fast.Time
-				a = a/10000*6000 + a%10000
-				b = b/10000*6000 + b%10000
-				d := a - b
-				sign := "+"
-				if d == 0 {
-					return "0"
-				} else if d < 0 {
-					sign = "-"
-					d = -d
-				}
-				d = d/6000*10000 + d%6000
-				return fmt.Sprint(sign, utils.FormatSwimTime(d))
+				return utils.CalculateSwimTimeDelta(etime, fast.Time)
 			}
 		} else if fast == nil || fast.Time > e.Time && e.Date != event.Date {
 			fast = e

@@ -149,14 +149,16 @@ func getRankDataFromPage(url, page string) []model.Rankings {
 			Length: utils.ParseInt(parts[0]),
 			Ranks:  make([]model.Ranking, 0, 6),
 		}
+		index := 0
 		for j := 4; j < len(r); j++ {
 			if n, err := strconv.Atoi(r[j]); err == nil {
 				rank := model.Ranking{
 					Level: header[j],
 					Rank:  n,
-					Link:  links[i][j-4],
+					Link:  links[i][index],
 				}
 				ranks.Ranks = append(ranks.Ranks, rank)
+				index++
 			}
 		}
 
