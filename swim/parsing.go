@@ -273,7 +273,7 @@ func extractTopListFromPage(url, page string) []string {
 			item.Score = intToPointer(utils.ParseInt(row[scoreIndex]))
 			item.ImxScores = convertToIntSlice(row[scoreIndex-5 : scoreIndex])
 		} else {
-			date, _ := time.Parse("1/02/06", row[dateIndex])
+			date, _ := time.Parse("1/2/06", row[dateIndex])
 			item.Time = intToPointer(utils.ParseSwimTime(row[timeIndex]))
 			item.Date = &date
 			item.Meet = row[meetIndex]
