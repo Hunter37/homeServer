@@ -359,7 +359,6 @@ func AddEvent(sid, course, stroke string, length int, event *Event) {
 			"Freestyle":         Free,
 			"Backstroke":        Back,
 			"Breaststroke":      Breast,
-			"Breaststoke":       Breast, // workaround for the typo "Breaststoke"
 			"Butterfly":         Fly,
 			"Individual Medley": IM,
 		}
