@@ -32,6 +32,14 @@ func Convert[K any, M any](s []K, c func(v K) M) []M {
 	return result
 }
 
+func ConvertWithIndex[K any, M any](s []K, c func(i int, v K) M) []M {
+	result := make([]M, 0, len(s))
+	for i, v := range s {
+		result = append(result, c(i, v))
+	}
+	return result
+}
+
 func ToAnySlice[K any](input []K) []any {
 	return Convert(input, func(v K) any { return v })
 }

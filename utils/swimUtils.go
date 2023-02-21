@@ -39,3 +39,7 @@ func CalculateSwimTimeDelta(a, b int) string {
 	d = d/6000*10000 + d%6000
 	return fmt.Sprint(sign, FormatSwimTime(d))
 }
+
+func GetSwimTimeInCentiSecond(time int) int {
+	return time/10000*6000 + time%10000
+}
