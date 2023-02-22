@@ -208,7 +208,7 @@ func Save() {
 	if err != nil {
 		utils.LogError(err, "Main data save failed!")
 	} else {
-		utils.Log(utils.GetLogTime() + " Main data saved!")
+		utils.Log(utils.GetLogTime() + " Main data saved!\n")
 	}
 }
 

@@ -29,7 +29,7 @@ function log(str) {
     contentElem.innerHTML += '<div>' + str + '</div>';
 }
 
-let token = null
+let token = null;
 
 async function search() {
     if (!token) {
