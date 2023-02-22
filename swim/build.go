@@ -15,17 +15,17 @@ import (
 func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header := make([]string, 0, 18)
 	header = append(header, "Course", "Stroke", "Dist", "Time", "Date")
-	var longest *[]model.Ranking
+	longest := 0
+	var levelName []string
 	for _, ranks := range swimmer.Rankings {
-		if longest == nil || len(*longest) < len(ranks.Ranks) {
-			longest = &(ranks.Ranks)
+		if longest < len(ranks.Ranks) {
+			longest = len(ranks.Ranks)
+			levelName = utils.Convert(ranks.Ranks, func(r model.Ranking) string {
+				return r.Level
+			})
 		}
 	}
-	if longest != nil {
-		for _, rank := range *longest {
-			header = append(header, rank.Level)
-		}
-	}
+	header = append(header, levelName...)
 	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
 
 	items := make([][]any, 0, len(swimmer.Rankings))
@@ -36,7 +36,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"))
 
 		// add ranks
-		for i := 0; i < len(*longest); i++ {
+		for i := 0; i < longest; i++ {
 			if i < len(ranks.Ranks) {
 				item = append(item, ranks.Ranks[i].Rank)
 			} else {
@@ -54,30 +54,30 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		} else {
 			pre := append([]int{2*stds[0] - stds[1]}, stds...)
 			item = append(item, utils.ConvertWithIndex(stds, func(i, t int) any {
-				percent := 100
+				percent := 0
 				if event.Time <= pre[i] {
 					if event.Time > t {
 						et := utils.GetSwimTimeInCentiSecond(event.Time)
 						ct := utils.GetSwimTimeInCentiSecond(t)
 						pt := utils.GetSwimTimeInCentiSecond(pre[i])
-						percent = int(100.0 * float32(et-ct) / float32(pt-ct))
-						if percent > 95 {
-							percent = 95
-						} else if percent < 10 {
-							percent = 10
+						percent = int(100.0 * float32(pt-et) / float32(pt-ct))
+						if percent > 90 {
+							percent = 90
+						} else if percent < 5 {
+							percent = 5
 						}
 					} else {
-						percent = 0
+						percent = 100
 					}
 				}
-				return fmt.Sprintf(`<td class="r"><div class="g" style="right:%d%%;"></div><div>%s</div><div class="d">%s</div></td>`,
+				return fmt.Sprintf(`<td class="g"><div class="r" style="left:%d%%;"></div><div>%s</div><div class="d">%s</div></td>`,
 					percent, utils.FormatSwimTime(t), utils.CalculateSwimTimeDelta(t, event.Time))
 			})...)
 		}
 
 		// add trClass and first url
 		item = append(item, fmt.Sprintf("d%d %s", ranks.Length, ranks.Stroke), ranks.Url)
-		for i := 0; i < len(*longest); i++ {
+		for i := 0; i < longest; i++ {
 			if i < len(ranks.Ranks) {
 				item = append(item, ranks.Ranks[i].Link)
 			} else {

@@ -1,4 +1,5 @@
 60
+
 80,https://www.swimmingrank.com/imow/imow/scy_boys_11_12_50FR_current.html
 50,https://www.swimmingrank.com/imow/imow/scy_boys_11_12_100FR_current.html
 80,https://www.swimmingrank.com/imow/imow/scy_boys_11_12_200FR_current.html
@@ -22,11 +23,27 @@
 70,https://www.swimmingrank.com/imow/imow/scy_boys_11_12_200IM_current.html
 30,https://www.swimmingrank.com/imow/imow/scy_boys_11_12_400IM_current.html
 
+
+// pn boy
 50,https://www.swimmingrank.com/imow/pn/scy_boys_5_10_imx.html
 55,https://www.swimmingrank.com/imow/pn/scy_boys_5_10_imr.html
+20,https://www.swimmingrank.com/imow/pn/scy_boys_11_12_imx.html
+10,https://www.swimmingrank.com/imow/pn/scy_boys_11_12_imr.html
 
-// pn girl 10&U 11-12
+// pn girl
 30,https://www.swimmingrank.com/imow/pn/scy_girls_5_10_imx.html
 30,https://www.swimmingrank.com/imow/pn/scy_girls_5_10_imr.html
 30,https://www.swimmingrank.com/imow/pn/scy_girls_11_12_imx.html
 30,https://www.swimmingrank.com/imow/pn/scy_girls_11_12_imr.html
+
+// us boy IMX, IMR
+30,https://www.swimmingrank.com/zone/usa/scy_boys_11_12_imr.html
+30,https://www.swimmingrank.com/zone/usa/scy_boys_11_12_imx.html
+30,https://www.swimmingrank.com/zone/usa/scy_boys_13_14_imr.html
+30,https://www.swimmingrank.com/zone/usa/scy_boys_13_14_imx.html
+
+// Jayden
+https://www.swimmingrank.com/imow/strokes/strokes_pn/JEAYYBHBA_meets.html
+
+// Alexander
+https://www.swimmingrank.com/imow/strokes/strokes_pn/AFLFEBHEA_meets.html
