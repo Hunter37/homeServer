@@ -62,7 +62,6 @@
 
 <script>
 
-    const modeElems = document.getElementsByName('mode');
     async function searchMode(elem) {
         if (!elem || elem.checked) {
             let response = await fetch('mode' + (elem && elem.checked ? '?mode=' + elem.value : ''));
