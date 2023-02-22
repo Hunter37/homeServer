@@ -90,7 +90,9 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 func modeHandler(writer http.ResponseWriter, request *http.Request) {
 	val := request.URL.Query().Get("mode")
 	if len(val) > 0 {
-		model.GetSettings().SearchMode = model.ModeType(val)
+		settings := model.GetSettings()
+		settings.SearchMode = model.ModeType(val)
+		model.SetSettings(settings)
 	}
 
 	data := map[string]any{
@@ -104,15 +106,10 @@ func modeHandler(writer http.ResponseWriter, request *http.Request) {
 
 // swimmerHandler handle the swimmer view and update json request in settings page
 func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
-	id := req.URL.Query().Get("id")
-	var sid string
-	model.Find(id, true, func(swimmer *model.Swimmer, _ string) {
-		if swimmer != nil {
-			sid = swimmer.ID
-		}
-	})
-
-	if len(sid) == 0 {
+	sid := req.URL.Query().Get("id")
+	var body []byte
+	swimmer, _ := model.Find(sid)
+	if swimmer == nil {
 		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
 		return
 	}
@@ -144,16 +141,11 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		model.Find(sid, true, func(swimmer *model.Swimmer, _ string) {
-			*swimmer = s
-		})
+		model.UpdateSwimmer(sid, &s)
 		model.Save()
 	}
 
-	var body []byte
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		body, _ = json.Marshal(swimmer)
-	})
+	body, _ = json.Marshal(swimmer)
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)

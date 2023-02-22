@@ -43,3 +43,11 @@ func CalculateSwimTimeDelta(a, b int) string {
 func GetSwimTimeInCentiSecond(time int) int {
 	return time/10000*6000 + time%10000
 }
+
+func GetColumn(list [][]string, col int) []string {
+	result := make([]string, 0, len(list))
+	for _, item := range list {
+		result = append(result, item[col])
+	}
+	return result
+}

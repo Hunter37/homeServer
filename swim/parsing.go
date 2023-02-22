@@ -47,7 +47,7 @@ func extractEventsAndRanksFromPages(sid, page string) {
 	urls := getAllEventLinks(page)
 	pages := BatchGet(urls)
 
-	scy := make([]model.Rankings, 0, 22)
+	scy := make([]model.Rankings, 0, 22+18)
 	lcm := make([]model.Rankings, 0, 18)
 	for i, page := range pages {
 		url := urls[i]
@@ -66,9 +66,8 @@ func extractEventsAndRanksFromPages(sid, page string) {
 		}
 	}
 
-	model.Find(sid, true, func(swimmer *model.Swimmer, _ string) {
-		swimmer.Rankings = append(scy, lcm...)
-	})
+	scy = append(scy, lcm...)
+	model.UpdateRankings(sid, &scy)
 }
 
 func getAllEventLinks(body string) []string {

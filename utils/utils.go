@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -8,12 +9,24 @@ import (
 	"time"
 )
 
-func GetColumn(list [][]string, col int) []string {
-	result := make([]string, 0, len(list))
-	for _, item := range list {
-		result = append(result, item[col])
+func Clone[T any](val T) T {
+	if val2, err := deepClone(val); err != nil {
+		LogError(err, "Deep clone failed", val)
+		return val
+	} else {
+		return val2
 	}
-	return result
+}
+
+func deepClone[T any](val T) (T, error) {
+	data, err := json.Marshal(val)
+	if err != nil {
+		return val, err
+	}
+
+	var result T
+	err = json.Unmarshal(data, &result)
+	return result, err
 }
 
 func LogError(err error, a ...any) {

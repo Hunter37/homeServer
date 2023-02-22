@@ -37,13 +37,10 @@ func Start() func() {
 }
 
 func birthday(url string) (time.Time, time.Time) {
-	needDownload := false
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
-	})
+	swimmer, _ := model.Find(sid)
 
-	if needDownload {
+	if swimmer == nil {
 		logDownloadUrl(url)
 		var err error
 		sid, err = extractSwimmerAllData(url)
@@ -51,13 +48,12 @@ func birthday(url string) (time.Time, time.Time) {
 			utils.LogError(err)
 			return time.Now(), time.Now()
 		}
+		swimmer, _ = model.Find(sid)
 	}
 
 	var left time.Time
 	var right time.Time
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		left, right = swimmer.GetBirthday()
-	})
+	left, right = swimmer.GetBirthday()
 	return left, right
 }
 
@@ -103,6 +99,7 @@ func getSearchResult(name string) *Table {
 
 func getInfo(url string) *Table {
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
+	var swimmer *model.Swimmer
 	mode := model.GetSettings().SearchMode
 
 	var errStr string
@@ -110,15 +107,14 @@ func getInfo(url string) *Table {
 	if mode == model.ONLINE {
 		needDownload = true
 	} else {
-		model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-			if mode == model.CACHE {
-				needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
-			} else { // model.OFFLINE
-				if swimmer == nil {
-					errStr = "Cannot find the swimmer in offline mode!"
-				}
+		swimmer, _ = model.Find(sid)
+		if mode == model.CACHE {
+			needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
+		} else { // model.OFFLINE
+			if swimmer == nil {
+				errStr = "Cannot find the swimmer in offline mode!"
 			}
-		})
+		}
 	}
 
 	if len(errStr) > 0 {
@@ -133,21 +129,20 @@ func getInfo(url string) *Table {
 		if err != nil {
 			return createErrorTable(err.Error())
 		}
+
+		swimmer, _ = model.Find(sid)
 	}
 
-	var mainTable *Table
-	model.Find(sid, false, func(swimmer *model.Swimmer, _ string) {
-		mainTable = generateRankTable(swimmer, url)
-		lastTable := mainTable
+	mainTable := generateRankTable(swimmer, url)
+	lastTable := mainTable
 
-		lastTable.Next = generateAgeBestTable(swimmer)
-		lastTable = lastTable.Next
+	lastTable.Next = generateAgeBestTable(swimmer)
+	lastTable = lastTable.Next
 
-		lastTable.Next = generateEventsTable(swimmer, model.SCY)
-		lastTable = lastTable.Next
+	lastTable.Next = generateEventsTable(swimmer, model.SCY)
+	lastTable = lastTable.Next
 
-		lastTable.Next = generateEventsTable(swimmer, model.LCM)
-	})
+	lastTable.Next = generateEventsTable(swimmer, model.LCM)
 
 	return mainTable
 }
@@ -160,13 +155,12 @@ func getRanks(text string) *Table {
 	if mode == model.ONLINE {
 		needDownload = urls
 	} else if mode == model.CACHE {
-		model.FindTopLists(urls, false, func(topList []*model.TopList) {
-			for i, list := range topList {
-				if list == nil || list.Update.Add(timeout).Before(time.Now()) {
-					needDownload = append(needDownload, urls[i])
-				}
+		topList := model.FindTopLists(urls)
+		for i, list := range topList {
+			if list == nil || list.Update.Add(timeout).Before(time.Now()) {
+				needDownload = append(needDownload, urls[i])
 			}
-		})
+		}
 	}
 
 	for _, url := range needDownload {
@@ -175,13 +169,12 @@ func getRanks(text string) *Table {
 	extractTopListsFromPages(needDownload)
 
 	cached := make([]string, 0, len(urls))
-	model.FindTopLists(urls, false, func(topList []*model.TopList) {
-		for i, list := range topList {
-			if list != nil {
-				cached = append(cached, urls[i])
-			}
+	topList := model.FindTopLists(urls)
+	for i, list := range topList {
+		if list != nil {
+			cached = append(cached, urls[i])
 		}
-	})
+	}
 
 	if len(cached) == 0 {
 		return createErrorTable("Cannot find the ranking info in offline mode.")

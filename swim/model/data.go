@@ -197,8 +197,8 @@ var mainData = Data{}
 var mutex = sync.RWMutex{}
 
 func Save() {
-	mutex.Lock()
-	defer mutex.Unlock()
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	str, err := json.Marshal(mainData)
 	if err == nil {
@@ -239,14 +239,10 @@ func Load() error {
 	}
 }
 
-func FindTopLists(urls []string, write bool, call func(topList []*TopList)) {
-	if write {
-		mutex.Lock()
-		defer mutex.Unlock()
-	} else {
-		mutex.RLock()
-		defer mutex.RUnlock()
-	}
+// FindTopLists return the slice of toplist
+func FindTopLists(urls []string) []*TopList {
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	lists := make([]*TopList, len(urls))
 	for i, url := range urls {
@@ -255,10 +251,12 @@ func FindTopLists(urls []string, write bool, call func(topList []*TopList)) {
 		}
 	}
 
-	call(lists)
+	return utils.Clone(lists)
 }
 
+// AddTopList append toplist with menu links to main data
 func AddTopList(url string, toplist *TopList) {
+	toplist = utils.Clone(toplist)
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -269,14 +267,10 @@ func AddTopList(url string, toplist *TopList) {
 	mainData.TopLists[url] = toplist
 }
 
-func Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
-	if write {
-		mutex.Lock()
-		defer mutex.Unlock()
-	} else {
-		mutex.RLock()
-		defer mutex.RUnlock()
-	}
+// Find return the swimmer object and the url string
+func Find(sid string) (*Swimmer, string) {
+	mutex.RLock()
+	defer mutex.RUnlock()
 
 	var swimmer *Swimmer
 	var url string
@@ -289,9 +283,10 @@ func Find(sid string, write bool, call func(swimmer *Swimmer, url string)) {
 		}
 	}
 
-	call(swimmer, url)
+	return utils.Clone(swimmer), url
 }
 
+// FindName search the swimmer's alias and name
 func FindName(name string) []string {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -319,7 +314,8 @@ func FindName(name string) []string {
 	return result
 }
 
-func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimmer {
+// AddSwimmer create the swimmer basic info
+func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -344,56 +340,91 @@ func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) *Swimme
 	swimmer.Team = team
 	swimmer.Age = age
 	swimmer.Update = time.Now()
+}
 
-	return swimmer
+func UpdateSwimmer(sid string, swimmer *Swimmer) {
+	swimmer = utils.Clone(swimmer)
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	for _, lsc := range mainData.Swimmers {
+		if _, ok := lsc.Swimmers[sid]; ok {
+			lsc.Swimmers[sid] = swimmer
+			break
+		}
+	}
+}
+
+func UpdateRankings(sid string, rankings *[]Rankings) {
+	rankings = utils.Clone(rankings)
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	swimmer := findSwimmer(sid)
+	swimmer.Rankings = *rankings
 }
 
 func AddEvent(sid, course, stroke string, length int, event *Event) {
-	Find(sid, true, func(swimmer *Swimmer, _ string) {
-		strokes := swimmer.SCY
-		if strings.EqualFold(LCM, course) {
-			strokes = swimmer.LCM
-		}
+	event = utils.Clone(event)
+	mutex.Lock()
+	defer mutex.Unlock()
 
-		strokeMapping := map[string]string{
-			"Freestyle":         Free,
-			"Backstroke":        Back,
-			"Breaststroke":      Breast,
-			"Butterfly":         Fly,
-			"Individual Medley": IM,
-		}
-		if shorter, ok := strokeMapping[stroke]; ok {
-			stroke = shorter
-		} else {
-			utils.LogError(fmt.Errorf("invalid stroke: [%s]", stroke))
-		}
+	swimmer := findSwimmer(sid)
 
-		lengths, ok := strokes[stroke]
-		if !ok {
-			lengths = &Length{}
-			strokes[stroke] = lengths
-		}
+	strokes := swimmer.SCY
+	if strings.EqualFold(LCM, course) {
+		strokes = swimmer.LCM
+	}
 
-		events, ok := (*lengths)[length]
-		if !ok {
-			events = []*Event{}
-		} else {
-			for _, ent := range events {
-				if ent.Date == event.Date && ent.Time == event.Time {
-					return
-				}
+	strokeMapping := map[string]string{
+		"Freestyle":         Free,
+		"Backstroke":        Back,
+		"Breaststroke":      Breast,
+		"Butterfly":         Fly,
+		"Individual Medley": IM,
+	}
+	if shorter, ok := strokeMapping[stroke]; ok {
+		stroke = shorter
+	} else {
+		utils.LogError(fmt.Errorf("invalid stroke: [%s]", stroke))
+	}
+
+	lengths, ok := strokes[stroke]
+	if !ok {
+		lengths = &Length{}
+		strokes[stroke] = lengths
+	}
+
+	events, ok := (*lengths)[length]
+	if !ok {
+		events = []*Event{}
+	} else {
+		for _, ent := range events {
+			if ent.Date == event.Date && ent.Time == event.Time {
+				return
 			}
 		}
+	}
 
-		events = append(events, event)
+	events = append(events, event)
 
-		sort.Slice(events, func(i, j int) bool {
-			return events[i].Date.After(events[j].Date) ||
-				events[i].Date == events[j].Date && events[i].Time < events[j].Time
-		})
-
-		(*lengths)[length] = events
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Date.After(events[j].Date) ||
+			events[i].Date == events[j].Date && events[i].Time < events[j].Time
 	})
+
+	(*lengths)[length] = events
+}
+
+func findSwimmer(sid string) *Swimmer {
+	var swimmer *Swimmer
+	for _, lsc := range mainData.Swimmers {
+		if s, ok := lsc.Swimmers[sid]; ok {
+			swimmer = s
+			break
+		}
+	}
+	return swimmer
 }
 
 func (s *Swimmer) ForEachEvent(call func(course, stroke string, length int, event *Event)) {
@@ -502,7 +533,16 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 }
 
 func GetSettings() *Settings {
-	return &mainData.Settings
+	mutex.RLock()
+	defer mutex.RUnlock()
+	return utils.Clone(&mainData.Settings)
+}
+
+func SetSettings(settings *Settings) {
+	settings = utils.Clone(settings)
+	mutex.Lock()
+	defer mutex.Unlock()
+	mainData.Settings = *settings
 }
 
 func filterStrokeKeys(strokes Stroke) []string {

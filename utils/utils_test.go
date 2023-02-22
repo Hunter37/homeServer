@@ -30,3 +30,50 @@ func TestChannel(t *testing.T) {
 		fmt.Println(enqueue(i))
 	}
 }
+
+type TestStruct struct {
+	IntVal    int
+	IntPtr    *int
+	StrVal    string
+	StrPtr    *string
+	SlcVal    []int
+	SlcPtr    *[]*int
+	Recursive *TestStruct
+}
+
+func TestDeepClone(t *testing.T) {
+	int2 := 2
+	str4 := "4"
+	int6 := 6
+	test1 := &TestStruct{
+		IntVal: 1,
+		IntPtr: &int2,
+		StrVal: "3",
+		StrPtr: &str4,
+		SlcVal: []int{5},
+		SlcPtr: &[]*int{&int6},
+		Recursive: &TestStruct{
+			IntVal: 7,
+		},
+	}
+
+	test2, err := deepClone(test1)
+	NoError(t, err)
+	Equal(t, test1, test2)
+
+	test3, err := deepClone(test1)
+	NoError(t, err)
+	Equal(t, test1, test3)
+
+	test1.IntVal += 100
+	int2 += 100
+	test1.StrVal += "100"
+	str4 += "100"
+	test1.SlcVal[0] += 100
+	int6 += 100
+	test1.Recursive.IntVal += 100
+
+	NotEqual(t, test1, test2)
+	NotEqual(t, test1, test3)
+	Equal(t, test2, test3)
+}

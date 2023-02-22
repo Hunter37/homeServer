@@ -58,8 +58,6 @@ func (job *EventJob) Do() {
 				sortMap[ranks[j].Course]+sortMap[ranks[j].Stroke]+ranks[j].Length
 		})
 
-		model.Find(job.sid, true, func(swimmer *model.Swimmer, _ string) {
-			swimmer.Rankings = ranks
-		})
+		model.UpdateRankings(job.sid, &ranks)
 	}
 }
