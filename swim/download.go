@@ -13,8 +13,6 @@ import (
 	"homeServer/utils"
 )
 
-const PoolSize = 5
-
 type DownloadJob struct {
 	lock    *sync.Mutex
 	visited *map[string]bool
@@ -64,8 +62,8 @@ func createInt32() *int32 {
 	return &i
 }
 
-func StartBackgroundDownloadPool() func() {
-	pool := threadpool.NewWorkerPool(PoolSize, PoolSize*1000)
+func StartBackgroundDownloadPool(maxWorkers int) func() {
+	pool := threadpool.NewWorkerPool(maxWorkers, maxWorkers*2)
 	pool.Start()
 
 	quit := make(chan bool)

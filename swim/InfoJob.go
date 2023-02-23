@@ -4,7 +4,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"homeServer/http"
 	"homeServer/regex"
 	"homeServer/swim/model"
 	"homeServer/utils"
@@ -20,7 +19,7 @@ func (job *InfoJob) Do() {
 
 	sid := regex.MatchOne(job.url, "/([^/]+)_meets.html", 1)
 
-	page, err := http.HttpGet(job.url)
+	page, err := httpPool.Get(job.url, false)
 	if err != nil {
 		utils.LogError(err, "Download swimmer info failed: "+job.url)
 		return

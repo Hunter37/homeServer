@@ -25,7 +25,7 @@ func HttpPost(url, body string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer CloseBody(resp)
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}
@@ -36,17 +36,17 @@ func HttpPost(url, body string) (string, error) {
 	return string(b), nil
 }
 
-func HttpGet(url string) (string, error) {
-	var body string
-	var err error
-	for i := 0; i < 3; i++ {
-		body, err = httpGet(url)
-		if err == nil {
-			break
-		}
-	}
-	return body, err
-}
+//func HttpGet(url string) (string, error) {
+//	var body string
+//	var err error
+//	for i := 0; i < 3; i++ {
+//		body, err = httpGet(url)
+//		if err == nil {
+//			break
+//		}
+//	}
+//	return body, err
+//}
 
 func Retry(do func() (*http.Response, error), times int, backoff time.Duration) (*http.Response, error) {
 	var resp *http.Response
@@ -72,7 +72,7 @@ func httpGet(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer CloseBody(resp)
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}
@@ -83,28 +83,28 @@ func httpGet(url string) (string, error) {
 	return string(b), nil
 }
 
-func BatchGet(urls []string) []string {
-	bodyChans := make([]chan string, 0, len(urls))
-	for _, url := range urls {
-		bodyChan := make(chan string)
-		bodyChans = append(bodyChans, bodyChan)
-
-		go func(url string, bodyChan chan<- string) {
-			b, err := HttpGet(url)
-			if err != nil {
-				utils.LogError(err)
-			}
-			bodyChan <- b
-		}(url, bodyChan)
-	}
-
-	result := make([]string, 0, len(urls))
-	for _, bodyChan := range bodyChans {
-		result = append(result, <-bodyChan)
-	}
-
-	return result
-}
+//func BatchGet(urls []string) []string {
+//	bodyChans := make([]chan string, 0, len(urls))
+//	for _, url := range urls {
+//		bodyChan := make(chan string)
+//		bodyChans = append(bodyChans, bodyChan)
+//
+//		go func(url string, bodyChan chan<- string) {
+//			b, err := HttpGet(url)
+//			if err != nil {
+//				utils.LogError(err)
+//			}
+//			bodyChan <- b
+//		}(url, bodyChan)
+//	}
+//
+//	result := make([]string, 0, len(urls))
+//	for _, bodyChan := range bodyChans {
+//		result = append(result, <-bodyChan)
+//	}
+//
+//	return result
+//}
 
 func CloseBody(resp *http.Response) {
 	if resp != nil && resp.Body != nil {

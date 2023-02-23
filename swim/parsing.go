@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	. "homeServer/http"
 	"homeServer/regex"
 	"homeServer/swim/model"
 	"homeServer/utils"
@@ -16,7 +15,7 @@ import (
 func extractSwimmerAllData(url string) (string, error) {
 	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
 
-	body, err := HttpGet(url)
+	body, err := httpPool.Get(url, true)
 	if err != nil {
 		utils.LogError(err)
 		return "", err
@@ -45,7 +44,7 @@ func extractSiwmmerInfoFromPage(sid string, page string) {
 
 func extractEventsAndRanksFromPages(sid, page string) {
 	urls := getAllEventLinks(page)
-	pages := BatchGet(urls)
+	pages := httpPool.BatchGet(urls, true)
 
 	scy := make([]model.Rankings, 0, 22+18)
 	lcm := make([]model.Rankings, 0, 18)
@@ -215,7 +214,7 @@ func getCellValues(cells []string, columns []int) []string {
 }
 
 func extractTopListsFromPages(urls []string) {
-	pages := BatchGet(urls)
+	pages := httpPool.BatchGet(urls, true)
 
 	for i, page := range pages {
 		extractTopListFromPage(urls[i], page)

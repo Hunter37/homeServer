@@ -1,15 +1,11 @@
 package http
 
 import (
-	"sync"
-
 	"homeServer/threadpool"
 )
 
 type HttpPool struct {
-	pool  *threadpool.Pool
-	queue []*httpJob
-	lock  sync.Mutex
+	pool *threadpool.Pool
 }
 
 type httpJob struct {
@@ -39,12 +35,11 @@ func (pool *HttpPool) Get(url string, highPriority bool) (string, error) {
 
 	if highPriority {
 		pool.pool.Submit(job)
-	} else if ok := pool.pool.Enqueue(job); !ok {
-		pool.enqueue(job)
+	} else {
+		pool.pool.Enqueue(job)
 	}
 
-	pool.waitDone(job)
-
+	<-job.Done
 	return job.RespBody, job.RespError
 }
 
@@ -58,8 +53,8 @@ func (pool *HttpPool) BatchGet(urls []string, highPriority bool) []string {
 
 		if highPriority {
 			pool.pool.Submit(job)
-		} else if ok := pool.pool.Enqueue(job); !ok {
-			pool.enqueue(job)
+		} else {
+			pool.pool.Enqueue(job)
 		}
 
 		jobs = append(jobs, job)
@@ -67,31 +62,11 @@ func (pool *HttpPool) BatchGet(urls []string, highPriority bool) []string {
 
 	result := make([]string, 0, len(urls))
 	for _, job := range jobs {
-		pool.waitDone(job)
+		<-job.Done
 		result = append(result, job.RespBody)
 	}
 
 	return result
-}
-
-func (pool *HttpPool) enqueue(job *httpJob) {
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
-	pool.queue = append(pool.queue, job)
-}
-
-func (pool *HttpPool) waitDone(job *httpJob) {
-	<-job.Done
-	pool.lock.Lock()
-	defer pool.lock.Unlock()
-
-	for len(pool.queue) > 0 {
-		if ok := pool.pool.Enqueue(pool.queue[0]); ok {
-			pool.queue = pool.queue[1:]
-		} else {
-			break
-		}
-	}
 }
 
 func (pool *HttpPool) Stop() {
@@ -100,9 +75,7 @@ func (pool *HttpPool) Stop() {
 
 func StartHttpPool(maxWorkers int) *HttpPool {
 	pool := &HttpPool{
-		pool:  threadpool.NewWorkerPool(maxWorkers, maxWorkers*2),
-		queue: make([]*httpJob, 0),
-		lock:  sync.Mutex{},
+		pool: threadpool.NewWorkerPool(maxWorkers, maxWorkers*2),
 	}
 
 	pool.pool.Start()

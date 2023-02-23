@@ -3,7 +3,6 @@ package swim
 import (
 	"sync/atomic"
 
-	"homeServer/http"
 	"homeServer/utils"
 )
 
@@ -16,7 +15,7 @@ func (job *TopListJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
 	atomic.AddInt32(job.listJob, 1)
 
-	page, err := http.HttpGet(job.url)
+	page, err := httpPool.Get(job.url, false)
 	if err != nil {
 		utils.LogError(err, "Download top list failed: "+job.url)
 		return

@@ -5,7 +5,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"homeServer/http"
 	"homeServer/swim/model"
 	"homeServer/utils"
 )
@@ -32,7 +31,7 @@ func (job *EventJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
 	atomic.AddInt32(job.eventJob, 1)
 
-	page, err := http.HttpGet(job.url)
+	page, err := httpPool.Get(job.url, false)
 	if err != nil {
 		utils.LogError(err, "Download swimmer stroke page failed: "+job.url)
 	} else {

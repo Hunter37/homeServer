@@ -13,6 +13,9 @@ type Pool struct {
 	dispatcherStopped sync.WaitGroup
 	workersStopped    *sync.WaitGroup
 	quit              chan bool
+
+	extraQueueLock sync.Mutex
+	extraQueue     []Work
 }
 
 func NewWorkerPool(maxWorkers int, jobQueueCapacity int) *Pool {
@@ -38,6 +41,9 @@ func NewWorkerPool(maxWorkers int, jobQueueCapacity int) *Pool {
 		dispatcherStopped: sync.WaitGroup{},
 		workersStopped:    &workersStopped,
 		quit:              make(chan bool),
+
+		extraQueueLock: sync.Mutex{},
+		extraQueue:     make([]Work, 0),
 	}
 }
 
@@ -64,6 +70,22 @@ func (q *Pool) dispatch() {
 			workerXChannel := <-q.readyPool //free worker x founded
 			workerXChannel <- job           // here is your job worker x
 		case job := <-q.internalQueue:
+
+			func() {
+				q.extraQueueLock.Lock()
+				defer q.extraQueueLock.Unlock()
+
+				canAdd := true
+				for len(q.extraQueue) > 0 && canAdd {
+					select {
+					case q.internalQueue <- q.extraQueue[0]:
+						q.extraQueue = q.extraQueue[1:]
+					default:
+						canAdd = false
+					}
+				}
+			}()
+
 			workerXChannel := <-q.readyPool //free worker x founded
 			workerXChannel <- job           // here is your job worker x
 		case <-q.quit:
@@ -92,6 +114,13 @@ func (q *Pool) Enqueue(job Work) bool {
 	case q.internalQueue <- job:
 		return true
 	default:
+
+		func() {
+			q.extraQueueLock.Lock()
+			defer q.extraQueueLock.Unlock()
+			q.extraQueue = append(q.extraQueue, job)
+		}()
+
 		return false
 	}
 }

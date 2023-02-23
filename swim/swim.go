@@ -22,16 +22,22 @@ const (
 	timeout = 2 * time.Hour
 )
 
+var (
+	httpPool *HttpPool
+)
+
 func Start() func() {
 	if err := model.Load(); err != nil {
 		log.Fatal("main data load failed!")
 	}
 
 	model.DataMigration()
-	stopPool := StartBackgroundDownloadPool()
+	stopPool := StartBackgroundDownloadPool(5)
+	httpPool = StartHttpPool(10)
 
 	return func() {
 		stopPool()
+		httpPool.Stop()
 		model.Save()
 	}
 }
