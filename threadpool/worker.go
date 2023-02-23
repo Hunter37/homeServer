@@ -12,8 +12,6 @@ type worker struct {
 	readyPool chan chan Work //get work from the boss
 	work      chan Work
 	quit      chan bool
-
-	pool *Pool
 }
 
 func NewWorker(id int, readyPool chan chan Work, done *sync.WaitGroup) *worker {
@@ -35,10 +33,7 @@ func (w *worker) Process(work Work) {
 			buf = buf[:runtime.Stack(buf, false)]
 			log.Printf("panic running process: %v\n%s\n", r, buf)
 		}
-		w.pool.RunningWorker(-1)
 	}()
-
-	w.pool.RunningWorker(1)
 	work.Do()
 }
 

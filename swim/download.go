@@ -13,15 +13,18 @@ import (
 	"homeServer/utils"
 )
 
+const PoolSize = 5
+
 type DownloadJob struct {
 	lock    *sync.Mutex
 	visited *map[string]bool
 	pool    *threadpool.Pool
 	url     string
 
-	listJob  *int32
-	infoJob  *int32
-	eventJob *int32
+	listJob    *int32
+	infoJob    *int32
+	eventJob   *int32
+	runningJob *int32
 }
 
 func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *DownloadJob)) {
@@ -32,22 +35,24 @@ func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *Download
 		(*currentJob.visited)[url] = true
 
 		dj := &DownloadJob{
-			lock:     currentJob.lock,
-			visited:  currentJob.visited,
-			pool:     currentJob.pool,
-			url:      url,
-			listJob:  currentJob.listJob,
-			infoJob:  currentJob.infoJob,
-			eventJob: currentJob.eventJob,
+			lock:       currentJob.lock,
+			visited:    currentJob.visited,
+			pool:       currentJob.pool,
+			url:        url,
+			listJob:    currentJob.listJob,
+			infoJob:    currentJob.infoJob,
+			eventJob:   currentJob.eventJob,
+			runningJob: currentJob.runningJob,
 		}
 
+		atomic.AddInt32(currentJob.runningJob, 1)
 		call(dj)
 	}
 }
 
 func CheckLastJob(dj *DownloadJob) {
-	count := dj.pool.RunningWorkerCount()
-	if count == 1 {
+	count := atomic.AddInt32(dj.runningJob, -1)
+	if count == 0 {
 		// this is the last one
 		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
 			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited)))
@@ -60,7 +65,7 @@ func createInt32() *int32 {
 }
 
 func StartBackgroundDownloadPool() func() {
-	pool := threadpool.NewWorkerPool(5, 10000)
+	pool := threadpool.NewWorkerPool(PoolSize, PoolSize*1000)
 	pool.Start()
 
 	quit := make(chan bool)
@@ -76,12 +81,13 @@ func StartBackgroundDownloadPool() func() {
 
 			visited := make(map[string]bool, 0)
 			dJob := &DownloadJob{
-				lock:     &sync.Mutex{},
-				visited:  &visited,
-				pool:     pool,
-				listJob:  createInt32(),
-				infoJob:  createInt32(),
-				eventJob: createInt32(),
+				lock:       &sync.Mutex{},
+				visited:    &visited,
+				pool:       pool,
+				listJob:    createInt32(),
+				infoJob:    createInt32(),
+				eventJob:   createInt32(),
+				runningJob: createInt32(),
 			}
 
 			minutes := 60
