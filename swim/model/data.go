@@ -327,10 +327,14 @@ func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) {
 
 	swimmer, ok := dlsc.Swimmers[sid]
 	if !ok {
-		swimmer = &Swimmer{
-			LCM: map[string]*Length{},
-			SCY: map[string]*Length{},
-		}
+		swimmer = &Swimmer{}
+	}
+
+	if swimmer.LCM == nil {
+		swimmer.LCM = Stroke{}
+	}
+	if swimmer.SCY == nil {
+		swimmer.SCY = Stroke{}
 	}
 
 	dlsc.Swimmers[sid] = swimmer
