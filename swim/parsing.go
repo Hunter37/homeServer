@@ -50,6 +50,10 @@ func extractEventsAndRanksFromPages(sid, page string) {
 	lcm := make([]model.Rankings, 0, 18)
 	for i, page := range pages {
 		url := urls[i]
+		if len(page) == 0 {
+			utils.LogError(fmt.Errorf("download page failed: %s", url))
+			continue
+		}
 		page = removeFooter(removeHTMLSpace(page))
 
 		// extract all events data

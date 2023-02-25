@@ -575,6 +575,7 @@ func timeMax(a, b time.Time) time.Time {
 }
 
 func DataMigration() {
+	mainData.Settings.Standards = []string{"ShowD", "Region"}
 	//for _, lsc := range mainData.Swimmers {
 	//	var bad []string
 	//	for sid, swimmer := range lsc.Swimmers {

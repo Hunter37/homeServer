@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"testing"
+
+	"homeServer/test"
 )
 
 func TestColor(t *testing.T) {
@@ -58,12 +60,12 @@ func TestDeepClone(t *testing.T) {
 	}
 
 	test2, err := deepClone(test1)
-	NoError(t, err)
-	Equal(t, test1, test2)
+	test.NoError(t, err)
+	test.Equal(t, test1, test2)
 
 	test3, err := deepClone(test1)
-	NoError(t, err)
-	Equal(t, test1, test3)
+	test.NoError(t, err)
+	test.Equal(t, test1, test3)
 
 	test1.IntVal += 100
 	int2 += 100
@@ -73,7 +75,7 @@ func TestDeepClone(t *testing.T) {
 	int6 += 100
 	test1.Recursive.IntVal += 100
 
-	NotEqual(t, test1, test2)
-	NotEqual(t, test1, test3)
-	Equal(t, test2, test3)
+	test.NotEqual(t, test1, test2)
+	test.NotEqual(t, test1, test3)
+	test.Equal(t, test2, test3)
 }

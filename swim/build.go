@@ -13,7 +13,7 @@ import (
 )
 
 func generateRankTable(swimmer *model.Swimmer, url string) *Table {
-	header := make([]string, 0, 18)
+	header := make([]string, 0, 20)
 	header = append(header, "Course", "Stroke", "Dist", "Time", "Date")
 	longest := 0
 	var levelName []string
@@ -28,10 +28,17 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header = append(header, levelName...)
 	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
 
+	var meets []string
+	settings := model.GetSettings()
+	for _, meet := range settings.Standards {
+		meets = append(meets, meet)
+	}
+	header = append(header, meets...)
+
 	items := make([][]any, 0, len(swimmer.Rankings))
 	for _, ranks := range swimmer.Rankings {
 		event := swimmer.GetBestEvent(ranks.Course, ranks.Stroke, ranks.Length)
-		item := make([]any, 0, 18)
+		item := make([]any, 0, len(header)+2)
 		item = append(item, ranks.Course, ranks.Stroke, ranks.Length,
 			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"))
 
@@ -73,6 +80,22 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 				return fmt.Sprintf(`<td class="g"><div class="r" style="left:%d%%;"></div><div>%s</div><div class="d">%s</div></td>`,
 					percent, utils.FormatSwimTime(t), utils.CalculateSwimTimeDelta(t, event.Time))
 			})...)
+		}
+
+		// add meet standards
+		for _, meet := range meets {
+			time := model.GetAgeGroupMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
+			if time <= 0 {
+				item = append(item, "")
+			} else {
+				diff := utils.CalculateSwimTimeDelta(time, event.Time)
+				class := "ad"
+				if event.Time <= time {
+					class = "dp"
+				}
+				item = append(item, fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div></td>`,
+					class, utils.FormatSwimTime(time), class, diff))
+			}
 		}
 
 		// add trClass and first url
