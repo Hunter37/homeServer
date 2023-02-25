@@ -28,12 +28,8 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header = append(header, levelName...)
 	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
 
-	var meets []string
 	settings := model.GetSettings()
-	for _, meet := range settings.Standards {
-		meets = append(meets, meet)
-	}
-	header = append(header, meets...)
+	header = append(header, settings.Standards...)
 
 	items := make([][]any, 0, len(swimmer.Rankings))
 	for _, ranks := range swimmer.Rankings {
@@ -85,7 +81,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		}
 
 		// add meet standards
-		for _, meet := range meets {
+		for _, meet := range settings.Standards {
 			time := model.GetAgeGroupMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
 			if time <= 0 {
 				item = append(item, "")
