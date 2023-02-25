@@ -62,6 +62,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			pre := append([]int{2*stds[0] - stds[1]}, stds...)
 			item = append(item, utils.ConvertWithIndex(stds, func(i, t int) any {
 				percent := 0
+				class := "ad"
 				if event.Time <= pre[i] {
 					if event.Time > t {
 						et := utils.GetSwimTimeInCentiSecond(event.Time)
@@ -74,11 +75,12 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 							percent = 5
 						}
 					} else {
+						class = "dp"
 						percent = 100
 					}
 				}
-				return fmt.Sprintf(`<td class="g"><div class="r" style="left:%d%%;"></div><div>%s</div><div class="d">%s</div></td>`,
-					percent, utils.FormatSwimTime(t), utils.CalculateSwimTimeDelta(t, event.Time))
+				return fmt.Sprintf(`<td class="ct g"><div class="r" style="left:%d%%;"></div><div class="%s">%s</div><div class="dd %s">%s</div></td>`,
+					percent, class, utils.FormatSwimTime(t), class, utils.CalculateSwimTimeDelta(t, event.Time))
 			})...)
 		}
 
