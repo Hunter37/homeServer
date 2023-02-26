@@ -64,19 +64,14 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 						et := utils.GetSwimTimeInCentiSecond(event.Time)
 						ct := utils.GetSwimTimeInCentiSecond(t)
 						pt := utils.GetSwimTimeInCentiSecond(pre[i])
-						percent = int(100.0 * float32(pt-et) / float32(pt-ct))
-						if percent > 90 {
-							percent = 90
-						} else if percent < 5 {
-							percent = 5
-						}
+						percent = utils.Max(5, utils.Min(95, int(100.0*float32(pt-et)/float32(pt-ct))))
 					} else {
 						class = "dp"
 						percent = 100
 					}
 				}
-				return fmt.Sprintf(`<td class="ct g"><div class="r" style="left:%d%%;"></div><div class="%s">%s</div><div class="dd %s">%s</div></td>`,
-					percent, class, utils.FormatSwimTime(t), class, utils.CalculateSwimTimeDelta(t, event.Time))
+				return fmt.Sprintf(`<td class="ct g"><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
+					class, utils.FormatSwimTime(t), class, utils.CalculateSwimTimeDelta(t, event.Time), percent)
 			})...)
 		}
 
@@ -88,11 +83,16 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			} else {
 				diff := utils.CalculateSwimTimeDelta(time, event.Time)
 				class := "ad"
+				et := utils.GetSwimTimeInCentiSecond(event.Time)
+				ct := utils.GetSwimTimeInCentiSecond(time)
+				pt := int(float32(ct) * 1.12)
+				percent := utils.Max(0, utils.Min(100, int(100.0*float32(pt-et)/float32(pt-ct))))
 				if event.Time <= time {
 					class = "dp"
+					percent = 100
 				}
-				item = append(item, fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div></td>`,
-					class, utils.FormatSwimTime(time), class, diff))
+				item = append(item, fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
+					class, utils.FormatSwimTime(time), class, diff, percent))
 			}
 		}
 

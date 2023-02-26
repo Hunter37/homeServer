@@ -9,6 +9,20 @@ type Ordered interface {
 		string
 }
 
+func Max[K Ordered](a, b K) K {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func Min[K Ordered](a, b K) K {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func SortedKeys[K Ordered, V any](m map[K]V, reverse ...bool) []K {
 	keys := make([]K, len(m))
 	i := 0
