@@ -19,7 +19,7 @@ const (
 	ActionSearch   = "search"
 	ActionBirthday = "birthday"
 
-	timeout = 2 * time.Hour
+	timeoutBuffer = 10
 )
 
 var (
@@ -115,6 +115,7 @@ func getInfo(url string) *Table {
 	} else {
 		swimmer, _ = model.Find(sid)
 		if mode == model.CACHE {
+			timeout := time.Duration(model.GetSettings().CacheTimeInMinutes+timeoutBuffer) * time.Minute
 			needDownload = swimmer == nil || swimmer.Update.Add(timeout).Before(time.Now())
 		} else { // model.OFFLINE
 			if swimmer == nil {
@@ -163,6 +164,7 @@ func getRanks(text string) *Table {
 	} else if mode == model.CACHE {
 		topList := model.FindTopLists(urls)
 		for i, list := range topList {
+			timeout := time.Duration(model.GetSettings().CacheTimeInMinutes+timeoutBuffer) * time.Minute
 			if list == nil || list.Update.Add(timeout).Before(time.Now()) {
 				needDownload = append(needDownload, urls[i])
 			}

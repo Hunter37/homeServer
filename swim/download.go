@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"homeServer/swim/model"
 	"homeServer/threadpool"
 	"homeServer/utils"
 )
@@ -88,7 +89,6 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 				runningJob: createInt32(),
 			}
 
-			minutes := 60
 			scanner := bufio.NewScanner(listFile)
 			scanner.Split(bufio.ScanLines)
 			for scanner.Scan() {
@@ -104,8 +104,6 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 						NewDownloadJob(dJob, url, func(job *DownloadJob) {
 							job.pool.Enqueue(&InfoJob{DownloadJob: *job})
 						})
-					} else {
-						minutes = utils.ParseInt(parts[0])
 					}
 					continue
 				} else if len(parts) == 2 {
@@ -119,7 +117,7 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 			}
 
 			select {
-			case <-time.After(time.Minute * time.Duration(minutes)):
+			case <-time.After(time.Minute * time.Duration(model.GetSettings().CacheTimeInMinutes)):
 				continue
 			case <-quit:
 				utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Stop background download thread"))

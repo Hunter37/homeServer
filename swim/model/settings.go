@@ -9,6 +9,7 @@ const (
 )
 
 type Settings struct {
-	SearchMode ModeType `json:",omitempty"`
-	Standards  []string `json:",omitempty"`
+	SearchMode         ModeType `json:",omitempty"`
+	Standards          []string `json:",omitempty"`
+	CacheTimeInMinutes int      `json:",omitempty"`
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -13,12 +14,12 @@ import (
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
-	"/swim":          mainPageHandler,
-	"/swim/settings": settingsPageHandler,
-	"/swim/search":   searchHandler,
-	"/swim/birthday": birthdayHandler,
-	"/swim/mode":     modeHandler,
-	"/swim/swimmer":  swimmerHandler,
+	"/swim":                mainPageHandler,
+	"/swim/settings":       settingsPageHandler,
+	"/swim/search":         searchHandler,
+	"/swim/birthday":       birthdayHandler,
+	"/swim/updateSettings": settingsHandler,
+	"/swim/swimmer":        swimmerHandler,
 }
 
 // SwimHandler the swim root handler
@@ -86,19 +87,19 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 	gzipWrite(writer, body, http.StatusOK)
 }
 
-// modeHandler handle the search mode json query in the settings page
-func modeHandler(writer http.ResponseWriter, request *http.Request) {
-	val := request.URL.Query().Get("mode")
+// settingsHandler handle the read/write settings query in the settings page
+func settingsHandler(writer http.ResponseWriter, request *http.Request) {
+	val := request.URL.Query().Get("save")
 	if len(val) > 0 {
-		settings := model.GetSettings()
-		settings.SearchMode = model.ModeType(val)
-		model.SetSettings(settings)
+		var settings model.Settings
+		if err := json.Unmarshal([]byte(val), &settings); err == nil {
+			model.SetSettings(&settings)
+		} else {
+			utils.LogError(fmt.Errorf("bad settings: %s", val))
+		}
 	}
 
-	data := map[string]any{
-		"mode": model.GetSettings().SearchMode,
-	}
-	body, _ := json.Marshal(data)
+	body, _ := json.Marshal(model.GetSettings())
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)

@@ -5,15 +5,6 @@
     <title>Swimming settings</title>
 </head>
 <style>
-    .top div, .top button {
-        margin: 10px;
-        font: 14px Verdana;
-    }
-</style>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.css" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.js"></script>
-
-<style>
     body, html {
         margin: 0;
         height: 100%;
@@ -28,57 +19,101 @@
     .top {
         margin: 10px;
     }
-</style>
 
+    .top table {
+        font: 14px Verdana;
+    }
+
+    td {
+        vertical-align: top;
+    }
+
+    #jsonSettings {
+        width: 480px;
+    }
+</style>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.js"></script>
 <body>
 <div class="root">
     <div class="top">
-        <fieldset>
-            <legend>Search mode:</legend>
-            <div>
-                <input type="radio" id="online" name="mode" value="online" onchange="searchMode(this)">
-                <label for="online">Online</label>
-            </div>
-            <div>
-                <input type="radio" id="cache" name="mode" value="cache" onchange="searchMode(this)">
-                <label for="cache">Cache</label>
-            </div>
-            <div>
-                <input type="radio" id="offline" name="mode" value="offline" onchange="searchMode(this)">
-                <label for="offline">Offline</label>
-            </div>
-        </fieldset>
-        <div>
-            Find Swimmer:
-            <input id="sinput" style="width: 120px"/>
-            <button onclick="load()" class="big">load</button>
-            <button onclick="save()" class="big">save</button>
-        </div>
+        <table>
+            <tbody>
+            <tr>
+                <td>
+                    <div>
+                        <fieldset>
+                            <legend>Search mode:</legend>
+                            <div>
+                                <input type="radio" id="online" name="mode" value="online"
+                                       onchange="updateSettings(this)">
+                                <label for="online">Online</label>
+                            </div>
+                            <div>
+                                <input type="radio" id="cache" name="mode" value="cache"
+                                       onchange="updateSettings(this)">
+                                <label for="cache">Cache</label>
+                            </div>
+                            <div>
+                                <input type="radio" id="offline" name="mode" value="offline"
+                                       onchange="updateSettings(this)">
+                                <label for="offline">Offline</label>
+                            </div>
+                        </fieldset>
+                    </div>
+                </td>
+                <td>
+                    <fieldset>
+                        <legend>Settings
+                            <button onclick="updateSettings(this)">Save Settings</button>
+                        </legend>
+                        <div id="jsonSettings"></div>
+                    </fieldset>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    Find Swimmer:
+                    <input id="sinput" style="width: 120px"/>
+                    <button onclick="load()" class="big">load</button>
+                    <button onclick="save()" class="big">save</button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
     </div>
-
     <div id="jsoneditor"></div>
 </div>
 </body>
 
 <script>
 
-    async function searchMode(elem) {
-        if (!elem || elem.checked) {
-            let response = await fetch('mode' + (elem && elem.checked ? '?mode=' + elem.value : ''));
-            if (response.ok) {
-                let data = await response.json()
-                console.log(data)
-                document.getElementById(data.mode).checked = true
-            }
+    let editorConfig = {
+        mode: 'tree',
+        modes: ['code', 'tree']
+    };
+
+    let settings = new JSONEditor(document.getElementById('jsonSettings'), editorConfig);
+
+    async function updateSettings(elem) {
+        let save = elem && (elem.checked || elem.nodeName == 'BUTTON');
+        let data = settings.get()
+        if (elem && elem.checked) {
+            data.SearchMode = elem.value
+        }
+        let str = encodeURIComponent(JSON.stringify(data))
+        let response = await fetch('updateSettings' + (save ? "?save=" + str : ""))
+        if (response.ok) {
+            data = await response.json();
+            console.log(data);
+            settings.set(data);
+            document.getElementById(data.SearchMode).checked = true;
         }
     }
 
-    searchMode()
+    updateSettings()
 
-    editor = new JSONEditor(document.getElementById('jsoneditor'), {
-        mode: 'tree',
-        modes: ['code', 'tree'],
-    })
+    let editor = new JSONEditor(document.getElementById('jsoneditor'), editorConfig);
 
     const sinputElem = document.getElementById('sinput');
 
@@ -89,11 +124,11 @@
     });
 
     async function load() {
-        let response = await fetch('swimmer?id=' + sinputElem.value)
+        let response = await fetch('swimmer?id=' + sinputElem.value);
         if (response.ok) {
-            editor.set(await response.json())
+            editor.set(await response.json());
         } else {
-            alert(await response.text())
+            alert(await response.text());
         }
     }
 
@@ -106,9 +141,9 @@
             body: JSON.stringify(editor.get())
         });
         if (response.ok) {
-            alert("DONE")
+            alert("DONE");
         } else {
-            alert(await response.text())
+            alert(await response.text());
         }
     }
 
