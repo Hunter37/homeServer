@@ -36,3 +36,18 @@ func TestForNilSlice(t *testing.T) {
 		fmt.Println(s)
 	}
 }
+
+//func TestDateMigration(t *testing.T) {
+//	by, _ := os.ReadFile("../../ageGroupTimeStandards.json")
+//	lines := strings.Split(string(by), "\n")
+//	result := ""
+//	for _, line := range lines {
+//		parts := strings.Split(line, " ")
+//		if len(parts) == 8 {
+//			result += fmt.Sprintf("%s %s %s %s %s %s %s %s\n", parts[2], parts[1], parts[0], parts[3], parts[4], parts[5], parts[6], parts[7])
+//		} else {
+//			result += line + "\n"
+//		}
+//	}
+//	os.WriteFile("../../ageGroupTimeStandards1.json", []byte(result), 0o600)
+//}
