@@ -492,24 +492,20 @@ func findGenderCourseStrokeLength(title string) (string, string, string, int) {
 
 func generateSearchTable(name string, items [][]string) *Table {
 	// items : name | age | team | lsc | sid | url
+
+	// sort by name
+	sort.Slice(items, func(i, j int) bool {
+		return fmt.Sprint(items[i][0]) < fmt.Sprint(items[j][0])
+	})
+
 	exist := make(map[string]bool, len(items))
 	for _, item := range items {
 		exist[item[4]] = true
 	}
 
-	for _, sid := range model.FindName(name) {
-		if _, ok := exist[sid]; !ok {
-			swimmer, url := model.Find(sid)
-			alias := ""
-			if len(swimmer.Alias) > 0 {
-				alias = fmt.Sprintf(" (%s)", swimmer.Alias)
-			}
-			items = utils.Insert(items, 0, []string{fmt.Sprint(swimmer.Name, alias),
-				fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
-		}
-	}
+	cached := findCachedName(name, exist)
 
-	if len(items) == 0 {
+	if len(items) == 0 && len(cached) == 0 {
 		return createErrorTable("Cannot found " + name)
 	}
 
@@ -526,6 +522,8 @@ func generateSearchTable(name string, items [][]string) *Table {
 		}
 	}
 
+	filterdItems = append(cached, filterdItems...)
+
 	if len(filterdItems) == 1 {
 		return getInfo(filterdItems[0][5].(string))
 	}
@@ -533,10 +531,6 @@ func generateSearchTable(name string, items [][]string) *Table {
 	for _, row := range filterdItems {
 		row[3] = strings.ToUpper(row[3].(string))
 	}
-
-	sort.Slice(filterdItems, func(i, j int) bool {
-		return fmt.Sprint(filterdItems[i][0]) < fmt.Sprint(filterdItems[j][0])
-	})
 
 	return &Table{
 		Header:    []string{},
@@ -547,6 +541,22 @@ func generateSearchTable(name string, items [][]string) *Table {
 		ShowOrder: true,
 		LeftAlign: []bool{true, false, true},
 	}
+}
+
+func findCachedName(name string, exist map[string]bool) [][]any {
+	cached := make([][]any, 0, 10)
+	for _, sid := range model.FindName(name) {
+		if _, ok := exist[sid]; !ok {
+			swimmer, url := model.Find(sid)
+			alias := ""
+			if len(swimmer.Alias) > 0 {
+				alias = fmt.Sprintf(" (%s)", swimmer.Alias)
+			}
+			cached = append(cached, []any{fmt.Sprint(swimmer.Name, alias),
+				fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
+		}
+	}
+	return cached
 }
 
 func buildSequenceIntSlice(length int) []int {

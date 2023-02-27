@@ -304,8 +304,10 @@ func FindName(name string) []string {
 	defer mutex.RUnlock()
 
 	name = strings.ToLower(strings.TrimSpace(name))
-	matchName := func(full string) bool {
-		parts := strings.Split(strings.ToLower(full), " ")
+	matchName := func(recordName string) bool {
+		recordName = strings.ToLower(recordName)
+		parts := strings.Split(recordName, " ")
+		parts = append(parts, recordName)
 		for _, part := range parts {
 			if strings.Index(part, name) == 0 {
 				return true
