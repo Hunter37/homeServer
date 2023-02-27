@@ -344,12 +344,12 @@
             filterDate = year + dateElem.value.substring(4);
         }
 
-        let timeStandard = '';
+        let timeStandard = 0;
         let standardElem = document.getElementById('standard');
         if (standardElem.value && table.Standards) {
             for (let i = 0; i < table.Standards.length; ++i) {
-                if (standardElem.value == table.Standards[i].Name) {
-                    timeStandard = table.Standards[i].Time;
+                if (standardElem.value == table.Standards[i].Name && table.Standards[i].Time) {
+                    timeStandard = parseInt(table.Standards[i].Time.replace(':', '').replace('.', ''));
                 }
             }
         }
@@ -416,9 +416,11 @@
                 if (row[table.TrClass]) {
                     trCls = row[table.TrClass].toLowerCase();
                 }
-                if (timeStandard && row[table.StandardColumn] &&
-                    (row[table.StandardColumn].length < timeStandard.length || row[table.StandardColumn] <= timeStandard)) {
-                    trCls += ' gn';
+                if (timeStandard && row[table.StandardColumn]) {
+                    let time = parseInt(row[table.StandardColumn].replace(':', '').replace('.', ''));
+                    if (time <= timeStandard) {
+                        trCls += ' gn';
+                    }
                 }
                 html.push('<tr' + (trCls ? ' class="' + trCls + '"' : '') + '>');
 
