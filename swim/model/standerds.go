@@ -99,10 +99,10 @@ func getMotivationalTimes(file string) map[string][]int {
 				return utils.ParseSwimTime(s)
 			})
 		}
-		standards[fmt.Sprint("Female", age, course, stroke, length)] =
+		standards[fmt.Sprint(Female, age, course, stroke, length)] =
 			convert(parts[0:6])
 
-		standards[fmt.Sprint("Male", age, course, stroke, length)] =
+		standards[fmt.Sprint(Male, age, course, stroke, length)] =
 			convert(utils.Reverse[string](parts[9:15]))
 	}
 

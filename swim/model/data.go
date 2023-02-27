@@ -20,6 +20,18 @@ const (
 	Breast = "Breast"
 	Fly    = "Fly"
 	IM     = "IM"
+	Male   = "Male"
+	Female = "Female"
+)
+
+var (
+	StrokeMapping = map[string]string{
+		"Freestyle":         Free,
+		"Backstroke":        Back,
+		"Breaststroke":      Breast,
+		"Butterfly":         Fly,
+		"Individual Medley": IM,
+	}
 )
 
 type Event struct {
@@ -380,14 +392,7 @@ func AddEvent(sid, course, stroke string, length int, event *Event) {
 		strokes = swimmer.LCM
 	}
 
-	strokeMapping := map[string]string{
-		"Freestyle":         Free,
-		"Backstroke":        Back,
-		"Breaststroke":      Breast,
-		"Butterfly":         Fly,
-		"Individual Medley": IM,
-	}
-	if shorter, ok := strokeMapping[stroke]; ok {
+	if shorter, ok := StrokeMapping[stroke]; ok {
 		stroke = shorter
 	} else {
 		utils.LogError(fmt.Errorf("invalid stroke: [%s]", stroke))

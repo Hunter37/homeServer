@@ -102,8 +102,8 @@ func loadAgeGroupStandards(file string) {
 		boyTimes := convert(utils.Reverse(parts)[:len(ages)])
 		for i, age := range ages {
 			for _, a := range age {
-				meetStds[fmt.Sprint("Female", a, course, stroke, length)] = girlTimes[i]
-				meetStds[fmt.Sprint("Male", a, course, stroke, length)] = boyTimes[i]
+				meetStds[fmt.Sprint(Female, a, course, stroke, length)] = girlTimes[i]
+				meetStds[fmt.Sprint(Male, a, course, stroke, length)] = boyTimes[i]
 			}
 		}
 	}

@@ -244,6 +244,10 @@
         z-index: -1;
     }
 
+    .gn > td {
+        background-color: #0F72;
+    }
+
 </style>
 <body>
 <div class="row">
@@ -252,8 +256,14 @@
 </div>
 <div id="filter" class="hide row">
     <div>Meet date:</div>
-    <div style="width:100%">
+    <div>
         <input id="date" type="date" class="big" onchange="onDateChange()"/>
+    </div>
+    <div>Meet cut:</div>
+    <div style="width:100%">
+        <select name="meet" id="standard" class="big" onchange="onDateChange()">
+            <option value=""></option>
+        </select>
     </div>
     <button onclick="loadBirthday()" class="big" style="width:260px">Find out 10 more</button>
 </div>
@@ -267,8 +277,8 @@
     });
 
     const inputElem = document.getElementById('input');
-    let birthdayMap = new Map
-    let birthdayDisplayMap = new Map
+    let birthdayMap = new Map;
+    let birthdayDisplayMap = new Map;
 
     // document.getElementById('date').value = new Date().toDateInputValue();
 
@@ -313,7 +323,7 @@
             value = inputElem.value;
         }
 
-        let input = encodeURIComponent(value)
+        let input = encodeURIComponent(value);
         let response = await fetch('swim/search?input=' + input);
         if (!response.ok) {
             updateContent(response.url);
@@ -324,14 +334,24 @@
 
     function createTable(table) {
         if (!table) {
-            return ''
+            return '';
         }
 
         let filterDate = null;
         let dateElem = document.getElementById('date');
         if (dateElem.value != new Date().toDateInputValue()) {
-            let year = parseInt(dateElem.value) - 1 - table.Age
-            filterDate = year + dateElem.value.substring(4)
+            let year = parseInt(dateElem.value) - 1 - table.Age;
+            filterDate = year + dateElem.value.substring(4);
+        }
+
+        let timeStandard = '';
+        let standardElem = document.getElementById('standard');
+        if (standardElem.value && table.Standards) {
+            for (let i = 0; i < table.Standards.length; ++i) {
+                if (standardElem.value == table.Standards[i].Name) {
+                    timeStandard = table.Standards[i].Time;
+                }
+            }
         }
 
         let html = [];
@@ -349,16 +369,16 @@
                     html.push('<span>', element.Text, '</span>');
                 }
                 if (element.Log) {
-                    console.log(element.Log)
+                    console.log(element.Log);
                 }
             }
             html.push('</div></div>');
         }
 
         if (table.Title) {
-            html.push('<h2>')
-            html.push(table.Title)
-            html.push('</h2>')
+            html.push('<h2>');
+            html.push(table.Title);
+            html.push('</h2>');
         }
 
         html.push('<table style="border-collapse:collapse"><tbody>');
@@ -389,14 +409,19 @@
             for (const row of table.Items) {
                 let date = birthdayMap.get(row[table.FilterColumn]);
                 if (!!date && filterDate != 'NaN' && date <= filterDate) {
-                    continue
+                    continue;
                 }
 
-                if (table.TrClass == null || !row[table.TrClass]) {
-                    html.push('<tr>');
-                } else {
-                    html.push('<tr class="', row[table.TrClass].toLowerCase(), '">');
+                let trCls = '';
+                if (row[table.TrClass]) {
+                    trCls = row[table.TrClass].toLowerCase();
                 }
+                if (timeStandard && row[table.StandardColumn] &&
+                    (row[table.StandardColumn].length < timeStandard.length || row[table.StandardColumn] <= timeStandard)) {
+                    trCls += ' gn';
+                }
+                html.push('<tr' + (trCls ? ' class="' + trCls + '"' : '') + '>');
+
                 if (table.ShowOrder) {
                     html.push('<td>', ++index, '</td>');
                 }
@@ -407,14 +432,14 @@
                     } else if (typeof value == 'string' && value.startsWith('<')) {
                         html.push(value);
                     } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
-                        let link = row[table.Link[i]]
+                        let link = row[table.Link[i]];
                         if (table.Action && table.Action[i] != 'href') {
                             if (table.Action[i] == 'birthday') {
                                 if (link.startsWith('{')) {
-                                    let object = JSON.parse(row[table.Link[i]])
+                                    let object = JSON.parse(row[table.Link[i]]);
                                     birthdayMap.set(object.Link, object.Right);
                                     birthdayDisplayMap.set(object.Link, object.Display);
-                                    link = object.Link
+                                    link = object.Link;
                                 }
                                 if (birthdayDisplayMap.get(link)) {
                                     html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
@@ -437,7 +462,7 @@
 
         html.push('</tbody></table>');
 
-        html.push(createTable(table.Next))
+        html.push(createTable(table.Next));
 
         return html.join('');
     }
@@ -451,6 +476,24 @@
             filterElem.classList.add('hide');
         }
 
+        let standardElem = document.getElementById('standard')
+        if (table && table.Standards) {
+            let std = table.Standards;
+            let selected = standardElem.value;
+            standardElem.innerHTML = '<option value=""></option>';
+            for (let i = 0; i < std.length; ++i) {
+                standardElem.innerHTML += '<option value="' + std[i].Name + '">' + std[i].Name + '</option>';
+                if (selected) {
+                    let idx = selected.indexOf(')');
+                    if (idx > 0 && selected.substring(0, idx) == std[i].Name.substring(0, idx)) {
+                        selected = std[i].Name;
+                        console.log(std[i].Name);
+                    }
+                }
+            }
+            standardElem.value = selected;
+        }
+
         return table;
     }
 
@@ -458,7 +501,7 @@
     let jsonMap = new Map
 
     function pushHistory(hash, data) {
-        hash = '#' + hash
+        hash = '#' + hash;
         jsonMap.set(hash, data);
         if (window.location.hash == hash) {
             loadContent();
@@ -472,7 +515,7 @@
     }
 
     window.addEventListener('hashchange', loadContent);
-    window.addEventListener('load', loadContent)
+    window.addEventListener('load', loadContent);
 
     async function loadContent() {
         let data = getHistory();
@@ -491,7 +534,7 @@
     }
 
     function updateContent(html) {
-        document.getElementById('table').innerHTML = html
+        document.getElementById('table').innerHTML = html;
     }
 
     function showTable(data) {

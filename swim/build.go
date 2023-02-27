@@ -3,6 +3,7 @@ package swim
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -337,6 +338,7 @@ func generateTopListTable(urls []string) *Table {
 	title := ""
 	subtitle := ""
 	maxAge := 0
+	minAge := 100
 	elements := make([]*Element, 0, 30)
 	textToElement := make(map[string]*Element, 30)
 
@@ -397,9 +399,8 @@ func generateTopListTable(urls []string) *Table {
 					row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
 			}
 
-			if maxAge < row.Age {
-				maxAge = row.Age
-			}
+			maxAge = utils.Max(maxAge, row.Age)
+			minAge = utils.Min(minAge, row.Age)
 		}
 
 		// build addition menus
@@ -427,18 +428,66 @@ func generateTopListTable(urls []string) *Table {
 		})
 	}
 
-	return &Table{
-		Title:        fmt.Sprintf("<h2>%s</h2><h3>%s</h3>", title, subtitle),
-		Header:       header,
-		Link:         link,
-		Action:       action,
-		LeftAlign:    lalign,
-		Items:        items,
-		ShowOrder:    true,
-		FilterColumn: filterCol,
-		Age:          maxAge,
-		Additions:    elements,
+	standardCol := 1
+	standards := []Standard{}
+	gender, course, stroke, length := findGenderCourseStrokeLength(subtitle)
+	for _, meet := range model.GetSettings().Standards {
+		for age := minAge; age <= maxAge; age++ {
+			if length > 0 {
+				tm := model.GetAgeGroupMeetStandard(meet, gender, age, course, stroke, length)
+				tstr := ""
+				if tm > 0 {
+					tstr = utils.FormatSwimTime(tm)
+				}
+				standards = append(standards, Standard{Name: fmt.Sprintf("%s (%d) %s", meet, age, tstr), Time: tstr})
+			}
+		}
 	}
+
+	return &Table{
+		Title:          fmt.Sprintf("<h2>%s</h2><h3>%s</h3>", title, subtitle),
+		Header:         header,
+		Link:           link,
+		Action:         action,
+		LeftAlign:      lalign,
+		Items:          items,
+		ShowOrder:      true,
+		FilterColumn:   filterCol,
+		Age:            maxAge,
+		Additions:      elements,
+		StandardColumn: standardCol,
+		Standards:      standards,
+	}
+}
+
+func findGenderCourseStrokeLength(title string) (string, string, string, int) {
+	gender := model.Male
+	if strings.Contains(title, "Girl") {
+		gender = model.Female
+	}
+	course := model.SCY
+	if strings.Contains(title, "LCM") {
+		course = model.LCM
+	}
+	stroke := model.Free
+	for str, stk := range model.StrokeMapping {
+		if strings.Contains(title, str) {
+			stroke = stk
+			break
+		}
+	}
+
+	length := 0
+	numbers := regexp.MustCompile(`\d+`).FindAllString(title, -1)
+	for _, n := range numbers {
+		val := utils.ParseInt(n)
+		if val > 24 {
+			length = val
+			break
+		}
+	}
+
+	return gender, course, stroke, length
 }
 
 func generateSearchTable(name string, items [][]string) *Table {
