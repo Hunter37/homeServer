@@ -20,12 +20,13 @@
         margin: 10px;
     }
 
-    .top table {
+    .top table, .big {
         font: 14px Verdana;
     }
 
     td {
         vertical-align: top;
+        padding: 3px;
     }
 
     #jsonSettings {
@@ -65,7 +66,7 @@
                 <td>
                     <fieldset>
                         <legend>Settings
-                            <button onclick="updateSettings(this)">Save Settings</button>
+                            <button class="big" onclick="updateSettings(this)">Save Settings</button>
                         </legend>
                         <div id="jsonSettings"></div>
                     </fieldset>
