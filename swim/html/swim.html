@@ -346,12 +346,9 @@
 
         let timeStandard = 0;
         let standardElem = document.getElementById('standard');
-        if (standardElem.value && table.Standards) {
-            for (let i = 0; i < table.Standards.length; ++i) {
-                if (standardElem.value == table.Standards[i].Name && table.Standards[i].Time) {
-                    timeStandard = parseInt(table.Standards[i].Time.replace(':', '').replace('.', ''));
-                }
-            }
+        if (standardElem.value) {
+            let idx = standardElem.value.indexOf(')');
+            timeStandard = parseInt(standardElem.value.substring(idx+1).replace(':', '').replace('.', ''))
         }
 
         let html = [];
@@ -480,17 +477,23 @@
 
         let standardElem = document.getElementById('standard')
         if (table && table.Standards) {
-            let std = table.Standards;
             let selected = standardElem.value;
             standardElem.innerHTML = '<option value=""></option>';
-            for (let i = 0; i < std.length; ++i) {
-                standardElem.innerHTML += '<option value="' + std[i].Name + '">' + std[i].Name + '</option>';
-                if (selected) {
-                    let idx = selected.indexOf(')');
-                    if (idx > 0 && selected.substring(0, idx) == std[i].Name.substring(0, idx)) {
-                        selected = std[i].Name;
+            let std = table.Standards;
+            for (let i = 0; i < std.length;) {
+                let meet = std[i].Meet;
+                standardElem.innerHTML += '<optgroup label="' + meet + '">';
+                for (; i < std.length && meet == std[i].Meet; ++i) {
+                    let val = meet + ' (' + std[i].Age + ') ' + std[i].Time
+                    standardElem.innerHTML += '<option value="' + val + '">' + val + '</option>';
+                    if (selected) {
+                        let idx = selected.indexOf(')');
+                        if (idx > 0 && selected.substring(0, idx) == val.substring(0, idx)) {
+                            selected = val;
+                        }
                     }
                 }
+                standardElem.innerHTML += '</optgroup>'
             }
             standardElem.value = selected;
         }

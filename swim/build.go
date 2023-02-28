@@ -439,7 +439,7 @@ func generateTopListTable(urls []string) *Table {
 				if tm > 0 {
 					tstr = utils.FormatSwimTime(tm)
 				}
-				standards = append(standards, Standard{Name: fmt.Sprintf("%s (%d) %s", meet, age, tstr), Time: tstr})
+				standards = append(standards, Standard{Meet: meet, Age: age, Time: tstr})
 			}
 		}
 	}

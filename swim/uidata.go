@@ -31,6 +31,7 @@ type Birthday struct {
 }
 
 type Standard struct {
-	Name string `json:",omitempty"`
+	Meet string `json:",omitempty"`
+	Age  int    `json:",omitempty"`
 	Time string `json:",omitempty"`
 }
