@@ -143,11 +143,8 @@ func generateAgeBestTable(swimmer *model.Swimmer) *Table {
 	eventMap := make(map[string]bool, 38)
 	eventAgeMap := make(map[string]*model.Event, 38*5)
 	swimmer.ForEachEvent(func(course, stroke string, length int, event *model.Event) {
-		if event.Age > ageMax {
-			ageMax = event.Age
-		} else if event.Age < ageMin {
-			ageMin = event.Age
-		}
+		ageMax = utils.Max(ageMax, event.Age)
+		ageMin = utils.Min(ageMin, event.Age)
 		name := fmt.Sprintf("%s %s %d", course, stroke, length)
 		if _, ok := eventMap[name]; !ok {
 			eventMap[name] = true
@@ -159,6 +156,7 @@ func generateAgeBestTable(swimmer *model.Swimmer) *Table {
 		}
 	})
 
+	ageMax = utils.Max(ageMax, ageMin)
 	header := make([]string, 0, ageMax-ageMin+1)
 	header = append(header, `<th rowspan="2">Course</th>`, `<th rowspan="2">Stroke</th>`, `<th rowspan="2">Dist</th>`)
 	for age := ageMax; age >= ageMin; age-- {
