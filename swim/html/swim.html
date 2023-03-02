@@ -49,7 +49,7 @@
         display: none;
     }
 
-    .big {
+    .big, .gn, .bl, .rd {
         font-size: 16px;
     }
 
@@ -58,13 +58,12 @@
     }
 
     .row {
-        display: flex;
-        max-width: 680px;
+        white-space: nowrap;
     }
 
     .row > * {
         margin: auto 2px;
-        white-space: nowrap;
+        display: inline-block;
     }
 
     .container {
@@ -244,8 +243,16 @@
         z-index: -1;
     }
 
-    .gn > td {
+    .gn > td, select.gn {
         background-color: #0F72;
+    }
+
+    .bl > td, select.bl {
+        background-color: #07F2;
+    }
+
+    .rd > td, select.rd {
+        background-color: #F002;
     }
 
 </style>
@@ -256,16 +263,12 @@
 </div>
 <div id="filter" class="hide row">
     <div>Meet date:</div>
-    <div>
-        <input id="date" type="date" class="big" onchange="onDateChange()"/>
-    </div>
+    <input id="date" type="date" class="big" onchange="onSelectionChange()"/>
     <div>Meet cut:</div>
-    <div style="width:100%">
-        <select name="meet" id="standard" class="big" onchange="onDateChange()">
-            <option value=""></option>
-        </select>
-    </div>
-    <button onclick="loadBirthday()" class="big" style="width:260px">Find out 10 more</button>
+    <select id="standard0" class="gn" onchange="onSelectionChange()"></select>
+    <select id="standard1" class="bl" onchange="onSelectionChange()"></select>
+    <select id="standard2" class="rd" onchange="onSelectionChange()"></select>
+    <button onclick="loadBirthday()" class="big">Find out 10 more</button>
 </div>
 <div id="table" class="container"></div>
 </body>
@@ -288,7 +291,7 @@
         }
     });
 
-    function onDateChange() {
+    function onSelectionChange() {
         showTable(getHistory());
     }
 
@@ -344,12 +347,25 @@
             filterDate = year + dateElem.value.substring(4);
         }
 
-        let timeStandard = 0;
-        let standardElem = document.getElementById('standard');
-        if (standardElem.value) {
-            let idx = standardElem.value.indexOf(')');
-            timeStandard = parseInt(standardElem.value.substring(idx+1).replace(':', '').replace('.', ''))
+        function getTimeStandard(selectId) {
+            let timeStandard = 0;
+            let standardElem = document.getElementById(selectId);
+            if (standardElem.value) {
+                let idx = standardElem.value.indexOf(')');
+                timeStandard = parseInt(standardElem.value.substring(idx + 1).replace(':', '').replace('.', ''))
+                return [timeStandard, standardElem.className]
+            }
+            return null;
         }
+
+        let timeStandards = [];
+        for (let i = 0; i < 3; ++i) {
+            let time = getTimeStandard('standard' + i);
+            if (time) {
+                timeStandards.push(time);
+            }
+        }
+        timeStandards.sort((a, b) => a[0] < b[0] ? -1 : 1);
 
         let html = [];
 
@@ -413,10 +429,13 @@
                 if (row[table.TrClass]) {
                     trCls = row[table.TrClass].toLowerCase();
                 }
-                if (timeStandard && row[table.StandardColumn]) {
+                if (timeStandards && row[table.StandardColumn]) {
                     let time = parseInt(row[table.StandardColumn].replace(':', '').replace('.', ''));
-                    if (time <= timeStandard) {
-                        trCls += ' gn';
+                    for (let ts of timeStandards) {
+                        if (time <= ts[0]) {
+                            trCls += ts[1];
+                            break;
+                        }
                     }
                 }
                 html.push('<tr' + (trCls ? ' class="' + trCls + '"' : '') + '>');
@@ -475,7 +494,15 @@
             filterElem.classList.add('hide');
         }
 
-        let standardElem = document.getElementById('standard')
+        for (let i = 0; i < 3; ++i) {
+            setSelect(table, 'standard' + i);
+        }
+
+        return table;
+    }
+
+    function setSelect(table, selectId) {
+        let standardElem = document.getElementById(selectId)
         if (table && table.Standards) {
             let selected = standardElem.value;
             standardElem.innerHTML = '<option value=""></option>';
@@ -497,8 +524,6 @@
             }
             standardElem.value = selected;
         }
-
-        return table;
     }
 
     // integrate with browser navigation buttons

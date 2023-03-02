@@ -26,7 +26,7 @@ document.getElementById('run').addEventListener('click', () => {
 });
 
 function log(str) {
-    contentElem.innerHTML += '<div>' + str + '</div>';
+    contentElem.innerHTML = '<div>' + str + '</div>' + contentElem.innerHTML;
 }
 
 let token = null;
@@ -95,13 +95,13 @@ async function findUsaSwimmer(name, date, token) {
         let result = await usaSwimming(first, last, day.toLocaleString('en-US'), token);
         if (result.length > 0) {
             console.log(result);
-            log('"Birthday":"' + result[0].birthDate.substring(0, 10).replaceAll('-', '/') + '",');
-            if (result[0].preferredName.trim() && result[0].preferredName != result[0].firstName) {
-                log('"Alias":"' + result[0].preferredName + ' ' + result[0].lastName + '",');
-            }
             if (result[0].middleName.trim()) {
                 log('"Middle":"' + result[0].middleName + '",');
             }
+            if (result[0].preferredName.trim() && result[0].preferredName != result[0].firstName) {
+                log('"Alias":"' + result[0].preferredName + ' ' + result[0].lastName + '",');
+            }
+            log('"Birthday":"' + result[0].birthDate.substring(0, 10).replaceAll('-', '/') + '",');
             return result;
         }
     }
