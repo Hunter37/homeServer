@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"homeServer/swim/model"
 	"homeServer/utils"
@@ -17,6 +18,7 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/swim":                mainPageHandler,
 	"/swim/settings":       settingsPageHandler,
 	"/swim/search":         searchHandler,
+	"/swim/save":           saveHandler,
 	"/swim/birthday":       birthdayHandler,
 	"/swim/updateSettings": settingsHandler,
 	"/swim/swimmer":        swimmerHandler,
@@ -103,6 +105,16 @@ func settingsHandler(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)
+}
+
+func saveHandler(writer http.ResponseWriter, request *http.Request) {
+	val := request.URL.Query().Get("save")
+	if strings.EqualFold(val, "true") {
+		info := model.Save()
+		gzipWrite(writer, []byte(info), http.StatusOK)
+	} else {
+		gzipWrite(writer, nil, http.StatusNotFound)
+	}
 }
 
 // swimmerHandler handle the swimmer view and update json request in settings page

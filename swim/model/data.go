@@ -208,7 +208,7 @@ var mainData = Data{}
 
 var mutex = sync.RWMutex{}
 
-func Save() {
+func Save() string {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
@@ -222,6 +222,8 @@ func Save() {
 	} else {
 		utils.Log(utils.GetLogTime() + " Main data saved!\n")
 	}
+
+	return getInfo()
 }
 
 func Load() error {
@@ -238,17 +240,24 @@ func Load() error {
 				mainData.Settings.SearchMode = CACHE
 			}
 
-			total := 0
-			for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
-				utils.Log(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
-					mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
-				total += len(mainData.Swimmers[lsc].Swimmers)
-			}
-			utils.Log(fmt.Sprintf("total = %d\n", total))
+			utils.Log(getInfo())
 		}
 
 		return err
 	}
+}
+
+func getInfo() string {
+	var b strings.Builder
+	total := 0
+	for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
+		b.WriteString(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
+			mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
+		total += len(mainData.Swimmers[lsc].Swimmers)
+	}
+	b.WriteString(fmt.Sprintf("total = %d\n", total))
+
+	return b.String()
 }
 
 // FindTopLists return the slice of toplist
