@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"testing"
 	"time"
 
@@ -65,6 +66,12 @@ func TestSerializeAndDeserialize(t *testing.T) {
 
 	err = backup("../../data.gob.gzip", &data)
 	test.NoError(t, err)
+
+	var recoverd Data
+	err = recover("../../data.gob.gzip", &recoverd)
+	test.NoError(t, err)
+
+	test.True(t, reflect.DeepEqual(data, recoverd))
 
 	func() {
 		// json

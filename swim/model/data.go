@@ -257,6 +257,26 @@ func backup(path string, data *Data) error {
 	return gzipWriter.Close()
 }
 
+func recover(path string, data *Data) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	gzipReader, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+
+	gobDec := gob.NewDecoder(gzipReader)
+	err = gobDec.Decode(data)
+	if err != nil {
+		return err
+	}
+
+	return gzipReader.Close()
+}
+
 func Load() error {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -401,7 +421,7 @@ func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) {
 	swimmer.ID = sid
 	swimmer.Name = name
 	swimmer.Gender = gender
-	swimmer.Team = team
+	swimmer.Team = strings.TrimSpace(team)
 	swimmer.Age = age
 	swimmer.Update = time.Now()
 }
