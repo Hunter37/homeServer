@@ -55,6 +55,8 @@ func CheckLastJob(dj *DownloadJob) {
 		// this is the last one
 		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
 			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited)))
+
+		backupData()
 	}
 }
 
@@ -129,5 +131,13 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 	return func() {
 		quit <- true
 		pool.Stop()
+	}
+}
+
+func backupData() {
+	now := time.Now()
+	fileName := fmt.Sprintf("data-%s.gob.gzip", now.Format("2006-01-02"))
+	if err := model.Backup(fileName); err != nil {
+		utils.LogError(err, "Backup failed")
 	}
 }

@@ -1,6 +1,8 @@
 package model
 
 import (
+	"compress/gzip"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -211,8 +213,9 @@ var mutex = sync.RWMutex{}
 func Save() string {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	data := &mainData
 
-	str, err := json.Marshal(mainData)
+	str, err := json.Marshal(data)
 	if err == nil {
 		err = os.WriteFile("data.json", str, 0o600)
 	}
@@ -223,37 +226,65 @@ func Save() string {
 		utils.Log(utils.GetLogTime() + " Main data saved!\n")
 	}
 
-	return getInfo()
+	return getInfo(data)
+}
+
+func Backup(path string) error {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	data := &mainData
+
+	return backup(path, data)
+}
+
+func backup(path string, data *Data) error {
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o600)
+	if err != nil {
+		return err
+	}
+
+	gzipWriter, err := gzip.NewWriterLevel(file, gzip.BestCompression)
+	if err != nil {
+		return err
+	}
+
+	gobEnc := gob.NewEncoder(gzipWriter)
+	err = gobEnc.Encode(data)
+	if err != nil {
+		return err
+	}
+
+	return gzipWriter.Close()
 }
 
 func Load() error {
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	if str, err := os.ReadFile("data.json"); err != nil {
+	return load("data.json", data)
+}
+
+func load(filePath string, data *Data) error {
+	if str, err := os.ReadFile(filePath); err != nil {
 		return err
 	} else {
-		err = json.Unmarshal(str, &mainData)
-
+		err = json.Unmarshal(str, data)
 		if err == nil {
-			if len(mainData.Settings.SearchMode) == 0 {
-				mainData.Settings.SearchMode = CACHE
-			}
-
-			utils.Log(getInfo())
+			utils.Log(getInfo(data))
 		}
 
 		return err
 	}
 }
 
-func getInfo() string {
+func getInfo(data *Data) string {
 	var b strings.Builder
 	total := 0
-	for _, lsc := range utils.SortedKeys(mainData.Swimmers) {
+	for _, lsc := range utils.SortedKeys(data.Swimmers) {
 		b.WriteString(fmt.Sprintf("%-30s : %d\n", fmt.Sprintf("%s (%s)",
-			mainData.Swimmers[lsc].LSC, lsc), len(mainData.Swimmers[lsc].Swimmers)))
-		total += len(mainData.Swimmers[lsc].Swimmers)
+			data.Swimmers[lsc].LSC, lsc), len(data.Swimmers[lsc].Swimmers)))
+		total += len(data.Swimmers[lsc].Swimmers)
 	}
 	b.WriteString(fmt.Sprintf("total = %d\n", total))
 
@@ -264,10 +295,11 @@ func getInfo() string {
 func FindTopLists(urls []string) []*TopList {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	data := &mainData
 
 	lists := make([]*TopList, len(urls))
 	for i, url := range urls {
-		if list, ok := mainData.TopLists[url]; ok {
+		if list, ok := data.TopLists[url]; ok {
 			lists[i] = list
 		}
 	}
@@ -278,24 +310,27 @@ func FindTopLists(urls []string) []*TopList {
 // AddTopList append toplist with menu links to main data
 func AddTopList(url string, toplist *TopList) {
 	toplist = utils.Clone(toplist)
+
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	if mainData.TopLists == nil {
-		mainData.TopLists = make(map[string]*TopList)
+	if data.TopLists == nil {
+		data.TopLists = make(map[string]*TopList)
 	}
 	toplist.Update = time.Now()
-	mainData.TopLists[url] = toplist
+	data.TopLists[url] = toplist
 }
 
 // Find return the swimmer object and the url string
 func Find(sid string) (*Swimmer, string) {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	data := &mainData
 
 	var swimmer *Swimmer
 	var url string
-	for path, lsc := range mainData.Swimmers {
+	for path, lsc := range data.Swimmers {
 		if s, ok := lsc.Swimmers[sid]; ok {
 			swimmer = s
 			parts := strings.Split(path, "/")
@@ -311,6 +346,7 @@ func Find(sid string) (*Swimmer, string) {
 func FindName(name string) []string {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	data := &mainData
 
 	name = strings.ToLower(strings.TrimSpace(name))
 	matchName := func(recordName string) bool {
@@ -327,7 +363,7 @@ func FindName(name string) []string {
 
 	result := make([]string, 0, 1)
 
-	for _, lsc := range mainData.Swimmers {
+	for _, lsc := range data.Swimmers {
 		for sid, swimmer := range lsc.Swimmers {
 			if matchName(swimmer.Alias) || matchName(swimmer.Name) {
 				result = append(result, sid)
@@ -341,11 +377,12 @@ func FindName(name string) []string {
 func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) {
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	dlsc, ok := mainData.Swimmers[lscId]
+	dlsc, ok := data.Swimmers[lscId]
 	if !ok {
 		dlsc = &Lsc{LSC: lscName, Swimmers: map[string]*Swimmer{}}
-		mainData.Swimmers[lscId] = dlsc
+		data.Swimmers[lscId] = dlsc
 	}
 
 	swimmer, ok := dlsc.Swimmers[sid]
@@ -371,10 +408,12 @@ func AddSwimmer(lscId, lscName, sid, name, gender, team string, age int) {
 
 func UpdateSwimmer(sid string, swimmer *Swimmer) {
 	swimmer = utils.Clone(swimmer)
+
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	for _, lsc := range mainData.Swimmers {
+	for _, lsc := range data.Swimmers {
 		if _, ok := lsc.Swimmers[sid]; ok {
 			lsc.Swimmers[sid] = swimmer
 			break
@@ -384,19 +423,23 @@ func UpdateSwimmer(sid string, swimmer *Swimmer) {
 
 func UpdateRankings(sid string, rankings *[]Rankings) {
 	rankings = utils.Clone(rankings)
+
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	swimmer := findSwimmer(sid)
+	swimmer := findSwimmer(sid, data)
 	swimmer.Rankings = *rankings
 }
 
 func AddEvent(sid, course, stroke string, length int, event *Event) {
 	event = utils.Clone(event)
+
 	mutex.Lock()
 	defer mutex.Unlock()
+	data := &mainData
 
-	swimmer := findSwimmer(sid)
+	swimmer := findSwimmer(sid, data)
 
 	strokes := swimmer.SCY
 	if strings.EqualFold(LCM, course) {
@@ -436,9 +479,9 @@ func AddEvent(sid, course, stroke string, length int, event *Event) {
 	(*lengths)[length] = events
 }
 
-func findSwimmer(sid string) *Swimmer {
+func findSwimmer(sid string, data *Data) *Swimmer {
 	var swimmer *Swimmer
-	for _, lsc := range mainData.Swimmers {
+	for _, lsc := range data.Swimmers {
 		if s, ok := lsc.Swimmers[sid]; ok {
 			swimmer = s
 			break
@@ -555,14 +598,19 @@ func (s *Swimmer) GetDelta(course, stroke string, length int, event *Event) stri
 func GetSettings() *Settings {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	return utils.Clone(&mainData.Settings)
+	data := &mainData
+
+	return utils.Clone(&data.Settings)
 }
 
 func SetSettings(settings *Settings) {
 	settings = utils.Clone(settings)
+
 	mutex.Lock()
 	defer mutex.Unlock()
-	mainData.Settings = *settings
+	data := &mainData
+
+	data.Settings = *settings
 }
 
 func filterStrokeKeys(strokes Stroke) []string {
