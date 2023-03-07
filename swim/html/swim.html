@@ -420,6 +420,19 @@
         if (table.Items) {
             let index = 0
             for (const row of table.Items) {
+
+                for (let i = 0; i < table.Value.length; ++i) {
+                    if (table.Link && table.Link[i] > -1) {
+                        let link = row[table.Link[i]];
+                        if (link && link.startsWith('{') && table.Action && table.Action[i] == 'birthday') {
+                            let object = JSON.parse(link);
+                            birthdayMap.set(object.Link, object.Right);
+                            birthdayDisplayMap.set(object.Link, object.Display);
+                            row[table.Link[i]] = object.Link;
+                        }
+                    }
+                }
+
                 let date = birthdayMap.get(row[table.FilterColumn]);
                 if (!!date && filterDate != 'NaN' && date <= filterDate) {
                     continue;
@@ -453,12 +466,6 @@
                         let link = row[table.Link[i]];
                         if (table.Action && table.Action[i] != 'href') {
                             if (table.Action[i] == 'birthday') {
-                                if (link.startsWith('{')) {
-                                    let object = JSON.parse(row[table.Link[i]]);
-                                    birthdayMap.set(object.Link, object.Right);
-                                    birthdayDisplayMap.set(object.Link, object.Display);
-                                    link = object.Link;
-                                }
                                 if (birthdayDisplayMap.get(link)) {
                                     html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
                                 } else {
