@@ -221,7 +221,9 @@ func extractTopListsFromPages(urls []string) {
 	pages := httpPool.BatchGet(urls, true)
 
 	for i, page := range pages {
-		extractTopListFromPage(urls[i], page)
+		if len(page) > 0 {
+			extractTopListFromPage(urls[i], page)
+		}
 	}
 }
 

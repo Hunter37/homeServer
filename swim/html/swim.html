@@ -443,7 +443,7 @@
                     trCls = row[table.TrClass].toLowerCase();
                 }
                 if (timeStandards && row[table.StandardColumn]) {
-                    let time = parseInt(row[table.StandardColumn].replace(':', '').replace('.', ''));
+                    let time = row[table.StandardColumn];
                     for (let ts of timeStandards) {
                         if (time <= ts[0]) {
                             trCls += ts[1];

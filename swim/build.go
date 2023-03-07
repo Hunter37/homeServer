@@ -13,6 +13,10 @@ import (
 	"homeServer/utils"
 )
 
+var (
+	stdList = []string{"B", "BB", "A", "AA", "AAA", "AAAA"}
+)
+
 func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header := make([]string, 0, 20)
 	header = append(header, "Course", "Stroke", "Dist", "Time", "Date")
@@ -27,7 +31,8 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		}
 	}
 	header = append(header, levelName...)
-	header = append(header, "Count", "B", "BB", "A", "AA", "AAA", "AAAA")
+	header = append(header, "Count")
+	header = append(header, stdList...)
 
 	settings := model.GetSettings()
 	header = append(header, settings.Standards...)
@@ -351,6 +356,8 @@ func generateTopListTable(urls []string) *Table {
 		}
 	}
 
+	gender, course, stroke, length := findGenderCourseStrokeLength(subtitle)
+
 	isImxTable = len(topList[0].ImxTitle) > 0
 	if isImxTable {
 		header = make([]string, 0, 11)
@@ -393,8 +400,18 @@ func generateTopListTable(urls []string) *Table {
 				item = append(item, row.Age, "Find out", lsc, row.Team, row.Url, bdayData)
 				items = append(items, item)
 			} else {
-				items = append(items, []any{row.Name, utils.FormatSwimTime(*row.Time), row.Date.Format("1/02/06"),
-					row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData})
+				stds := model.GetStandards(gender, row.Age, course, stroke, length)
+				std := ""
+				for i, s := range stds {
+					if *row.Time <= s {
+						std = stdList[i]
+					}
+				}
+				timeCol := fmt.Sprintf(`<td class="ct"'><div>%s</div><div class="std">%s</div></td>`,
+					utils.FormatSwimTime(*row.Time), std)
+
+				items = append(items, []any{row.Name, timeCol, row.Date.Format("1/02/06"),
+					row.Age, "Find out", lsc, row.Team, row.Meet, row.Url, bdayData, *row.Time})
 			}
 
 			maxAge = utils.Max(maxAge, row.Age)
@@ -419,16 +436,13 @@ func generateTopListTable(urls []string) *Table {
 				items[i][1].(int) == items[j][1].(int) && items[i][7].(int) > items[j][7].(int)
 		})
 	} else {
-		time := func(v any) int { return utils.ParseSwimTime(fmt.Sprint(v)) }
 		sort.Slice(items, func(i, j int) bool {
-			return time(items[i][1]) < time(items[j][1]) ||
-				time(items[i][1]) == time(items[j][1]) && items[i][3].(int) < items[j][3].(int)
+			return items[i][10].(int)*100+items[i][3].(int) < items[j][10].(int)*100+items[j][3].(int)
 		})
 	}
 
-	standardCol := 1
-	standards := []Standard{}
-	gender, course, stroke, length := findGenderCourseStrokeLength(subtitle)
+	standardCol := 10
+	standards := make([]Standard, 0)
 	for _, meet := range model.GetSettings().Standards {
 		for age := minAge; age <= maxAge; age++ {
 			if length > 0 {
