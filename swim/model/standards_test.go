@@ -59,19 +59,25 @@ func gobMarshal(v any) ([]byte, error) {
 }
 
 func TestSerializeAndDeserialize(t *testing.T) {
-
 	var data Data
+	var recovered Data
+
+	now := time.Now()
 	err := load("../../data.json", &data)
 	test.NoError(t, err)
+	fmt.Println("Load json file:       ", time.Since(now))
 
+	now = time.Now()
 	err = backup("../../data.gob.gzip", &data)
 	test.NoError(t, err)
+	fmt.Println("backup to gob gzip:   ", time.Since(now))
 
-	var recoverd Data
-	err = recover("../../data.gob.gzip", &recoverd)
+	now = time.Now()
+	err = recover("../../data.gob.gzip", &recovered)
 	test.NoError(t, err)
+	fmt.Println("recover from gob gzip:", time.Since(now))
 
-	test.True(t, reflect.DeepEqual(data, recoverd))
+	test.True(t, reflect.DeepEqual(data, recovered))
 
 	func() {
 		// json
