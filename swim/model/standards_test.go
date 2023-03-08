@@ -26,7 +26,8 @@ func TestBuildMotivateTimes(t *testing.T) {
 }
 
 func TestLoadAgeGroupStandards(t *testing.T) {
-	loadAgeGroupStandards("../../ageGroupTimeStandards.json")
+	err := loadAgeGroupStandards("../../ageGroupTimeStandards.json")
+	test.NoError(t, err)
 
 	test.Equal(t, meetStandards["ShowD"]["Female15SCYFree50"], 2889)
 	test.Equal(t, meetStandards["ShowD"]["Female16SCYFree50"], 2889)

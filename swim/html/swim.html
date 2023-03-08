@@ -335,6 +335,17 @@
         }
     }
 
+    function getTimeStandard(selectId) {
+        let timeStandard = 0;
+        let standardElem = document.getElementById(selectId);
+        if (standardElem.value) {
+            let idx = standardElem.value.indexOf(')');
+            timeStandard = parseInt(standardElem.value.substring(idx + 1).replace(':', '').replace('.', ''))
+            return [timeStandard, standardElem.className]
+        }
+        return null;
+    }
+
     function createTable(table) {
         if (!table) {
             return '';
@@ -345,17 +356,6 @@
         if (dateElem.value != new Date().toDateInputValue()) {
             let year = parseInt(dateElem.value) - 1 - table.Age;
             filterDate = year + dateElem.value.substring(4);
-        }
-
-        function getTimeStandard(selectId) {
-            let timeStandard = 0;
-            let standardElem = document.getElementById(selectId);
-            if (standardElem.value) {
-                let idx = standardElem.value.indexOf(')');
-                timeStandard = parseInt(standardElem.value.substring(idx + 1).replace(':', '').replace('.', ''))
-                return [timeStandard, standardElem.className]
-            }
-            return null;
         }
 
         let timeStandards = [];

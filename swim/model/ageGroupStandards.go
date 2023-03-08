@@ -32,13 +32,13 @@ func GetAgeGroupMeetStandard(meet, gender string, age int, course, stroke string
 	return -1
 }
 
-func loadAgeGroupStandards(file string) {
+func loadAgeGroupStandards(file string) error {
 	meetStandards = make(map[string]map[string]int)
 
 	listFile, err := os.Open(file)
 	if err != nil {
 		utils.LogError(err, "list file read failed!")
-		return
+		return err
 	}
 
 	scanner := bufio.NewScanner(listFile)
@@ -83,8 +83,9 @@ func loadAgeGroupStandards(file string) {
 		}
 
 		if len(parts) != 2+2*len(ages) {
-			utils.LogError(fmt.Errorf("wrong line"), line)
-			continue
+			err = fmt.Errorf("wrong line")
+			utils.LogError(err, line)
+			return err
 		}
 
 		stroke := parts[len(ages)+1]
@@ -107,4 +108,6 @@ func loadAgeGroupStandards(file string) {
 			}
 		}
 	}
+
+	return nil
 }
