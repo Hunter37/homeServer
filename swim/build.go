@@ -40,6 +40,9 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	items := make([][]any, 0, len(swimmer.Rankings))
 	for _, ranks := range swimmer.Rankings {
 		event := swimmer.GetBestEvent(ranks.Course, ranks.Stroke, ranks.Length)
+		if event == nil {
+			continue
+		}
 		item := make([]any, 0, len(header)+2)
 		item = append(item, ranks.Course, ranks.Stroke, ranks.Length,
 			utils.FormatSwimTime(event.Time), event.Date.Format("1/02/06"))
@@ -378,7 +381,11 @@ func generateTopListTable(urls []string) *Table {
 
 			swimmer, _ := model.Find(row.Sid)
 			if swimmer != nil {
-				*row.Time = swimmer.GetBestEvent(course, stroke, length).Time
+				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
+					*row.Time = e.Time
+				} else {
+					continue
+				}
 
 				left, right := swimmer.GetBirthday()
 				setBrithday := struct {
@@ -480,7 +487,7 @@ func findGenderCourseStrokeLength(title string) (string, string, string, int) {
 		gender = model.Female
 	}
 	course := model.SCY
-	if strings.Contains(title, "LCM") {
+	if strings.Contains(title, "LCM") || strings.Contains(title, "Meters") {
 		course = model.LCM
 	}
 	stroke := model.Free

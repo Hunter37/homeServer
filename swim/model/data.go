@@ -573,9 +573,9 @@ func (s *Swimmer) GetBestEvent(course, stroke string, length int) *Event {
 	if len(events) == 0 {
 		return nil
 	}
-	best := events[0]
+	var best *Event
 	for _, e := range events {
-		if e.Time < best.Time && !e.Invalid {
+		if (best == nil || e.Time < best.Time) && !e.Invalid {
 			best = e
 		}
 	}
