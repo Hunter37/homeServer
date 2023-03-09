@@ -454,14 +454,12 @@ func generateTopListTable(urls []string) *Table {
 	standards := make([]Standard, 0)
 	for _, meet := range model.GetSettings().Standards {
 		for age := minAge; age <= maxAge; age++ {
-			if length > 0 {
-				tm := model.GetAgeGroupMeetStandard(meet, gender, age, course, stroke, length)
-				tstr := ""
-				if tm > 0 {
-					tstr = utils.FormatSwimTime(tm)
-				}
-				standards = append(standards, Standard{Meet: meet, Age: age, Time: tstr})
+			tm := model.GetAgeGroupMeetStandard(meet, gender, age, course, stroke, length)
+			tstr := ""
+			if tm > 0 {
+				tstr = utils.FormatSwimTime(tm)
 			}
+			standards = append(standards, Standard{Meet: meet, Age: age, Time: tstr})
 		}
 	}
 
