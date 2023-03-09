@@ -378,6 +378,8 @@ func generateTopListTable(urls []string) *Table {
 
 			swimmer, _ := model.Find(row.Sid)
 			if swimmer != nil {
+				*row.Time = swimmer.GetBestEvent(course, stroke, length).Time
+
 				left, right := swimmer.GetBirthday()
 				setBrithday := struct {
 					Link string
