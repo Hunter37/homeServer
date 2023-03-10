@@ -16,6 +16,7 @@ import (
 
 const (
 	SCY    = "SCY"
+	SCM    = "SCM"
 	LCM    = "LCM"
 	Free   = "Free"
 	Back   = "Back"
@@ -34,6 +35,8 @@ var (
 		"Butterfly":         Fly,
 		"Individual Medley": IM,
 	}
+
+	courseSet = map[string]int{SCY: 0, SCM: 1, LCM: 2}
 )
 
 type Event struct {
