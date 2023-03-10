@@ -21,8 +21,8 @@ func TestLoadAgeGroupStandards(t *testing.T) {
 	test.Equal(t, meetStandards["ShowD"]["Female18LCMFree50"], 3269)
 	test.Equal(t, meetStandards["ShowD"]["Female14LCMFree50"], 3319)
 
-	test.Equal(t, meetStandards["PNsect"]["Male11LCMFree1500"], 174559)
-	test.Equal(t, meetStandards["PNsect"]["Male11SCYFree1650"], 171316)
-	test.Equal(t, meetStandards["PNsect"]["Female11LCMFree400"], 44321)
-	test.Equal(t, meetStandards["PNsect"]["Female11SCYFree500"], 51317)
+	test.Equal(t, meetStandards["PNsect"]["Male13LCMFree1500"], 174559)
+	test.Equal(t, meetStandards["PNsect"]["Male13SCYFree1650"], 171316)
+	test.Equal(t, meetStandards["PNsect"]["Female13LCMFree400"], 44321)
+	test.Equal(t, meetStandards["PNsect"]["Female13SCYFree500"], 51317)
 }

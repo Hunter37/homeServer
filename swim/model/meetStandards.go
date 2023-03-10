@@ -15,7 +15,7 @@ var (
 	// key2 := gender | age | course | stroke | length
 	// value := time int
 
-	freeLenLCMtoSCYMapping = map[int]int{25: 25, 50: 50, 100: 100, 200: 200, 400: 500, 800: 1000, 1500: 1650}
+	meterToYardMapping = map[int]int{400: 500, 800: 1000, 1500: 1650}
 )
 
 func GetAgeGroupMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
@@ -116,7 +116,9 @@ func loadMeetStandards(file string) error {
 		for i, course := range courses {
 			clen := length
 			if course == SCY {
-				clen = freeLenLCMtoSCYMapping[length]
+				if l, ok := meterToYardMapping[length]; ok {
+					clen = l
+				}
 			}
 
 			for j, age := range ages {
