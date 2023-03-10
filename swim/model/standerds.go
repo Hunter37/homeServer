@@ -13,14 +13,7 @@ import (
 var (
 	standards map[string][]int
 
-	stdmap = map[int]string{
-		0: "B",
-		1: "BB",
-		2: "A",
-		3: "AA",
-		4: "AAA",
-		5: "AAAA",
-	}
+	StandardNames = []string{"B", "BB", "A", "AA", "AAA", "AAAA"}
 )
 
 func GetStandards(gender string, age int, course, stroke string, length int) []int {
@@ -42,7 +35,7 @@ func GetStandard(gender string, age int, course, stroke string, length, time int
 	times := GetStandards(gender, age, course, stroke, length)
 	for i, t := range times {
 		if time <= t {
-			std = stdmap[i]
+			std = StandardNames[i]
 		} else {
 			break
 		}
@@ -53,7 +46,7 @@ func GetStandard(gender string, age int, course, stroke string, length, time int
 
 func getMotivationalTimes(file string) map[string][]int {
 	// gender | age | course | stroke | length [B, BB, A, AA, AAA, AAAA]
-	standards := make(map[string][]int)
+	stds := make(map[string][]int)
 
 	listFile, err := os.Open(file)
 	if err != nil {
@@ -99,12 +92,12 @@ func getMotivationalTimes(file string) map[string][]int {
 				return utils.ParseSwimTime(s)
 			})
 		}
-		standards[fmt.Sprint(Female, age, course, stroke, length)] =
+		stds[fmt.Sprint(Female, age, course, stroke, length)] =
 			convert(parts[0:6])
 
-		standards[fmt.Sprint(Male, age, course, stroke, length)] =
+		stds[fmt.Sprint(Male, age, course, stroke, length)] =
 			convert(utils.Reverse[string](parts[9:15]))
 	}
 
-	return standards
+	return stds
 }

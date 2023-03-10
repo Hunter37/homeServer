@@ -13,10 +13,6 @@ import (
 	"homeServer/utils"
 )
 
-var (
-	stdList = []string{"B", "BB", "A", "AA", "AAA", "AAAA"}
-)
-
 func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	header := make([]string, 0, 20)
 	header = append(header, "Course", "Stroke", "Dist", "Time", "Date")
@@ -32,7 +28,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	}
 	header = append(header, levelName...)
 	header = append(header, "Count")
-	header = append(header, stdList...)
+	header = append(header, model.StandardNames...)
 
 	settings := model.GetSettings()
 	header = append(header, settings.Standards...)
@@ -413,7 +409,7 @@ func generateTopListTable(urls []string) *Table {
 				std := ""
 				for i, s := range stds {
 					if *row.Time <= s {
-						std = stdList[i]
+						std = model.StandardNames[i]
 					}
 				}
 				timeCol := fmt.Sprintf(`<td class="ct"'><div>%s</div><div class="std">%s</div></td>`,
