@@ -18,10 +18,10 @@ var (
 
 func GetAgeGroupMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
 	if meetStandards == nil {
-		err := loadAgeGroupStandards("ageGroupTimeStandards.json")
+		err := loadAgeGroupStandards("data/ageGroupTimeStandards.json")
 		utils.LogError(err)
 	} else if _, ok := meetStandards[meet]; !ok {
-		err := loadAgeGroupStandards("ageGroupTimeStandards.json")
+		err := loadAgeGroupStandards("data/ageGroupTimeStandards.json")
 		utils.LogError(err)
 	}
 

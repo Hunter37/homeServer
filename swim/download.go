@@ -72,7 +72,7 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 	quit := make(chan bool)
 	go func() {
 		for {
-			listFile, err := os.Open("list.json")
+			listFile, err := os.Open("data/list.json")
 			if err != nil {
 				utils.LogError(err, "list file read failed!")
 				continue
@@ -136,7 +136,7 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 
 func backupData() {
 	now := time.Now()
-	fileName := fmt.Sprintf("data-%s.gob.gzip", now.Format("2006-01-02"))
+	fileName := fmt.Sprintf("backup/data-%s.gob.gzip", now.Format("2006-01-02"))
 	if err := model.Backup(fileName); err != nil {
 		utils.LogError(err, "Backup failed")
 	}

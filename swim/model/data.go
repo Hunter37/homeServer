@@ -282,7 +282,7 @@ func Load() error {
 	defer mutex.Unlock()
 	data := &mainData
 
-	return load("data.json", data)
+	return load("data/data.json", data)
 }
 
 func load(filePath string, data *Data) error {

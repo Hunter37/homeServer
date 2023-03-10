@@ -20,13 +20,13 @@ import (
 
 func TestBuildMotivateTimes(t *testing.T) {
 	// gender | age | course | stroke | length [AAAA, AAA, AA, A, BB, B]
-	standards := getMotivationalTimes("../../2021-2024AgeGroupMotivationTimes.txt")
+	standards := getMotivationalTimes("../../data/2021-2024AgeGroupMotivationTimes.txt")
 
 	utils.Log(fmt.Sprint(len(standards)))
 }
 
 func TestLoadAgeGroupStandards(t *testing.T) {
-	err := loadAgeGroupStandards("../../ageGroupTimeStandards.json")
+	err := loadAgeGroupStandards("../../data/ageGroupTimeStandards.json")
 	test.NoError(t, err)
 
 	test.Equal(t, meetStandards["ShowD"]["Female15SCYFree50"], 2889)
@@ -64,17 +64,17 @@ func TestSerializeAndDeserialize(t *testing.T) {
 	var recovered Data
 
 	now := time.Now()
-	err := load("../../data.json", &data)
+	err := load("../../data/data.json", &data)
 	test.NoError(t, err)
 	fmt.Println("Load json file:       ", time.Since(now))
 
 	now = time.Now()
-	err = backup("../../data.gob.gzip", &data)
+	err = backup("../../bin/data.gob.gzip", &data)
 	test.NoError(t, err)
 	fmt.Println("backup to gob gzip:   ", time.Since(now))
 
 	now = time.Now()
-	err = recover("../../data.gob.gzip", &recovered)
+	err = recover("../../bin/data.gob.gzip", &recovered)
 	test.NoError(t, err)
 	fmt.Println("recover from gob gzip:", time.Since(now))
 

@@ -5,6 +5,7 @@ export LANGUAGES := go
 .PHONY: clean
 clean:
 	rm -f go.sum
+	rm -f bin/*
 
 .PHONY: dependencies
 dependencies:
@@ -21,7 +22,8 @@ utest: dependencies
 
 .PHONY: build
 build: dependencies
-	go build
+	go build -o bin/
+	ln -sf bin/homeServer homeServer
 
 .PHONY: all
 all: clean format utest build

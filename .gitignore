@@ -1,8 +1,10 @@
 # built binaries
 bin/
+homeServer
 
 # data file
 data*.json
+data*.gob.gzip
 
 # IDE files
 # .vscode/

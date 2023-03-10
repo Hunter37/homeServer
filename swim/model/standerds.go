@@ -25,7 +25,7 @@ var (
 
 func GetStandards(gender string, age int, course, stroke string, length int) []int {
 	if len(standards) == 0 {
-		standards = getMotivationalTimes("2021-2024AgeGroupMotivationTimes.txt")
+		standards = getMotivationalTimes("data/2021-2024AgeGroupMotivationTimes.txt")
 	}
 
 	if age < 10 {
