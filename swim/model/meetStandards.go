@@ -115,7 +115,7 @@ func loadMeetStandards(file string) error {
 
 		for i, course := range courses {
 			clen := length
-			if course == SCY {
+			if course == SCY && stroke == Free {
 				if l, ok := meterToYardMapping[length]; ok {
 					clen = l
 				}
