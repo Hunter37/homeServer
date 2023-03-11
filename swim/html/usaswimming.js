@@ -78,9 +78,17 @@ async function usaSwimming(first, last, birthday, token) {
 }
 
 async function findUsaSwimmer(name, date, token) {
-    name = name.split(' ');
-    let first = name[0];
-    let last = name[1];
+    name = name.trim();
+    date = date.trim();
+    let parts = name.split(' ');
+    let first = parts[0];
+    let last = parts[1];
+    if (name.includes(',')) {
+        parts = name.split(',');
+        first = parts[1].trim();
+        last = parts[0].trim();
+    }
+    console.log(last + ', ' + first);
     date = date.split(' - ');
     let begin = date[0];
     let end = date[1];
