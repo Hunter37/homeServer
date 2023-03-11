@@ -20,11 +20,9 @@ var (
 
 func GetMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
 	if meetStandards == nil {
-		err := loadMeetStandards("data/meetStandards.json")
-		utils.LogError(err)
+		utils.LogError(loadMeetStandards("data/meetStandards.json"))
 	} else if _, ok := meetStandards[meet]; !ok {
-		err := loadMeetStandards("data/meetStandards.json")
-		utils.LogError(err)
+		utils.LogError(loadMeetStandards("data/meetStandards.json"))
 	}
 
 	if standard, ok := meetStandards[meet]; ok {

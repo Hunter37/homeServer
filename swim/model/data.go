@@ -25,6 +25,8 @@ const (
 	IM     = "IM"
 	Male   = "Male"
 	Female = "Female"
+
+	dataFile = "data/data.json"
 )
 
 var (
@@ -220,7 +222,7 @@ func Save() string {
 
 	str, err := json.Marshal(data)
 	if err == nil {
-		err = os.WriteFile("data/data.json", str, 0o600)
+		err = os.WriteFile(dataFile, str, 0o600)
 	}
 
 	if err != nil {
@@ -285,7 +287,7 @@ func Load() error {
 	defer mutex.Unlock()
 	data := &mainData
 
-	return load("data/data.json", data)
+	return load(dataFile, data)
 }
 
 func load(filePath string, data *Data) error {
