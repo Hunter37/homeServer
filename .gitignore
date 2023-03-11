@@ -3,8 +3,8 @@ bin/
 homeServer
 
 # data file
-data*.json
-data*.gob.gzip
+data/data.json
+backup/
 
 # IDE files
 # .vscode/

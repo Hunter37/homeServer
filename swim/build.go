@@ -33,7 +33,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 	settings := model.GetSettings()
 	meets := make([]string, 0, len(settings.Standards))
 	for _, m := range settings.Standards {
-		if model.GetAgeGroupMeetStandard(m, swimmer.Gender, swimmer.Age, model.LCM, model.Free, 100) > 0 {
+		if model.GetMeetStandard(m, swimmer.Gender, swimmer.Age, model.LCM, model.Free, 100) > 0 {
 			meets = append(meets, m)
 		}
 	}
@@ -81,14 +81,14 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 						percent = 100
 					}
 				}
-				return fmt.Sprintf(`<td class="ct g"><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
+				return fmt.Sprintf(`<td class="ct"><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
 					class, utils.FormatSwimTime(t), class, utils.CalculateSwimTimeDelta(t, event.Time), percent)
 			})...)
 		}
 
 		// add meet standards
 		for _, meet := range meets {
-			time := model.GetAgeGroupMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
+			time := model.GetMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
 			if time <= 0 {
 				item = append(item, "")
 			} else {
@@ -456,7 +456,7 @@ func generateTopListTable(urls []string) *Table {
 	standards := make([]Standard, 0)
 	for _, meet := range model.GetSettings().Standards {
 		for age := minAge; age <= maxAge; age++ {
-			tm := model.GetAgeGroupMeetStandard(meet, gender, age, course, stroke, length)
+			tm := model.GetMeetStandard(meet, gender, age, course, stroke, length)
 			tstr := ""
 			if tm > 0 {
 				tstr = utils.FormatSwimTime(tm)

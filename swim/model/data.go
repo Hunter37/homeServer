@@ -220,7 +220,7 @@ func Save() string {
 
 	str, err := json.Marshal(data)
 	if err == nil {
-		err = os.WriteFile("data.json", str, 0o600)
+		err = os.WriteFile("data/data.json", str, 0o600)
 	}
 
 	if err != nil {

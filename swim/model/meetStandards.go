@@ -18,7 +18,7 @@ var (
 	meterToYardMapping = map[int]int{400: 500, 800: 1000, 1500: 1650}
 )
 
-func GetAgeGroupMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
+func GetMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
 	if meetStandards == nil {
 		err := loadMeetStandards("data/meetStandards.json")
 		utils.LogError(err)

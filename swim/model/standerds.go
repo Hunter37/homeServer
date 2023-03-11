@@ -18,7 +18,7 @@ var (
 
 func GetStandards(gender string, age int, course, stroke string, length int) []int {
 	if len(standards) == 0 {
-		standards = getMotivationalTimes("data/2021-2024AgeGroupMotivationTimes.txt")
+		standards = loadMotivationalTimes("data/2021-2024AgeGroupMotivationTimes.txt")
 	}
 
 	if age < 10 {
@@ -44,7 +44,7 @@ func GetStandard(gender string, age int, course, stroke string, length, time int
 	return std
 }
 
-func getMotivationalTimes(file string) map[string][]int {
+func loadMotivationalTimes(file string) map[string][]int {
 	// gender | age | course | stroke | length [B, BB, A, AA, AAA, AAAA]
 	stds := make(map[string][]int)
 

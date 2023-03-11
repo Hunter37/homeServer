@@ -7,6 +7,13 @@ import (
 	"homeServer/test"
 )
 
+func TestForNilSlice(t *testing.T) {
+	var nilSlice []string
+	for _, s := range nilSlice {
+		fmt.Println(s)
+	}
+}
+
 func TestColor(t *testing.T) {
 	for i := 0; i < 110; i++ {
 		if i%10 == 0 {
@@ -14,6 +21,7 @@ func TestColor(t *testing.T) {
 		}
 		fmt.Printf("\033[%dm%4d\033[0m  ", i, i)
 	}
+	fmt.Println()
 }
 
 func TestChannel(t *testing.T) {
@@ -33,28 +41,28 @@ func TestChannel(t *testing.T) {
 	}
 }
 
-type TestStruct struct {
+type testStruct struct {
 	IntVal    int
 	IntPtr    *int
 	StrVal    string
 	StrPtr    *string
 	SlcVal    []int
 	SlcPtr    *[]*int
-	Recursive *TestStruct
+	Recursive *testStruct
 }
 
 func TestDeepClone(t *testing.T) {
 	int2 := 2
 	str4 := "4"
 	int6 := 6
-	test1 := &TestStruct{
+	test1 := &testStruct{
 		IntVal: 1,
 		IntPtr: &int2,
 		StrVal: "3",
 		StrPtr: &str4,
 		SlcVal: []int{5},
 		SlcPtr: &[]*int{&int6},
-		Recursive: &TestStruct{
+		Recursive: &testStruct{
 			IntVal: 7,
 		},
 	}
