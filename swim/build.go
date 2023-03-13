@@ -62,48 +62,24 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		item = append(item, len(swimmer.GetEvents(ranks.Course, ranks.Stroke, ranks.Length)))
 
 		// add motivational standards
+		var preStdTimeInSecond int
 		stds := model.GetStandards(swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
 		if len(stds) == 0 {
 			item = append(item, "", "", "", "", "", "")
 		} else {
-			pre := append([]int{2*stds[0] - stds[1]}, stds...)
+			preStdTimeInSecond = 2*utils.GetSwimTimeInCentiSecond(stds[0]) - utils.GetSwimTimeInCentiSecond(stds[1])
 			item = append(item, utils.ConvertWithIndex(stds, func(i, t int) any {
-				percent := 0
-				class := "ad"
-				if event.Time <= pre[i] {
-					if event.Time > t {
-						et := utils.GetSwimTimeInCentiSecond(event.Time)
-						ct := utils.GetSwimTimeInCentiSecond(t)
-						pt := utils.GetSwimTimeInCentiSecond(pre[i])
-						percent = utils.Max(5, utils.Min(95, int(100.0*float32(pt-et)/float32(pt-ct))))
-					} else {
-						class = "dp"
-						percent = 100
-					}
-				}
-				return fmt.Sprintf(`<td class="ct"><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
-					class, utils.FormatSwimTime(t), class, utils.CalculateSwimTimeDelta(t, event.Time), percent)
+				return buildStandardCell(event.Time, t, &preStdTimeInSecond)
 			})...)
 		}
 
 		// add meet standards
 		for _, meet := range meets {
-			time := model.GetMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
-			if time <= 0 {
+			stdTime := model.GetMeetStandard(meet, swimmer.Gender, swimmer.Age, ranks.Course, ranks.Stroke, ranks.Length)
+			if stdTime <= 0 {
 				item = append(item, "")
 			} else {
-				diff := utils.CalculateSwimTimeDelta(time, event.Time)
-				class := "ad"
-				et := utils.GetSwimTimeInCentiSecond(event.Time)
-				ct := utils.GetSwimTimeInCentiSecond(time)
-				pt := int(float32(ct) * 1.12)
-				percent := utils.Max(0, utils.Min(100, int(100.0*float32(pt-et)/float32(pt-ct))))
-				if event.Time <= time {
-					class = "dp"
-					percent = 100
-				}
-				item = append(item, fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
-					class, utils.FormatSwimTime(time), class, diff, percent))
+				item = append(item, buildStandardCell(event.Time, stdTime, &preStdTimeInSecond))
 			}
 		}
 
@@ -142,6 +118,28 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			{Log: fmt.Sprintf("%s (%s)     Alias:%s     ID=%s", swimmer.Name, swimmer.Middle, swimmer.Alias, swimmer.ID)},
 		},
 	}
+}
+
+func buildStandardCell(swimmerTime, stdTime int, preStdTimeInSecond *int) string {
+	diff := utils.CalculateSwimTimeDelta(stdTime, swimmerTime)
+	class := "ad"
+	st := utils.GetSwimTimeInCentiSecond(swimmerTime)
+	ct := utils.GetSwimTimeInCentiSecond(stdTime)
+	pt := *preStdTimeInSecond
+	*preStdTimeInSecond = ct
+
+	if pt <= ct {
+		pt = int(float32(ct) * 1.1)
+	}
+	percent := utils.Max(0, int(100.*float32(pt-st)/float32(pt-ct)))
+
+	if swimmerTime <= stdTime {
+		class = "dp"
+		percent = 100
+	}
+
+	return fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
+		class, utils.FormatSwimTime(stdTime), class, diff, percent)
 }
 
 func generateAgeBestTable(swimmer *model.Swimmer) *Table {
