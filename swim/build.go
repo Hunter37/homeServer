@@ -129,7 +129,7 @@ func buildStandardCell(swimmerTime, stdTime int, preStdTimeInSecond *int) string
 	*preStdTimeInSecond = ct
 
 	if pt <= ct {
-		pt = int(float32(ct) * 1.1)
+		pt = int(float32(ct) * 1.15)
 	}
 	percent := utils.Max(0, int(100.*float32(pt-st)/float32(pt-ct)))
 
@@ -138,7 +138,7 @@ func buildStandardCell(swimmerTime, stdTime int, preStdTimeInSecond *int) string
 		percent = 100
 	}
 
-	return fmt.Sprintf(`<td class="ct"'><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
+	return fmt.Sprintf(`<td class="ct"><div class="%s">%s</div><div class="dd %s">%s</div><div class="r" style="left:%d%%;"></div></td>`,
 		class, utils.FormatSwimTime(stdTime), class, diff, percent)
 }
 
