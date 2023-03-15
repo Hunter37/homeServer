@@ -1,7 +1,8 @@
 package utils
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net"
 	"net/http"
@@ -19,13 +20,14 @@ func Clone[T any](val T) T {
 }
 
 func deepClone[T any](val T) (T, error) {
-	data, err := json.Marshal(val)
-	if err != nil {
-		return val, err
+	var result T
+
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(val); err != nil {
+		return result, err
 	}
 
-	var result T
-	err = json.Unmarshal(data, &result)
+	err := gob.NewDecoder(&buf).Decode(&result)
 	return result, err
 }
 

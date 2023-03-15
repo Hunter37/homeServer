@@ -67,7 +67,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 		if len(stds) == 0 {
 			item = append(item, "", "", "", "", "", "")
 		} else {
-			preStdTimeInSecond = 2*utils.GetSwimTimeInCentiSecond(stds[0]) - utils.GetSwimTimeInCentiSecond(stds[1])
+			preStdTimeInSecond = int(2.5*float32(utils.GetSwimTimeInCentiSecond(stds[0])) - 1.5*float32(utils.GetSwimTimeInCentiSecond(stds[1])))
 			item = append(item, utils.ConvertWithIndex(stds, func(i, t int) any {
 				return buildStandardCell(event.Time, t, &preStdTimeInSecond)
 			})...)
