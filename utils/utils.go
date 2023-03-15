@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"runtime"
 	"time"
 )
@@ -21,6 +22,10 @@ func Clone[T any](val T) T {
 
 func deepClone[T any](val T) (T, error) {
 	var result T
+
+	if reflect.ValueOf(val).IsNil() {
+		return result, nil
+	}
 
 	var buf bytes.Buffer
 	if err := gob.NewEncoder(&buf).Encode(val); err != nil {
