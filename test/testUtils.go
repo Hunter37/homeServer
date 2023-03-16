@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -21,10 +23,86 @@ func NoError(t *testing.T, err error, msgAndArgs ...interface{}) bool {
 	return true
 }
 
+// Error asserts that a function returned an error (i.e. not `nil`).
+//
+//	  actualObj, err := SomeFunction()
+//	  if assert.Error(t, err) {
+//		   assert.Equal(t, expectedError, err)
+//	  }
+func Error(t *testing.T, err error, msgAndArgs ...interface{}) bool {
+	if err == nil {
+		return Fail(t, "An error is expected but got nil.", msgAndArgs...)
+	}
+
+	return true
+}
+
+// Nil asserts that the specified object is nil.
+//
+//	assert.Nil(t, err)
+func Nil(t *testing.T, object interface{}, msgAndArgs ...interface{}) bool {
+	if isNil(object) {
+		return true
+	}
+
+	return Fail(t, fmt.Sprintf("Expected nil, but got: %#v", object), msgAndArgs...)
+}
+
 // Fail reports a failure through
 func Fail(t *testing.T, failureMessage string, msgAndArgs ...any) bool {
-	t.Errorf("\n%s %s", failureMessage, fmt.Sprint(msgAndArgs...))
+	t.Errorf("\n%s %s\nCaller: %s", failureMessage, fmt.Sprint(msgAndArgs...), callerInfo())
 	return false
+}
+
+// containsKind checks if a specified kind in the slice of kinds.
+func containsKind(kinds []reflect.Kind, kind reflect.Kind) bool {
+	for i := 0; i < len(kinds); i++ {
+		if kind == kinds[i] {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isNil checks if a specified object is nil or not, without Failing.
+func isNil(object interface{}) bool {
+	if object == nil {
+		return true
+	}
+
+	value := reflect.ValueOf(object)
+	kind := value.Kind()
+	isNilableKind := containsKind(
+		[]reflect.Kind{
+			reflect.Chan, reflect.Func,
+			reflect.Interface, reflect.Map,
+			reflect.Ptr, reflect.Slice},
+		kind)
+
+	if isNilableKind && value.IsNil() {
+		return true
+	}
+
+	return false
+}
+
+func callerInfo() string {
+	for i := 0; ; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+
+		parts := strings.Split(file, "/")
+		if len(parts) == 1 || parts[len(parts)-1] == "testUtils.go" {
+			continue
+		}
+
+		return fmt.Sprintf("%s:%d", file, line)
+	}
+
+	return ""
 }
 
 // True asserts that the specified value is true.
