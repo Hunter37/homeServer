@@ -8,6 +8,7 @@
     body, html {
         margin: 0;
         height: 100%;
+        font: 14px Verdana;
     }
 
     .root {
@@ -20,68 +21,71 @@
         margin: 10px;
     }
 
-    .top table, .big {
+    .big {
         font: 14px Verdana;
     }
 
-    td {
-        vertical-align: top;
-        padding: 3px;
+    #jsonSettings {
+        width: 360px;
     }
 
-    #jsonSettings {
-        width: 480px;
+    .jsoneditor-poweredBy {
+        display: none;
     }
+
+    .ib {
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    .rgt > p {
+        text-align: right;
+        margin: 5px 2px;
+    }
+
 </style>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.9.2/jsoneditor.min.js"></script>
 <body>
 <div class="root">
     <div class="top">
-        <table>
-            <tbody>
-            <tr>
-                <td>
-                    <div>
-                        <fieldset>
-                            <legend>Search mode:</legend>
-                            <div>
-                                <input type="radio" id="online" name="mode" value="online"
-                                       onchange="updateSettings(this)">
-                                <label for="online">Online</label>
-                            </div>
-                            <div>
-                                <input type="radio" id="cache" name="mode" value="cache"
-                                       onchange="updateSettings(this)">
-                                <label for="cache">Cache</label>
-                            </div>
-                            <div>
-                                <input type="radio" id="offline" name="mode" value="offline"
-                                       onchange="updateSettings(this)">
-                                <label for="offline">Offline</label>
-                            </div>
-                        </fieldset>
-                    </div>
-                </td>
-                <td>
-                    <fieldset>
-                        <legend>Settings
-                            <button class="big" onclick="updateSettings(this)">Save Settings</button>
-                        </legend>
-                        <div id="jsonSettings"></div>
-                    </fieldset>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2">
-                    Find Swimmer:
-                    <input id="sinput" style="width: 120px"/>
-                    <button onclick="load()" class="big">load</button>
-                    <button onclick="save()" class="big">save</button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <div>
+            <fieldset class="ib">
+                <legend>Search mode:</legend>
+                <div>
+                    <input type="radio" id="online" name="mode" value="online"
+                           onchange="updateSettings(this)">
+                    <label for="online">Online</label>
+                </div>
+                <div>
+                    <input type="radio" id="cache" name="mode" value="cache"
+                           onchange="updateSettings(this)">
+                    <label for="cache">Cache</label>
+                </div>
+                <div>
+                    <input type="radio" id="offline" name="mode" value="offline"
+                           onchange="updateSettings(this)">
+                    <label for="offline">Offline</label>
+                </div>
+            </fieldset>
+            <fieldset class="ib" style="position:relative">
+                <legend>Settings</legend>
+                <div id="jsonSettings"></div>
+                <button class="big" style="position:absolute;top:11px;right:16px" onclick="updateSettings(this)">Save</button>
+            </fieldset>
+            <fieldset class="ib rgt">
+                <legend>Merge Data</legend>
+                <p>From:<input id="mergeFrom" style="width: 120px"/></p>
+                <p>To:<input id="mergeTo" style="width: 120px"/></p>
+                <p><button onclick="merge()" class="big">Merge</button></p>
+            </fieldset>
+        </div>
+        <div style="margin-top: 20px">
+            Find Swimmer:
+            <input id="sinput" style="width: 120px"/>
+            <button onclick="load()" class="big">Load</button>
+            <button onclick="save()" class="big">Save</button>
+        </div>
     </div>
     <div id="jsoneditor"></div>
 </div>
@@ -89,12 +93,14 @@
 
 <script>
 
-    let editorConfig = {
+    let settings = new JSONEditor(document.getElementById('jsonSettings'), {
         mode: 'tree',
-        modes: ['code', 'tree']
-    };
-
-    let settings = new JSONEditor(document.getElementById('jsonSettings'), editorConfig);
+        modes: ['code', 'tree'],
+        search: false,
+        statusBar: false,
+        enableSort: false,
+        enableTransform: false
+    });
 
     async function updateSettings(elem) {
         let save = elem && (elem.checked || elem.nodeName == 'BUTTON');
@@ -114,7 +120,16 @@
 
     updateSettings()
 
-    let editor = new JSONEditor(document.getElementById('jsoneditor'), editorConfig);
+    async function merge() {
+        let from = encodeURIComponent(document.getElementById('mergeFrom').value);
+        let to = encodeURIComponent(document.getElementById('mergeTo').value);
+        let response = await fetch('mergeSwimmer?from=' + from + "&to=" + to);
+        alert("Merge " + (response.ok ? 'Success' : 'Failed'));
+    }
+
+    let editor = new JSONEditor(document.getElementById('jsoneditor'), {
+        modes: ['code', 'tree']
+    });
 
     const sinputElem = document.getElementById('sinput');
 

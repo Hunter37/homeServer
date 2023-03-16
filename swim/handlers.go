@@ -19,6 +19,7 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/swim/search":         searchHandler,
 	"/swim/birthday":       birthdayHandler,
 	"/swim/updateSettings": settingsHandler,
+	"/swim/mergeSwimmer":   mergeSwimmerHandler,
 	"/swim/swimmer":        swimmerHandler,
 }
 
@@ -103,6 +104,33 @@ func settingsHandler(writer http.ResponseWriter, request *http.Request) {
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)
+}
+
+// mergeSwimmerHandler merge to swimmer data in the settings page
+func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
+	from := request.URL.Query().Get("from")
+	to := request.URL.Query().Get("to")
+	if from == to {
+		gzipWrite(writer, nil, http.StatusBadRequest)
+		return
+	}
+
+	if to != "DELETE" {
+		f, _ := model.Find(from)
+		t, _ := model.Find(to)
+		if f == nil || t == nil || f.Name != t.Name {
+			gzipWrite(writer, nil, http.StatusBadRequest)
+			return
+		}
+
+		f.ForEachEvent(func(course, stroke string, length int, event *model.Event) {
+			model.AddEvent(to, course, stroke, length, event)
+		})
+	}
+
+	model.Delete(from)
+
+	gzipWrite(writer, nil, http.StatusOK)
 }
 
 // swimmerHandler handle the swimmer view and update json request in settings page

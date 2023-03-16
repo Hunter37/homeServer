@@ -31,10 +31,15 @@ const (
 
 var (
 	StrokeMapping = map[string]string{
+		Free:                Free,
 		"Freestyle":         Free,
+		Back:                Back,
 		"Backstroke":        Back,
+		Breast:              Breast,
 		"Breaststroke":      Breast,
+		Fly:                 Fly,
 		"Butterfly":         Fly,
+		IM:                  IM,
 		"Individual Medley": IM,
 	}
 
@@ -365,6 +370,20 @@ func Find(sid string) (*Swimmer, string) {
 	}
 
 	return utils.Clone(swimmer), url
+}
+
+// Delete remove the swimmer by id
+func Delete(sid string) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	data := &mainData
+
+	for _, lsc := range data.Swimmers {
+		if _, ok := lsc.Swimmers[sid]; ok {
+			delete(lsc.Swimmers, sid)
+			break
+		}
+	}
 }
 
 // FindName search the swimmer's alias and name
