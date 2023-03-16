@@ -87,3 +87,21 @@ func TestDeepClone(t *testing.T) {
 	test.NotEqual(t, test1, test3)
 	test.Equal(t, test2, test3)
 }
+
+func TestDeepCloneWithNil(t *testing.T) {
+	var p *int
+
+	cp, err := deepClone(p)
+	test.NoError(t, err)
+	test.Equal(t, p, cp)
+
+	arr := make([]*int, 0)
+	carr, err := deepClone(arr)
+	test.NoError(t, err)
+	test.Nil(t, carr) // clone empty arr [], will get a nil pointer, this is a gob side effect
+
+	arr = append(arr, nil)
+	carr2, err := deepClone(arr)
+	test.Error(t, err) // clone arr with nil [nil], will get an error
+	test.Nil(t, carr2) // clone arr with nil [nil], will get a nil pointer, this is a gob side effect
+}
