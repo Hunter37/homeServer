@@ -125,7 +125,8 @@ type Swimmer struct {
 	LCM      Stroke     `json:",omitempty"`
 	Rankings []Rankings `json:",omitempty"`
 
-	Update time.Time `json:",omitempty"`
+	Update  time.Time `json:",omitempty"`
+	Invalid bool      `json:",omitempty"`
 }
 
 func (s *Swimmer) MarshalJSON() ([]byte, error) {

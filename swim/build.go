@@ -384,6 +384,10 @@ func generateTopListTable(urls []string) *Table {
 
 			swimmer, _ := model.Find(row.Sid)
 			if swimmer != nil {
+				if swimmer.Invalid {
+					continue
+				}
+
 				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
 					*row.Time = e.Time
 				} else if !isImxTable {
