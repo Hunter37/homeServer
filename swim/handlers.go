@@ -126,6 +126,16 @@ func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
 		f.ForEachEvent(func(course, stroke string, length int, event *model.Event) {
 			model.AddEvent(to, course, stroke, length, event)
 		})
+
+		if t.Birthday == nil {
+			t.Birthday = f.Birthday
+		}
+		if len(t.Middle) == 0 {
+			t.Middle = f.Middle
+		}
+		if len(t.Alias) == 0 {
+			t.Alias = f.Alias
+		}
 	}
 
 	model.Delete(from)
