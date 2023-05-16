@@ -128,10 +128,13 @@ func buildStandardCell(swimmerTime, stdTime int, preStdTimeInSecond *int) string
 	pt := *preStdTimeInSecond
 	*preStdTimeInSecond = ct
 
-	if pt <= ct {
+	percent := 0
+	if pt < ct {
 		pt = int(float32(ct) * 1.15)
 	}
-	percent := utils.Max(0, int(100.*float32(pt-st)/float32(pt-ct)))
+	if pt != ct {
+		percent = utils.Max(0, int(100.*float32(pt-st)/float32(pt-ct)))
+	}
 
 	if swimmerTime <= stdTime {
 		class = "dp"

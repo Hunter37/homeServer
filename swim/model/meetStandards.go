@@ -19,10 +19,14 @@ var (
 )
 
 func GetMeetStandard(meet, gender string, age int, course, stroke string, length int) int {
+	var err error
+
 	if meetStandards == nil {
-		utils.LogError(loadMeetStandards("data/meetStandards.json"))
+		meetStandards, err = loadMeetStandards("data/meetStandards.json")
+		utils.LogError(err)
 	} else if _, ok := meetStandards[meet]; !ok {
-		utils.LogError(loadMeetStandards("data/meetStandards.json"))
+		meetStandards, err = loadMeetStandards("data/meetStandards.json")
+		utils.LogError(err)
 	}
 
 	if standard, ok := meetStandards[meet]; ok {
@@ -34,13 +38,13 @@ func GetMeetStandard(meet, gender string, age int, course, stroke string, length
 	return -1
 }
 
-func loadMeetStandards(file string) error {
-	meetStandards = make(map[string]map[string]int)
+func loadMeetStandards(file string) (map[string]map[string]int, error) {
+	standards := make(map[string]map[string]int)
 
 	listFile, err := os.Open(file)
 	if err != nil {
 		utils.LogError(err, "list file read failed!")
-		return err
+		return standards, err
 	}
 
 	scanner := bufio.NewScanner(listFile)
@@ -57,7 +61,7 @@ func loadMeetStandards(file string) error {
 		// meet name
 		if strings.Index(line, "meet:") == 0 {
 			meetStds = make(map[string]int)
-			meetStandards[strings.TrimSpace(line[5:])] = meetStds
+			standards[strings.TrimSpace(line[5:])] = meetStds
 			continue
 		}
 
@@ -94,7 +98,7 @@ func loadMeetStandards(file string) error {
 		if len(parts) != 2+2*valueCount {
 			err = fmt.Errorf("wrong line")
 			utils.LogError(err, line)
-			return err
+			return standards, err
 		}
 
 		stroke := parts[valueCount+1]
@@ -131,5 +135,5 @@ func loadMeetStandards(file string) error {
 		}
 	}
 
-	return nil
+	return standards, nil
 }

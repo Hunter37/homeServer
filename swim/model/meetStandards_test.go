@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoadMeetStandards(t *testing.T) {
-	err := loadMeetStandards("../../data/meetStandards.json")
+	meetStandards, err := loadMeetStandards("../../data/meetStandards.json")
 	test.NoError(t, err)
 
 	test.Equal(t, meetStandards["ShowD"]["Female15SCYFree50"], 2889)
