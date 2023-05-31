@@ -21,10 +21,11 @@ var (
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
-	"/favicon.ico":          iconHandler,
-	"/health":               healthHandler,
-	"/swim":                 swim.SwimHandler,
-	"/apple-touch-icon.png": appleIconHandler,
+	"/favicon.ico":                      iconHandler,
+	"/health":                           healthHandler,
+	"/swim":                             swim.SwimHandler,
+	"/apple-touch-icon.png":             appleIconHandler,
+	"/apple-touch-icon-precomposed.png": appleIconHandler,
 }
 
 func main() {
