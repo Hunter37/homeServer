@@ -392,7 +392,9 @@ func generateTopListTable(urls []string) *Table {
 				}
 
 				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
-					*row.Time = e.Time
+					if e.Time < *row.Time {
+						*row.Time = e.Time
+					}
 				} else if !isImxTable {
 					continue
 				}
