@@ -391,12 +391,15 @@ func generateTopListTable(urls []string) *Table {
 					continue
 				}
 
-				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
-					if e.Time < *row.Time {
-						*row.Time = e.Time
+				if e := swimmer.GetBestEvent(course, stroke, length); e != nil && e.Time < *row.Time {
+					*row.Time = e.Time
+				} else {
+					for _, evt := range swimmer.GetEvents(course, stroke, length) {
+						if *row.Date == evt.Date && evt.Invalid {
+							*row.Time = e.Time
+							break
+						}
 					}
-				} else if !isImxTable {
-					continue
 				}
 
 				left, right := swimmer.GetBirthday()
