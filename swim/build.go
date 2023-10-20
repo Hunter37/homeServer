@@ -388,19 +388,23 @@ func generateTopListTable(urls []string) *Table {
 			swimmer, _ := model.Find(row.Sid)
 			if swimmer != nil {
 				if swimmer.Invalid {
-					continue
+					continue //skip user
 				}
 
-				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
-					if e.Time < *row.Time {
+				badUserData := false
+				for _, evt := range swimmer.GetEvents(course, stroke, length) {
+					if *row.Date == evt.Date && *row.Time == evt.Time && evt.Invalid {
+						// bad user data
+						badUserData = true
+						break
+					}
+				}
+
+				if badUserData {
+					if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
 						*row.Time = e.Time
 					} else {
-						for _, evt := range swimmer.GetEvents(course, stroke, length) {
-							if *row.Date == evt.Date && evt.Invalid {
-								*row.Time = e.Time
-								break
-							}
-						}
+						continue //skip user
 					}
 				}
 
