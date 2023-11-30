@@ -400,10 +400,13 @@ func generateTopListTable(urls []string) *Table {
 					}
 				}
 
-				if badUserData {
-					if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
+				if e := swimmer.GetBestEvent(course, stroke, length); e != nil {
+					if badUserData || e.Time < *row.Time {
 						*row.Time = e.Time
-					} else {
+						*row.Date = e.Date
+					}
+				} else {
+					if badUserData {
 						continue //skip user
 					}
 				}
@@ -437,7 +440,7 @@ func generateTopListTable(urls []string) *Table {
 						std = model.StandardNames[i]
 					}
 				}
-				timeCol := fmt.Sprintf(`<td class="ct"'><div>%s</div><div class="std">%s</div></td>`,
+				timeCol := fmt.Sprintf(`<td class="ct"><div>%s</div><div class="std">%s</div></td>`,
 					utils.FormatSwimTime(*row.Time), std)
 
 				items = append(items, []any{row.Name, timeCol, row.Date.Format("1/02/06"),
