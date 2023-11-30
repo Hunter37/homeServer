@@ -10,44 +10,22 @@ import (
 
 func TestFindIMRelayPlayer(t *testing.T) {
 
-	//	text := `
-	//1	Noah Arthiabah	10	Bellevue Club Swim Te	36.48	6/24/23	PN MET Cannonba
-	//2	Jacob Yeung	10	Bellevue Club Swim Te	39.14	6/24/23	PN MET Cannonba
-	//3	Luke Han	10	Bellevue Club Swim Te	39.27	6/24/23	PN MET Cannonba
-	//4	Yichen Fei	9	Bellevue Club Swim Te	43.22	5/05/23	PN BC May Flow
-	//,,,,,,
-	//1	Noah Arthiabah	10	Bellevue Club Swim Te	43.79	6/02/23	IE VS Apple Cap
-	//2	Luke Han	10	Bellevue Club Swim Te	47.13	6/24/23	PN MET Cannonba
-	//3	Alexander Han	9	Bellevue Club Swim Te	47.15	5/05/23	PN BC May Flow
-	//4	Zegen Brink	9	Bellevue Club Swim Te	50.00	5/05/23	PN BC May Flow
-	//,,,,,,
-	//1	Noah Arthiabah	10	Bellevue Club Swim Te	34.83	6/02/23	IE VS Apple Cap
-	//2	Jacob Yeung	10	Bellevue Club Swim Te	39.19	6/24/23	PN MET Cannonba
-	//3	David Xin	10	Bellevue Club Swim Te	42.90	5/05/23	PN BC May Flow
-	//4	Alexander Han	9	Bellevue Club Swim Te	42.98	6/02/23	IE VS Apple Cap
-	//,,,,,,
-	//1	Noah Arthiabah	10	Bellevue Club Swim Te	30.73	6/24/23	PN MET Cannonba
-	//2	Luke Han	10	Bellevue Club Swim Te	34.41	5/05/23	PN BC May Flow
-	//3	Jacob Yeung	10	Bellevue Club Swim Te	34.88	5/05/23	PN BC May Flow
-	//4	Yichen Fei	9	Bellevue Club Swim Te	35.65	6/24/23	PN MET Cannonba
-	//`
-	// 2.66   3.34    4.36    3.68
-
 	text := `
-7	Evan Mok	10	Pacific Dragons Swim	39.32	5/05/23	CAN West Coast
-
-8	Muyuan Zhu	10	Pacific Dragons Swim	39.70	6/24/23	PN MET Cannonba
-
-11	Marcus Chen	9	Pacific Dragons Swim	40.40	6/24/23	PN MET Cannonba
-
-12	Michael Zhang	10	Pacific Dragons Swim	40.43	6/03/23	PN VAST Summer
+	1	Leon Huang	25.42	11/18/23	12	2011/03/12	PN	Bellevue Club Swim Te	PN November AGI
+	2	Carter Neal	26.16	11/04/23	12	2011/05/27	PN	Bellevue Club Swim Te	PN BISC Bob Mil
+	3	Ryan Shaw	26.28	11/18/23	12	2011/02/14	PN	Bellevue Club Swim Te	PN November AGI
+	4	Jayden Han	26.59	11/04/23	12	2011/03/27 - 04/30	PN	Bellevue Club Swim Te	PN BISC Bob Mil
+	5	Anderson Tseng	26.81	11/18/23	12	2011/07/31	PN	Bellevue Club Swim Te	PN November AGI
+	6	DJ Vukadinovic	27.24	11/05/22	11	2012/01/08	PN	Bellevue Club Swim Te	PN BISC Bob Mil
+	7	Yan Zhang	27.40	11/04/23	12	2011/08/08	PN	Bellevue Club Swim Te	PN BISC Bob Mil
+	8	Fitz McCullough	28.64	10/14/23	12	2011/09/26	PN	Bellevue Club Swim Te	PN CSC Fall Cla
 `
 
 	data := make([][][]string, 0)
 
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
-		line := scanner.Text()
+		line := strings.TrimSpace(scanner.Text())
 		if len(line) < 20 {
 			data = append(data, make([][]string, 0))
 		} else {
@@ -55,20 +33,52 @@ func TestFindIMRelayPlayer(t *testing.T) {
 			data[group] = append(data[group], strings.Split(line, "\t"))
 		}
 	}
+	free := data[0]
 
-	bestTime = 1549900
+	if len(data) >= 4 {
+		free = data[3]
 
-	used := map[string]bool{}
-	choice := []int{-1, -1, -1, -1}
-	dfs(data, used, 0, choice, 0)
+		inGroup := map[string]bool{}
+		used := map[string]bool{}
 
-	fmt.Printf("\n%s%d.%d\n\n\n", best, bestTime/100, bestTime%100)
+		for i := 0; i < len(data[0]); i++ {
+			bestTime = 600000
+			choice := []int{-1, -1, -1, -1}
+
+			dfs(data, used, inGroup, 0, choice, 0)
+
+			if bestTime == 600000 {
+				break
+			}
+
+			fmt.Printf("MR %d\n%s%d:%02d.%02d\n\n", i+1, best, bestTime/100/60, bestTime/100%60, bestTime%100)
+
+			for k := range inGroup {
+				used[k] = true
+			}
+		}
+	}
+
+	i := 0
+	end := 4
+	for end <= len(free) {
+		bestTime = 0
+
+		fmt.Printf("FR %d\n", (i+1)/4)
+		for ; i < end; i++ {
+			fmt.Println(strings.Join(free[i], "\t"))
+			bestTime += getTime(free[i][2])
+		}
+		fmt.Printf("%d:%02d.%02d\n\n", bestTime/100/60, bestTime/100%60, bestTime%100)
+
+		end += 4
+	}
 }
 
 var best string
 var bestTime int
 
-func dfs(data [][][]string, used map[string]bool, style int, choice []int, time int) {
+func dfs(data [][][]string, used, inGroup map[string]bool, style int, choice []int, time int) {
 	if time >= bestTime {
 		return
 	}
@@ -76,9 +86,16 @@ func dfs(data [][][]string, used map[string]bool, style int, choice []int, time 
 	if style == 4 {
 		bestTime = time
 		best = ""
+
+		for k := range inGroup {
+			delete(inGroup, k)
+		}
+
 		for i := 0; i < 4; i++ {
 			best += strings.Join(data[i][choice[i]], "\t") + "\n"
+			inGroup[data[i][choice[i]][1]] = true
 		}
+
 		return
 	}
 
@@ -88,15 +105,21 @@ func dfs(data [][][]string, used map[string]bool, style int, choice []int, time 
 		if _, found := used[swimmer[1]]; !found {
 			used[swimmer[1]] = true
 			choice[style] = i
-			dfs(data, used, style+1, choice, time+getTime(swimmer[4]))
+			dfs(data, used, inGroup, style+1, choice, time+getTime(swimmer[2]))
 			delete(used, swimmer[1])
 		}
 	}
 }
 
 func getTime(t string) int {
-	p := strings.Split(t, ".")
+	m := 0
+	p := strings.Split(t, ":")
+	if len(p) == 2 {
+		m, _ = strconv.Atoi(p[0])
+		t = p[1]
+	}
+	p = strings.Split(t, ".")
 	s, _ := strconv.Atoi(p[0])
-	m, _ := strconv.Atoi(p[1])
-	return s*100 + m
+	c, _ := strconv.Atoi(p[1])
+	return (m*60+s)*100 + c
 }
