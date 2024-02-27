@@ -1,16 +1,17 @@
 package model
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"homeServer/storage"
 	"homeServer/utils"
 )
 
@@ -228,7 +229,7 @@ func Save() string {
 
 	str, err := json.Marshal(data)
 	if err == nil {
-		err = os.WriteFile(dataFile, str, 0o600)
+		err = storage.File.Write(dataFile, str)
 	}
 
 	if err != nil {
@@ -249,12 +250,9 @@ func Backup(path string) error {
 }
 
 func backup(path string, data *Data) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0o600)
-	if err != nil {
-		return err
-	}
+	var buf bytes.Buffer
 
-	gzipWriter, err := gzip.NewWriterLevel(file, gzip.BestCompression)
+	gzipWriter, err := gzip.NewWriterLevel(&buf, gzip.BestCompression)
 	if err != nil {
 		return err
 	}
@@ -265,16 +263,21 @@ func backup(path string, data *Data) error {
 		return err
 	}
 
-	return gzipWriter.Close()
-}
-
-func recover(path string, data *Data) error {
-	file, err := os.Open(path)
+	err = gzipWriter.Close()
 	if err != nil {
 		return err
 	}
 
-	gzipReader, err := gzip.NewReader(file)
+	return storage.File.Write(path, buf.Bytes())
+}
+
+func recover(path string, data *Data) error {
+	b, err := storage.File.Read(path)
+	if err != nil {
+		return err
+	}
+
+	gzipReader, err := gzip.NewReader(bytes.NewBuffer(b))
 	if err != nil {
 		return err
 	}
@@ -297,7 +300,7 @@ func Load() error {
 }
 
 func load(filePath string, data *Data) error {
-	if str, err := os.ReadFile(filePath); err != nil {
+	if str, err := storage.File.Read(filePath); err != nil {
 		return err
 	} else {
 		err = json.Unmarshal(str, data)
@@ -708,4 +711,13 @@ func DataMigration() {
 	//	delete(mainData.Swimmers, path)
 	//	utils.Log("Deleted " + path + "\n")
 	//}
+}
+
+func Init() {
+	mainData = Data{
+		Swimmers: make(Swimmers),
+		Settings: Settings{
+			CacheTimeInMinutes: 360,
+		},
+	}
 }

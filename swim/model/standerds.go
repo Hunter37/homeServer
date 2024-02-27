@@ -2,11 +2,12 @@ package model
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
+	"homeServer/storage"
 	"homeServer/utils"
 )
 
@@ -18,7 +19,7 @@ var (
 
 func GetStandards(gender string, age int, course, stroke string, length int) []int {
 	if len(standards) == 0 {
-		standards = loadMotivationalTimes("data/2021-2024AgeGroupMotivationTimes.txt")
+		standards = loadMotivationalTimes("data/2021-2024AgeGroupMotivationTimes.json")
 	}
 
 	if age < 10 {
@@ -48,13 +49,13 @@ func loadMotivationalTimes(file string) map[string][]int {
 	// gender | age | course | stroke | length [B, BB, A, AA, AAA, AAAA]
 	stds := make(map[string][]int)
 
-	listFile, err := os.Open(file)
+	b, err := storage.File.Read(file)
 	if err != nil {
 		utils.LogError(err, "list file read failed!")
 		return nil
 	}
 
-	scanner := bufio.NewScanner(listFile)
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
 	scanner.Split(bufio.ScanLines)
 	var age int
 	var course string

@@ -2,13 +2,14 @@ package swim
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"homeServer/storage"
 	"homeServer/swim/model"
 	"homeServer/threadpool"
 	"homeServer/utils"
@@ -72,10 +73,10 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 	quit := make(chan bool)
 	go func() {
 		for {
-			listFile, err := os.Open("data/list.json")
+			b, err := storage.File.Read("data/list.json")
 			if err != nil {
 				utils.LogError(err, "list file read failed!")
-				continue
+				break
 			}
 
 			utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Start background downloading"))
@@ -91,7 +92,7 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 				runningJob: createInt32(),
 			}
 
-			scanner := bufio.NewScanner(listFile)
+			scanner := bufio.NewScanner(bytes.NewBuffer(b))
 			scanner.Split(bufio.ScanLines)
 			for scanner.Scan() {
 				line := strings.TrimSpace(scanner.Text())

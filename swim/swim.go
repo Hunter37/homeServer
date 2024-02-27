@@ -2,7 +2,6 @@ package swim
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"regexp"
 	"strings"
@@ -28,7 +27,8 @@ var (
 
 func Start() func() {
 	if err := model.Load(); err != nil {
-		log.Fatal("main data load failed!")
+		utils.LogError(err, "main data load failed!")
+		model.Init()
 	}
 
 	model.DataMigration()

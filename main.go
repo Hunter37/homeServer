@@ -10,6 +10,7 @@ import (
 	"time"
 
 	. "homeServer/http"
+	"homeServer/storage"
 	"homeServer/swim"
 	"homeServer/utils"
 )
@@ -17,7 +18,8 @@ import (
 const httpServerClosed = "http: Server closed"
 
 var (
-	host = "c1469969.eero.online:3737" //"73.19.5.132:3737"
+	host = "4.227.70.54"
+	//"c1469969.eero.online:3737" //"73.19.5.132:3737"
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
@@ -35,22 +37,37 @@ func main() {
 	}
 	utils.Log(fmt.Sprintf("%v %v\n", utils.GetLogTime(), host))
 
+	storage.File = &storage.LocalFile{}
+	if os.Getenv("STORAGE") == "AZURE_BLOB" {
+		azureblob := &storage.AzureBlobFile{}
+		azureblob.Init()
+		storage.File = azureblob
+		utils.SimpleLog = true
+		utils.Log("Use Azure Blob Storage\n")
+	}
+
 	swimStop := swim.Start()
+
+	port := os.Getenv("PORT")
+	if len(port) > 0 {
+		port = ":" + port
+	} else {
+		port = ":8080"
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", routerHandler)
 	svr := &http.Server{
 		Handler: mux,
-		Addr:    ":8080",
-		//Addr: ":8088",
+		Addr:    port,
 	}
 
-	go func() {
-		for {
-			time.Sleep(60 * time.Second)
-			healthCheck()
-		}
-	}()
+	// go func() {
+	// 	for {
+	// 		time.Sleep(60 * time.Second)
+	// 		healthCheck()
+	// 	}
+	// }()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)

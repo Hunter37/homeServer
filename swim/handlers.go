@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
+	"homeServer/storage"
 	"homeServer/swim/model"
 	"homeServer/utils"
 )
@@ -37,7 +37,7 @@ func SwimHandler(writer http.ResponseWriter, req *http.Request) {
 
 // mainPageHandler handle the main html page
 func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := os.ReadFile("swim/html/swim.html")
+	body, err := storage.File.Read("swim/html/swim.html")
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")
@@ -46,7 +46,7 @@ func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
 
 // settingsPageHandler handle the settings html page
 func settingsPageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := os.ReadFile("swim/html/settings.html")
+	body, err := storage.File.Read("swim/html/settings.html")
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")

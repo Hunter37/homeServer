@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var SimpleLog = false
+
 func Clone[T any](val T) T {
 	if val2, err := deepClone(val); err != nil {
 		LogError(err, "Deep clone failed", val)
@@ -41,7 +43,11 @@ func LogError(err error, a ...any) {
 		pc, filename, line, _ := runtime.Caller(1)
 		CleanTempTime()
 		fmt.Print(GetLogTime())
-		fmt.Printf(" [\033[31mERROR\033[0m] in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), filename, line, err)
+		if SimpleLog {
+			fmt.Printf(" [ERROR] in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), filename, line, err)
+		} else {
+			fmt.Printf(" [\033[31mERROR\033[0m] in %s[%s:%d] %v", runtime.FuncForPC(pc).Name(), filename, line, err)
+		}
 		fmt.Println(a...)
 	}
 }
@@ -57,8 +63,13 @@ func LogHttpCaller(req *http.Request, goodPath bool) {
 	if err != nil {
 		host = req.RemoteAddr
 	}
-	fmt.Printf(" \033[33m%-15v\033[0m \033[2m[\033[36m%v\033[0m\033[2m]\033[0m\033[%dm%v \033[0m%v\n",
+	if SimpleLog {
+		fmt.Printf(" %-15v [%v]%v %v\n",
+		host, req.Method, req.URL.String(), req.Header["User-Agent"])
+	} else {
+		fmt.Printf(" \033[33m%-15v\033[0m \033[2m[\033[36m%v\033[0m\033[2m]\033[0m\033[%dm%v \033[0m%v\n",
 		host, req.Method, pathColor, req.URL.String(), req.Header["User-Agent"])
+	}
 }
 
 func Log(msg string) {

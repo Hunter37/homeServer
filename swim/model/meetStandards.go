@@ -2,10 +2,11 @@ package model
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"os"
 	"strings"
 
+	"homeServer/storage"
 	"homeServer/utils"
 )
 
@@ -41,13 +42,13 @@ func GetMeetStandard(meet, gender string, age int, course, stroke string, length
 func loadMeetStandards(file string) (map[string]map[string]int, error) {
 	standards := make(map[string]map[string]int)
 
-	listFile, err := os.Open(file)
+	b, err := storage.File.Read(file)
 	if err != nil {
 		utils.LogError(err, "list file read failed!")
 		return standards, err
 	}
 
-	scanner := bufio.NewScanner(listFile)
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
 	scanner.Split(bufio.ScanLines)
 	var ages [][]int
 	var courses []string
