@@ -37,5 +37,11 @@ push:
 	docker tag home-server hunterhome.azurecr.io/home-server
 	docker push hunterhome.azurecr.io/home-server
 
+.PHONY: pushdh
+pushdh:
+	# docker login --username xueweihan
+	docker tag home-server xueweihan/home-server:0.1.0
+	docker push xueweihan/home-server:0.1.0
+
 .PHONY: all
 all: clean format utest build

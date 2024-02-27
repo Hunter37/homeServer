@@ -1,0 +1,14 @@
+# docker compose file for build linux devbox
+version: "3"
+services:
+  devbox:
+    container_name: devbox
+    image: xueweihan/devlinux
+    ports:
+      - 8000-8040:8000-8040
+    volumes:
+      - ./:/src
+      - //var/run/docker.sock:/var/run/docker.sock
+    stdin_open: true
+    tty: true
+    command: /bin/bash
