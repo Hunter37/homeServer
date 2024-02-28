@@ -5,11 +5,6 @@
 # docker push xueweihan/devlinux
 # docker push xueweihan/devlinux:0.1.0
 
-#USE
-# docker-compose -f devbox.yaml up --no-start
-# docker start -i devbox
-# docker rm -f devbox
-
 
 # FROM ubuntu:22.04
 FROM ubuntu@sha256:e9569c25505f33ff72e88b2990887c9dcf230f23259da296eb814fc2b41af999

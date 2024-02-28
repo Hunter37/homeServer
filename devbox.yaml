@@ -2,7 +2,7 @@
 version: "3"
 services:
   devbox:
-    container_name: devbox
+    container_name: homebox
     image: xueweihan/devlinux
     ports:
       - 8000-8040:8000-8040
@@ -12,3 +12,8 @@ services:
     stdin_open: true
     tty: true
     command: /bin/bash
+
+#USE
+# docker-compose -f devbox.yaml up --no-start
+# docker start -i homebox
+# docker rm -f homebox
