@@ -37,6 +37,8 @@ jobs:
     - name: Test
       run: |
         echo ${new_tag}
+        echo $new_tag
+        echo ${{ env.new_tag }}
 
     # - name: Login to Azure
     #   uses: azure/login@v1
