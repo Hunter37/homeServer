@@ -1,12 +1,27 @@
-name: Build go in container and push to docker hub
+name: Publish
 
 on:
+  # Automatic trigger when pushing tags
   push:
+    branches:
+      - "!*"
     tags:
-      - '*'
+      - 'v*'
+
+  # Manual trigger from the UI
+  workflow_dispatch:
+    inputs:
+      message:
+        description: 'Publish description'
+
+  # Dependency to a forking workflow
+  workflow_run:
+    workflows: ["Build"]
+    type:
+      - complete
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
 
     steps:

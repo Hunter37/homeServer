@@ -1,4 +1,4 @@
-name: Build go app and push to Azure
+name: Build
 
 on:
   push:
