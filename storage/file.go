@@ -66,7 +66,8 @@ func (f *AzureBlobFile) Init() error {
 	// 	os.Getenv("CLIENT_SECRET"),
 	// 	nil)
 
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
+	credential, err := azidentity.NewManagedIdentityCredential(nil)
+	// credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return err
 	}
