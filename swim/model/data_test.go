@@ -30,12 +30,22 @@ func gobMarshal(v any) ([]byte, error) {
 	}
 }
 
+// func TestRecoverData(t *testing.T) {
+// 	var recovered Data
+// 	err := recover(`C:\Users\xueweihan.REDMOND\Downloads\data-2024-02-27.gob.gzip`, &recovered)
+// 	test.NoError(t, err)
+// 	str, err := json.Marshal(recovered)
+// 	test.NoError(t, err)
+// 	err = storage.File.Write("recovered.json", str)
+// 	test.NoError(t, err)
+// }
+
 func TestSerializeAndDeserialize(t *testing.T) {
 	var data Data
 	var recovered Data
 
 	_, filename, _, _ := runtime.Caller(0)
-    t.Logf("Current test filename: %s", filename)
+	t.Logf("Current test filename: %s", filename)
 	dir := filepath.Dir(filename)
 
 	// now := time.Now()
@@ -44,12 +54,12 @@ func TestSerializeAndDeserialize(t *testing.T) {
 	// fmt.Println("Load json file:       ", time.Since(now))
 
 	now := time.Now()
-	err := backup(filepath.Join(dir,"../../bin/data.gob.gzip"), &data)
+	err := backup(filepath.Join(dir, "../../bin/data.gob.gzip"), &data)
 	test.NoError(t, err)
 	fmt.Println("backup to gob gzip:   ", time.Since(now))
 
 	now = time.Now()
-	err = recover(filepath.Join(dir,"../../bin/data.gob.gzip"), &recovered)
+	err = recover(filepath.Join(dir, "../../bin/data.gob.gzip"), &recovered)
 	test.NoError(t, err)
 	fmt.Println("recover from gob gzip:", time.Since(now))
 
