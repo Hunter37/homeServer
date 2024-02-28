@@ -1,13 +1,19 @@
 package model
 
 import (
+	"runtime"
 	"testing"
+	"path/filepath"
 
 	"homeServer/test"
 )
 
 func TestLoadMeetStandards(t *testing.T) {
-	meetStandards, err := loadMeetStandards("../../data/meetStandards.json")
+	_, filename, _, _ := runtime.Caller(0)
+    t.Logf("Current test filename: %s", filename)
+	dir := filepath.Dir(filename)
+	path := filepath.Join(dir, "../../data/meetStandards.json")
+	meetStandards, err := loadMeetStandards(path)
 	test.NoError(t, err)
 
 	test.Equal(t, meetStandards["ShowD"]["Female15SCYFree50"], 2889)

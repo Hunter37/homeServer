@@ -37,7 +37,6 @@ func main() {
 	}
 	utils.Log(fmt.Sprintf("%v %v\n", utils.GetLogTime(), host))
 
-	storage.File = &storage.LocalFile{}
 	if os.Getenv("STORAGE") == "AZURE_BLOB" {
 		azureblob := &storage.AzureBlobFile{}
 		azureblob.Init()

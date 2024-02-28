@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	File FileStorage
+	File FileStorage = &LocalFile{}
 )
 
 type FileStorage interface {

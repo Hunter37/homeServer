@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -32,18 +34,22 @@ func TestSerializeAndDeserialize(t *testing.T) {
 	var data Data
 	var recovered Data
 
-	now := time.Now()
-	err := load("../../data/data.json", &data)
-	test.NoError(t, err)
-	fmt.Println("Load json file:       ", time.Since(now))
+	_, filename, _, _ := runtime.Caller(0)
+    t.Logf("Current test filename: %s", filename)
+	dir := filepath.Dir(filename)
 
-	now = time.Now()
-	err = backup("../../bin/data.gob.gzip", &data)
+	// now := time.Now()
+	// err := load(filepath.Join(dir,"../../data/data.json"), &data)
+	// test.NoError(t, err)
+	// fmt.Println("Load json file:       ", time.Since(now))
+
+	now := time.Now()
+	err := backup(filepath.Join(dir,"../../bin/data.gob.gzip"), &data)
 	test.NoError(t, err)
 	fmt.Println("backup to gob gzip:   ", time.Since(now))
 
 	now = time.Now()
-	err = recover("../../bin/data.gob.gzip", &recovered)
+	err = recover(filepath.Join(dir,"../../bin/data.gob.gzip"), &recovered)
 	test.NoError(t, err)
 	fmt.Println("recover from gob gzip:", time.Since(now))
 
