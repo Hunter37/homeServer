@@ -36,6 +36,8 @@ jobs:
 
     - name: Test
       run: |
+        yes=$(git describe --tags)
+        echo $yes
         echo ${new_tag}
         echo $new_tag
         echo ${{ env.new_tag }}
