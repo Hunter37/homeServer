@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -39,7 +40,10 @@ func main() {
 
 	if os.Getenv("STORAGE") == "AZURE_BLOB" {
 		azureblob := &storage.AzureBlobFile{}
-		azureblob.Init()
+		err := azureblob.Init()
+		if err != nil {
+			log.Fatal("Failed to initialize Azure Blob Storage:", err)
+		}
 		storage.File = azureblob
 		utils.SimpleLog = true
 		utils.Log("Use Azure Blob Storage\n")

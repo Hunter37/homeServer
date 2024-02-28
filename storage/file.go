@@ -60,13 +60,13 @@ func (f *AzureBlobFile) Write(path string, data []byte) error {
 func (f *AzureBlobFile) Init() error {
 	url := "https://homeserverdata.blob.core.windows.net/"
 
-	credential, err := azidentity.NewClientSecretCredential(
-		os.Getenv("TENANT_ID"),
-		os.Getenv("CLIENT_ID"),
-		os.Getenv("CLIENT_SECRET"),
-		nil)
+	// credential, err := azidentity.NewClientSecretCredential(
+	// 	os.Getenv("TENANT_ID"),
+	// 	os.Getenv("CLIENT_ID"),
+	// 	os.Getenv("CLIENT_SECRET"),
+	// 	nil)
 
-	// credential, err := azidentity.NewDefaultAzureCredential(nil)
+	credential, err := azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return err
 	}
