@@ -4,19 +4,19 @@ on:
   # Automatic trigger when pushing tags
   push:
     tags:
-      - 'v*'
+    - 'v*'
 
-  # Manual trigger from the UI
-  workflow_dispatch:
-    inputs:
-      message:
-        description: 'Publish description'
+  # # Manual trigger from the UI
+  # workflow_dispatch:
+  #   inputs:
+  #     message:
+  #       description: 'Publish description'
 
-  # Dependency to a forking workflow
-  workflow_run:
-    workflows: ["Build"]
-    type:
-      - complete
+  # # Dependency to a forking workflow
+  # workflow_run:
+  #   workflows: ["Build"]
+  #   type:
+  #   - complete
 
 jobs:
   publish:
