@@ -66,6 +66,7 @@ func loadMeetStandards(file string) (map[string]map[string]int, error) {
 			continue
 		}
 
+		line = strings.ReplaceAll(line, "\t", " ")
 		parts := strings.Split(line, " ")
 
 		// course and age line
