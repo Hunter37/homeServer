@@ -1,19 +1,6 @@
 name: Release
 
 on:
-  workflow_dispatch:
-    # permissions:
-    #   users:
-    #     - xueweihan
-    inputs:
-      tag:
-        description: 'Release Version'
-        required: true
-        default: 'v0.0.0'
-      branch:
-        description: 'Release on branch'
-        required: true
-        default: 'main'
   release:
     types: [published]
 
@@ -37,7 +24,8 @@ jobs:
       uses: azure/CLI@v1
       with:
         inlineScript: |
-          az storage blob upload-batch --account-name homeserverdata --auth-mode key -d 'data' -s 'data' --pattern '*.json'
+          az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'data' -s 'data' --pattern '*.json'
+          az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'swim-html' -s 'swim/html' --pattern '*.html'
 
     - name: logout
       run: az logout
