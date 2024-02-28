@@ -4,7 +4,7 @@ on:
   # Automatic trigger when pushing tags
   push:
     tags:
-    - 'v*'
+      - 'v*'
 
   # # Manual trigger from the UI
   # workflow_dispatch:
