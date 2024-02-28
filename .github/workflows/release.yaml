@@ -10,11 +10,16 @@ jobs:
 
     steps:
 
-    - name: show env
-      run: echo hello world ${{ github.event.inputs.tag }}
-
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Extract tag
+      id: extract_tag
+      run: |
+        tag=${GITHUB_REF#refs/tags/}
+        tag=${tag#"v"}
+        echo "::set-output name=tag::$tag"
+        echo $tag
 
     - uses: azure/login@v1
       with:
@@ -26,6 +31,13 @@ jobs:
         inlineScript: |
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'data' -s 'data' --pattern '*.json'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'swim-html' -s 'swim/html' --pattern '*.html'
+
+    - name: Deploy web app
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'swimrank'
+        # slot-name: 'production'
+        images: xueweihan/home-server:${{ steps.extract_tag.outputs.tag }}
 
     - name: logout
       run: az logout
