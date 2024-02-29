@@ -17,8 +17,8 @@ COPY --from=build-env /src/homeServer ./homeServer
 # COPY --from=build-env /src/swim/html/ ./swim/html/
 # RUN mkdir backup
 
-ARG VER=0.0.0
-ENV VERSION=$VER
+ARG TAG=0.0.0
+ENV TAG=$TAG
 ENV STORAGE=AZURE_BLOB
 EXPOSE 8080
 CMD ["/app/homeServer"]
