@@ -16,9 +16,8 @@ jobs:
     - name: Extract tag
       id: extract_tag
       run: |
-        tag=${GITHUB_REF#refs/tags/}
-        tag=${tag#"v"}
-        echo "::set-output name=tag::$tag"
+        tag=${GITHUB_REF#refs/tags/v}
+        echo "tag=$tag" >> $GITHUB_OUTPUT
         echo $tag
 
     - uses: azure/login@v1
