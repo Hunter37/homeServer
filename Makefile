@@ -29,7 +29,7 @@ build: dependencies
 .PHONY: docker
 docker:
 	docker build -t home-server .
-	docker run -p 8080:8080 home-server
+#	docker run -p 8080:8080 home-server
 
 .PHONY: push
 push:
@@ -45,3 +45,15 @@ pushdh:
 
 .PHONY: all
 all: clean format utest build
+
+
+# Create azure app keys (json-auth):
+# az ad sp create-for-rbac --name home-rg-deploy-app \
+                           --role contributor \
+						   --scopes /subscriptions/10e43d30-2be8-42eb-8fef-b334040d4cc0/resourceGroups/home-rg \
+						   --json-auth
+
+# az ad sp create-for-rbac --name home-rg-server-app \
+                           --role "Storage Blob Data Contributor" \
+						   --scopes /subscriptions/10e43d30-2be8-42eb-8fef-b334040d4cc0/resourceGroups/home-rg/providers/Microsoft.Storage/storageAccounts/homeserverdata \
+						   --json-auth

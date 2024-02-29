@@ -19,8 +19,8 @@ import (
 const httpServerClosed = "http: Server closed"
 
 var (
-	host = "4.227.70.54"
-	//"c1469969.eero.online:3737" //"73.19.5.132:3737"
+	host = "c1469969.eero.online:3737" //"73.19.5.132:3737"
+	startTime = time.Now()
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
@@ -123,6 +123,7 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogTempTime()
 	writer.Header().Set("Connection", "close")
+	writer.Write([]byte(fmt.Sprintf("%v %v", os.Getenv("VERSION"), startTime.Format("2006-01-02 15:04:05"))))
 	writer.WriteHeader(http.StatusOK)
 }
 
