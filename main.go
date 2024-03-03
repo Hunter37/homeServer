@@ -49,8 +49,6 @@ func main() {
 		utils.Log("Use Azure Blob Storage\n")
 	}
 
-	swimStop := swim.Start()
-
 	port := os.Getenv("PORT")
 	if len(port) > 0 {
 		port = ":" + port
@@ -72,13 +70,17 @@ func main() {
 	// 	}
 	// }()
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
-		<-c
-		swimStop()
-		utils.Log("\nBye!\n")
-		os.Exit(1)
+		swimStop := swim.Start()
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+		go func() {
+			<-c
+			swimStop()
+			utils.Log("\nBye!\n")
+			os.Exit(1)
+		}()
 	}()
 
 	if err := svr.ListenAndServe(); err != nil && err.Error() != httpServerClosed {
