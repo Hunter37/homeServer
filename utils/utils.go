@@ -65,10 +65,10 @@ func LogHttpCaller(req *http.Request, goodPath bool) {
 	}
 	if SimpleLog {
 		fmt.Printf(" %-15v [%v]%v %v\n",
-		host, req.Method, req.URL.String(), req.Header["User-Agent"])
+			host, req.Method, req.URL.String(), req.Header["User-Agent"])
 	} else {
 		fmt.Printf(" \033[33m%-15v\033[0m \033[2m[\033[36m%v\033[0m\033[2m]\033[0m\033[%dm%v \033[0m%v\n",
-		host, req.Method, pathColor, req.URL.String(), req.Header["User-Agent"])
+			host, req.Method, pathColor, req.URL.String(), req.Header["User-Agent"])
 	}
 }
 
@@ -82,18 +82,20 @@ func GetLogTime() string {
 }
 
 func LogTempTime(optional ...any) {
-	CleanTempTime()
-	fmt.Print("\u001B[30m\u001B[47m")
-	fmt.Print(GetLogTime())
-	fmt.Print("\u001B[0m")
-	if len(optional) > 0 {
-		fmt.Print(optional...)
+	if !SimpleLog {
+		CleanTempTime()
+		fmt.Print("\u001B[30m\u001B[47m")
+		fmt.Print(GetLogTime())
+		fmt.Print("\u001B[0m")
+		if len(optional) > 0 {
+			fmt.Print(optional...)
+		}
+		needNewLine = true
 	}
-	needNewLine = true
 }
 
 func CleanTempTime() {
-	if needNewLine {
+	if needNewLine && !SimpleLog {
 		needNewLine = false
 		fmt.Print("\u001B[0G")
 	}
