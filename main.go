@@ -122,9 +122,9 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogTempTime()
-	writer.Write([]byte(fmt.Sprintf("%v %v", os.Getenv("TAG"), startTime.Format("2006-01-02 15:04:05"))))
 	writer.Header().Set("Connection", "close")
 	writer.WriteHeader(http.StatusOK)
+	writer.Write([]byte(fmt.Sprintf("%v %v", os.Getenv("TAG"), startTime.Format("2006-01-02 15:04:05"))))
 }
 
 func iconHandler(writer http.ResponseWriter, req *http.Request) {
