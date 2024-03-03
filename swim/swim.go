@@ -32,7 +32,7 @@ func Start() func() {
 		//model.Init()
 	}
 
-	model.DataMigration()
+	// model.DataMigration()
 	stopPool := StartBackgroundDownloadPool(5)
 	httpPool = StartHttpPool(10)
 

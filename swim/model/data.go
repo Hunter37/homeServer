@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -222,14 +223,31 @@ var mainData = Data{}
 
 var mutex = sync.RWMutex{}
 
-func Save() string {
+func Save() {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	data := &mainData
 
-	str, err := json.Marshal(data)
+	var jsonStr []byte
+	var err error
+	saveSwimersToJson := true
+
+	if os.Getenv("STORAGE") == "AZURE_BLOB" {
+		saveSwimmersTable(&data.Swimmers)
+		saveSwimersToJson = false
+	}
+
+	func() {
+		if !saveSwimersToJson {
+			swimmers := data.Swimmers
+			defer func() { data.Swimmers = swimmers }()
+			data.Swimmers = nil
+		}
+		jsonStr, err = json.Marshal(data)
+	}()
+
 	if err == nil {
-		err = storage.File.Write(dataFile, str)
+		err = storage.File.Write(dataFile, jsonStr)
 	}
 
 	if err != nil {
@@ -237,8 +255,6 @@ func Save() string {
 	} else {
 		utils.Log(utils.GetLogTime() + " Main data saved!\n")
 	}
-
-	return getInfo(data)
 }
 
 func Backup(path string) error {
@@ -300,13 +316,24 @@ func Load() error {
 }
 
 func load(filePath string, data *Data) error {
-	if str, err := storage.File.Read(filePath); err != nil {
+	if b, err := storage.File.Read(filePath); err != nil {
 		return err
 	} else {
-		err = json.Unmarshal(str, data)
-		if err == nil {
-			utils.Log(getInfo(data))
+		err = json.Unmarshal(b, data)
+		if err != nil {
+			return err
 		}
+
+		if os.Getenv("STORAGE") == "AZURE_BLOB" {
+			swimmer, err := loadSwimmersTable()
+			if err != nil {
+				return err
+			}
+
+			data.Swimmers = *swimmer
+		}
+
+		utils.Log(getInfo(data))
 
 		return err
 	}
@@ -686,32 +713,32 @@ func timeMax(a, b time.Time) time.Time {
 	return b
 }
 
-func DataMigration() {
-	//for _, lsc := range mainData.Swimmers {
-	//	var bad []string
-	//	for sid, swimmer := range lsc.Swimmers {
-	//		if swimmer.Age == 0 {
-	//			bad = append(bad, sid)
-	//		}
-	//	}
-	//	for _, sid := range bad {
-	//		delete(lsc.Swimmers, sid)
-	//		utils.Log("Deleted " + sid + "\n")
-	//	}
-	//}
-	//
-	//var bad []string
-	//for path, lsc := range mainData.Swimmers {
-	//	if len(lsc.Swimmers) == 0 {
-	//		bad = append(bad, path)
-	//	}
-	//}
-	//
-	//for _, path := range bad {
-	//	delete(mainData.Swimmers, path)
-	//	utils.Log("Deleted " + path + "\n")
-	//}
-}
+// func DataMigration() {
+// 	for _, lsc := range mainData.Swimmers {
+// 		var bad []string
+// 		for sid, swimmer := range lsc.Swimmers {
+// 			if swimmer.Age == 0 {
+// 				bad = append(bad, sid)
+// 			}
+// 		}
+// 		for _, sid := range bad {
+// 			delete(lsc.Swimmers, sid)
+// 			utils.Log("Deleted " + sid + "\n")
+// 		}
+// 	}
+
+// 	var bad []string
+// 	for path, lsc := range mainData.Swimmers {
+// 		if len(lsc.Swimmers) == 0 {
+// 			bad = append(bad, path)
+// 		}
+// 	}
+
+// 	for _, path := range bad {
+// 		delete(mainData.Swimmers, path)
+// 		utils.Log("Deleted " + path + "\n")
+// 	}
+// }
 
 func Init() {
 	mainData = Data{

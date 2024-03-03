@@ -4,8 +4,8 @@ services:
   devbox:
     container_name: homebox
     image: xueweihan/devlinux
-    ports:
-      - 8000-8040:8000-8040
+    # ports:
+    #   - 8000-8040:8000-8040
     volumes:
       - ./:/src
       - //var/run/docker.sock:/var/run/docker.sock
