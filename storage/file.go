@@ -12,7 +12,8 @@ import (
 
 var (
 	File            FileStorage = &LocalFile{}
-	AzureCredential *azidentity.DefaultAzureCredential
+	AzureCredential *azidentity.ManagedIdentityCredential
+	// AzureCredential *azidentity.DefaultAzureCredential
 )
 
 type FileStorage interface {
@@ -61,10 +62,9 @@ func (f *AzureBlobFile) Write(path string, data []byte) error {
 func (f *AzureBlobFile) Init() error {
 	url := "https://homeserverdata.blob.core.windows.net/"
 
-
-	// credential, err := azidentity.NewManagedIdentityCredential(nil)
 	var err error
-	AzureCredential, err = azidentity.NewDefaultAzureCredential(nil)
+	AzureCredential, err = azidentity.NewManagedIdentityCredential(nil)
+	// AzureCredential, err = azidentity.NewDefaultAzureCredential(nil)
 	if err != nil {
 		return err
 	}
