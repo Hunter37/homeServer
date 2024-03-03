@@ -57,7 +57,8 @@ func CheckLastJob(dj *DownloadJob) {
 		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
 			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited)))
 
-		backupData()
+		//backupData()
+		model.Save()
 	}
 }
 
