@@ -4,7 +4,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"homeServer/regex"
 	"homeServer/swim/model"
 	"homeServer/utils"
 )
@@ -17,7 +16,10 @@ func (job *InfoJob) Do() {
 	defer CheckLastJob(&job.DownloadJob)
 	atomic.AddInt32(job.infoJob, 1)
 
-	sid := regex.MatchOne(job.url, "/([^/]+)_meets.html", 1)
+	swimmer := GetCachedSwimmerFromMeetUrl(job.url)
+	swimmer.Rankings = make([]model.Rankings, 0, len(swimmer.Rankings)) // clean the rankings, we need to rebuild it
+	strokesLock := &sync.Mutex{}
+	rankingLock := &sync.Mutex{}
 
 	page, err := httpPool.Get(job.url, false)
 	if err != nil {
@@ -25,20 +27,19 @@ func (job *InfoJob) Do() {
 		return
 	}
 
-	extractSiwmmerInfoFromPage(sid, page)
+	extractSiwmmerInfoFromPage(page, swimmer)
 
 	urls := getAllEventLinks(page)
 	strokeJobCount := int32(len(urls))
-	ranks := make([]model.Rankings, 0, len(urls)*2)
 
 	for _, url := range urls {
 		NewDownloadJob(&job.DownloadJob, url, func(job *DownloadJob) {
 			job.pool.Enqueue(&EventJob{
 				DownloadJob: *job,
-				sid:         sid,
+				swimmer:     swimmer,
+				strokesLock: strokesLock,
+				rankingLock: rankingLock,
 				count:       &strokeJobCount,
-				ranks:       &ranks,
-				ranksLock:   &sync.Mutex{},
 			})
 		})
 	}

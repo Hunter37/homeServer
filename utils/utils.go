@@ -1,17 +1,34 @@
 package utils
 
 import (
-	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
-	"reflect"
 	"runtime"
+	"sync"
 	"time"
 )
 
 var SimpleLog = false
+
+func LockOperation(lock *sync.Mutex, call func()) {
+	lock.Lock()
+	defer lock.Unlock()
+	call()
+}
+
+func ReadLockOperation(lock *sync.RWMutex, call func()) {
+	lock.RLock()
+	defer lock.RUnlock()
+	call()
+}
+
+func WriteLockOperation(lock *sync.RWMutex, call func()) {
+	lock.Lock()
+	defer lock.Unlock()
+	call()
+}
 
 func Clone[T any](val T) T {
 	if val2, err := deepClone(val); err != nil {
@@ -25,17 +42,25 @@ func Clone[T any](val T) T {
 func deepClone[T any](val T) (T, error) {
 	var result T
 
-	if reflect.ValueOf(val).IsNil() {
-		return result, nil
-	}
-
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(val); err != nil {
+	b, err := json.Marshal(val)
+	if err != nil {
 		return result, err
 	}
 
-	err := gob.NewDecoder(&buf).Decode(&result)
+	err = json.Unmarshal(b, &result)
 	return result, err
+
+	// if reflect.ValueOf(val).IsNil() {
+	// 	return result, nil
+	// }
+
+	// var buf bytes.Buffer
+	// if err := gob.NewEncoder(&buf).Encode(val); err != nil {
+	// 	return result, err
+	// }
+
+	// err := gob.NewDecoder(&buf).Decode(&result)
+	// return result, err
 }
 
 func LogError(err error, a ...any) {
@@ -73,8 +98,12 @@ func LogHttpCaller(req *http.Request, goodPath bool) {
 }
 
 func Log(msg string) {
+	Logf(msg)
+}
+
+func Logf(format string, a ...any) {
 	CleanTempTime()
-	fmt.Print(msg)
+	fmt.Printf(format, a...)
 }
 
 func GetLogTime() string {

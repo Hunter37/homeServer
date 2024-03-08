@@ -3,7 +3,6 @@ package swim
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -54,11 +53,8 @@ func CheckLastJob(dj *DownloadJob) {
 	count := atomic.AddInt32(dj.runningJob, -1)
 	if count == 0 {
 		// this is the last one
-		utils.Log(fmt.Sprintf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
-			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited)))
-
-		//backupData()
-		model.Save()
+		utils.Logf("%s \033[36m%s [%d]+[%d]+[%d]=[%d]\033[0m\n", utils.GetLogTime(), "Background download finished",
+			atomic.LoadInt32(dj.listJob), atomic.LoadInt32(dj.infoJob), atomic.LoadInt32(dj.eventJob), len(*dj.visited))
 	}
 }
 
@@ -73,6 +69,10 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 
 	quit := make(chan bool)
 	go func() {
+
+		// HACK: this is a hack to make sure the background download is not running when the swimmerCache is loaded
+		model.LoadSwimmerCacheFromTable()
+
 		for {
 			b, err := storage.File.Read("data/list.json")
 			if err != nil {
@@ -80,7 +80,11 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 				break
 			}
 
-			utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Start background downloading"))
+			if utils.SimpleLog {
+				utils.Logf("%s %s\n", utils.GetLogTime(), "Start background downloading")
+			} else {
+				utils.Logf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Start background downloading")
+			}
 
 			visited := make(map[string]bool, 0)
 			dJob := &DownloadJob{
@@ -124,7 +128,11 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 			case <-time.After(time.Minute * time.Duration(model.GetSettings().CacheTimeInMinutes)):
 				continue
 			case <-quit:
-				utils.Log(fmt.Sprintf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Stop background download thread"))
+				if utils.SimpleLog {
+					utils.Logf("%s %s\n", utils.GetLogTime(), "Stop background download thread")
+				} else {
+					utils.Logf("%s \033[36m%s\033[0m\n", utils.GetLogTime(), "Stop background download thread")
+				}
 				return
 			}
 		}
@@ -133,13 +141,5 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 	return func() {
 		quit <- true
 		pool.Stop()
-	}
-}
-
-func backupData() {
-	now := time.Now()
-	fileName := fmt.Sprintf("backup/data-%s.gob.gzip", now.Format("2006-01-02"))
-	if err := model.Backup(fileName); err != nil {
-		utils.LogError(err, "Backup failed")
 	}
 }

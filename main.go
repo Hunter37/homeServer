@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,22 +31,32 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 }
 
 func main() {
+
+	// model.DataMigrationToTable1()
+	// return
+
 	if len(os.Args) > 1 {
 		host = os.Args[1]
 		time.Sleep(time.Second)
 	}
-	utils.Log(fmt.Sprintf("%v %v\n", utils.GetLogTime(), host))
 
 	if os.Getenv("STORAGE") == "AZURE_BLOB" {
-		azureblob := &storage.AzureBlobFile{}
-		err := azureblob.Init()
-		if err != nil {
-			log.Fatal("Failed to initialize Azure Blob Storage:", err)
-		}
-		storage.File = azureblob
-		utils.SimpleLog = true
-		utils.Log("Use Azure Blob Storage\n")
+		storage.File = storage.AzureBlobFile{}
 	}
+
+	utils.SimpleLog = true
+	utils.Logf("%v %v\n", utils.GetLogTime(), host)
+
+	swimStop := swim.Start()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		swimStop()
+		utils.Logf("\n%s Bye!\n", utils.GetLogTime())
+		os.Exit(1)
+	}()
 
 	port := os.Getenv("PORT")
 	if len(port) > 0 {
@@ -70,19 +79,6 @@ func main() {
 	// 	}
 	// }()
 
-	go func() {
-		swimStop := swim.Start()
-
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			<-c
-			swimStop()
-			utils.Log("\nBye!\n")
-			os.Exit(1)
-		}()
-	}()
-
 	if err := svr.ListenAndServe(); err != nil && err.Error() != httpServerClosed {
 		fmt.Println("Failed to start HTTP server")
 	}
@@ -100,7 +96,7 @@ func healthCheck() {
 		resp2, err2 := client.Get("https://google.com")
 		defer CloseBody(resp2)
 		if err2 != nil || resp2.StatusCode != http.StatusOK {
-			utils.Log(fmt.Sprintf("\033[31m%v\033[0m\n", utils.GetLogTime()))
+			utils.Logf("\033[31m%v\033[0m\n", utils.GetLogTime())
 		} else {
 			utils.LogError(err)
 			//restart(swimStop)

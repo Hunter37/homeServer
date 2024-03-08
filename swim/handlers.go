@@ -111,43 +111,60 @@ func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
 	from := request.URL.Query().Get("from")
 	to := request.URL.Query().Get("to")
 	if from == to {
-		gzipWrite(writer, nil, http.StatusBadRequest)
+		gzipWrite(writer, []byte("self copy"), http.StatusBadRequest)
 		return
 	}
 
 	if to != "DELETE" {
-		f, _ := model.Find(from)
-		t, _ := model.Find(to)
-		if f == nil || t == nil || f.Name != t.Name {
-			gzipWrite(writer, nil, http.StatusBadRequest)
+		err := model.RemoveSwimmerFromCache(from)
+		if err != nil {
+			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			return
+		}
+	} else {
+		f := model.GetSwimmerFormCache(from)
+		if f == nil {
+			gzipWrite(writer, []byte("cannot found swimmer 'From'"), http.StatusBadRequest)
+			return
+		}
+		t := model.GetSwimmerFormCache(to)
+		if t == nil {
+			gzipWrite(writer, []byte("cannot found swimmer 'To'"), http.StatusBadRequest)
+			return
+		}
+		if f.Name != t.Name {
+			gzipWrite(writer, []byte("different name"), http.StatusBadRequest)
 			return
 		}
 
 		f.ForEachEvent(func(course, stroke string, length int, event *model.Event) {
-			model.AddEvent(to, course, stroke, length, event)
+			t.AddEvent(course, stroke, length, event)
 		})
 
 		if t.Birthday == nil {
 			t.Birthday = f.Birthday
 		}
-		if len(t.Middle) == 0 {
+		if t.Middle == "" {
 			t.Middle = f.Middle
 		}
-		if len(t.Alias) == 0 {
+		if t.Alias == "" {
 			t.Alias = f.Alias
 		}
-	}
 
-	model.Delete(from)
+		err := model.WriteSwimmerToCache(t)
+		if err != nil {
+			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			return
+		}
+	}
 
 	gzipWrite(writer, nil, http.StatusOK)
 }
 
 // swimmerHandler handle the swimmer view and update json request in settings page
 func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
-	sid := req.URL.Query().Get("id")
-	var body []byte
-	swimmer, _ := model.Find(sid)
+	fullId := req.URL.Query().Get("id")
+	swimmer := model.GetSwimmerFormCache(fullId)
 	if swimmer == nil {
 		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
 		return
@@ -175,16 +192,19 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		if sid != s.ID {
+		if swimmer.ID != s.ID {
 			gzipWrite(writer, []byte("Swimmer id is wrong"), http.StatusNotFound)
 			return
 		}
 
-		model.UpdateSwimmer(sid, &s)
-		model.Save()
+		err = model.WriteSwimmerToCache(&s)
+		if err != nil {
+			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			return
+		}
 	}
 
-	body, _ = json.Marshal(swimmer)
+	body, _ := json.Marshal(swimmer)
 
 	writer.Header().Set("Content-Type", "text/json")
 	gzipWrite(writer, body, http.StatusOK)

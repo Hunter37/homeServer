@@ -1,16 +1,16 @@
 package model
 
 import (
+	"path/filepath"
 	"runtime"
 	"testing"
-	"path/filepath"
 
 	"homeServer/test"
 )
 
 func TestLoadMeetStandards(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-    t.Logf("Current test filename: %s", filename)
+	t.Logf("Current test filename: %s", filename)
 	dir := filepath.Dir(filename)
 	path := filepath.Join(dir, "../../data/meetStandards.json")
 	meetStandards, err := loadMeetStandards(path)

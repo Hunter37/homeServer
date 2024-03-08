@@ -3,6 +3,7 @@ package swim
 import (
 	"sync/atomic"
 
+	"homeServer/swim/model"
 	"homeServer/utils"
 )
 
@@ -21,7 +22,9 @@ func (job *TopListJob) Do() {
 		return
 	}
 
-	urls := extractTopListFromPage(job.url, page)
+	urls, toplist := extractTopListFromPage(page)
+	model.SaveTopList(job.url, toplist)
+
 	for _, url := range urls {
 		if job.top == 0 {
 			break

@@ -115,7 +115,7 @@ func generateRankTable(swimmer *model.Swimmer, url string) *Table {
 			{Text: swimmer.Team},
 			{Text: "Birthday: " + sprintBirthday(left, right)},
 			{Text: fmt.Sprintf("Total Event: %d", swimmer.GetEventCount())},
-			{Log: fmt.Sprintf("%s (%s)     Alias:%s     ID=%s", swimmer.Name, swimmer.Middle, swimmer.Alias, swimmer.ID)},
+			{Log: fmt.Sprintf("%s (%s)     Alias:%s     ID=%s:%s", swimmer.Name, swimmer.Middle, swimmer.Alias, swimmer.LscID, swimmer.ID)},
 		},
 	}
 }
@@ -226,11 +226,11 @@ func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 	lAligns := make([]bool, 2, 30)
 	preStroke := ""
 	strokeMap := map[string]map[int]bool{
-		model.Free:   map[int]bool{},
-		model.Breast: map[int]bool{},
-		model.Back:   map[int]bool{},
-		model.Fly:    map[int]bool{},
-		model.IM:     map[int]bool{},
+		model.Free:   {},
+		model.Breast: {},
+		model.Back:   {},
+		model.Fly:    {},
+		model.IM:     {},
 	}
 	dateMap := make(map[string]bool, 300)
 	lenghtStrokeMap := make(map[string]bool, 24)
@@ -339,13 +339,13 @@ func generateEventsTable(swimmer *model.Swimmer, course string) *Table {
 	}
 }
 
-func generateTopListTable(urls []string) *Table {
+func generateTopListTable(toplists []*model.TopList) *Table {
 	header := []string{"Name", "Time", "Date", "Age", "Birthday", "LSC", "Team", "Meet"}
 	link := []int{8, -1, -1, -1, 9}
 	action := []string{ActionSearch, "", "", "", ActionBirthday}
 	lalign := []bool{true, false, false, false, true, true, true, true}
 	filterCol := 8
-	isImxTable := false
+	imxTitle := []string{}
 	items := make([][]any, 0, 1000)
 	title := ""
 	subtitle := ""
@@ -354,11 +354,8 @@ func generateTopListTable(urls []string) *Table {
 	elements := make([]*Element, 0, 30)
 	textToElement := make(map[string]*Element, 30)
 
-	topList := model.FindTopLists(urls)
-
 	// build title and subtitle
-	for i := range urls {
-		list := topList[i]
+	for _, list := range toplists {
 		title += " " + list.Level
 		if list.Title != subtitle {
 			subtitle += list.Title
@@ -367,11 +364,17 @@ func generateTopListTable(urls []string) *Table {
 
 	gender, course, stroke, length := findGenderCourseStrokeLength(subtitle)
 
-	isImxTable = len(topList[0].ImxTitle) > 0
-	if isImxTable {
+	for _, list := range toplists {
+		if list != nil && len(list.ImxTitle) > 0 {
+			imxTitle = list.ImxTitle
+			break
+		}
+	}
+
+	if len(imxTitle) > 0 {
 		header = make([]string, 0, 11)
 		header = append(header, "Name", "Score")
-		header = append(header, topList[0].ImxTitle...)
+		header = append(header, imxTitle...)
 		header = append(header, "Age", "Birthday", "LSC", "Team")
 		link = []int{11, -1, -1, -1, -1, -1, -1, -1, 12}
 		action = []string{ActionSearch, "", "", "", "", "", "", "", ActionBirthday}
@@ -379,13 +382,16 @@ func generateTopListTable(urls []string) *Table {
 		filterCol = 11
 	}
 
-	for i := range urls {
-		list := topList[i]
+	for _, list := range toplists {
 		for _, row := range list.List {
 			bdayData := row.Url
-			lsc := strings.ToUpper(regex.MatchOne(row.Url, `strokes_([^/]+)/`, 1))
+			match := regex.MatchRow(row.Url, `/([^/]+)/strokes/strokes_([^/]+)/`, []int{1, 2})
+			if len(match) != 2 {
+				continue
+			}
+			lsc := strings.ToUpper(match[1])
 
-			swimmer, _ := model.Find(row.Sid)
+			swimmer := model.GetSwimmerFormCache(match[0] + "|" + match[1] + ":" + row.Sid)
 			if swimmer != nil {
 				if swimmer.Invalid {
 					continue //skip user
@@ -426,7 +432,7 @@ func generateTopListTable(urls []string) *Table {
 				bdayData = string(b)
 			}
 
-			if isImxTable {
+			if len(imxTitle) > 0 {
 				item := make([]any, 0, 12)
 				item = append(item, row.Name, *row.Score)
 				item = append(item, utils.ToAnySlice(row.ImxScores)...)
@@ -463,7 +469,7 @@ func generateTopListTable(urls []string) *Table {
 		}
 	}
 
-	if isImxTable {
+	if len(imxTitle) > 0 {
 		sort.Slice(items, func(i, j int) bool {
 			return items[i][1].(int) > items[j][1].(int) ||
 				items[i][1].(int) == items[j][1].(int) && items[i][7].(int) > items[j][7].(int)
@@ -534,7 +540,7 @@ func findGenderCourseStrokeLength(title string) (string, string, string, int) {
 }
 
 func generateSearchTable(name string, items [][]string) *Table {
-	// items : name | age | team | lsc | sid | url
+	// items : name | age | team | lscId | sid | url
 
 	// sort by name
 	sort.Slice(items, func(i, j int) bool {
@@ -543,7 +549,7 @@ func generateSearchTable(name string, items [][]string) *Table {
 
 	exist := make(map[string]bool, len(items))
 	for _, item := range items {
-		exist[item[4]] = true
+		exist[item[3]+":"+item[4]] = true
 	}
 
 	cached := findCachedName(name, exist)
@@ -588,15 +594,15 @@ func generateSearchTable(name string, items [][]string) *Table {
 
 func findCachedName(name string, exist map[string]bool) [][]any {
 	cached := make([][]any, 0, 10)
-	for _, sid := range model.FindName(name) {
-		if _, ok := exist[sid]; !ok {
-			swimmer, url := model.Find(sid)
+	for _, swimmer := range model.GetSwimmerFormCacheByName(name) {
+		if _, ok := exist[swimmer.LscID+":"+swimmer.ID]; !ok {
+			url := swimmer.GetMeetUrl()
 			alias := ""
 			if len(swimmer.Alias) > 0 {
 				alias = fmt.Sprintf(" (%s)", swimmer.Alias)
 			}
 			cached = append(cached, []any{fmt.Sprint(swimmer.Name, alias),
-				fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), sid, url})
+				fmt.Sprint(swimmer.Age), swimmer.Team, regex.MatchOne(url, `/strokes_([^/]+)/`, 1), swimmer.ID, url})
 		}
 	}
 	return cached

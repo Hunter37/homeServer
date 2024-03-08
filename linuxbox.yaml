@@ -3,9 +3,9 @@ version: "3"
 services:
   devbox:
     container_name: linuxbox
-    image: torusdev1.azurecr.io/devlinux
+    image: xueweihan/devlinux
     # ports:
-    #   - 8000-8060:8000-8060
+    #   - 8000-8040:8000-8040
     volumes:
       - ./:/src
       - //var/run/docker.sock:/var/run/docker.sock
@@ -13,8 +13,17 @@ services:
     tty: true
     command: /bin/bash
 
-
-# az login
-# az acr login --name torusdev1
+#USE
 # docker-compose -f linuxbox.yaml up --no-start
+# or
+# docker create -it --name linuxbox -v "c:\\repos:/src" -v "//var/run/docker.sock:/var/run/docker.sock" xueweihan/devlinux /bin/bash
+
 # docker start -i linuxbox
+# docker rm -f linuxbox
+
+
+
+
+# docker run -d --name linuxbox -v "c:\\repos:/src" -v "//var/run/docker.sock:/var/run/docker.sock" xueweihan/devlinux sleep infinity
+# docker exec -it linuxbox /bin/bash
+

@@ -6,311 +6,201 @@ import (
 	"fmt"
 	"homeServer/storage"
 	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/data/aztables"
 )
 
-type SwmimerEntity struct {
+type SwimmerEntity struct {
 	aztables.Entity
 
 	LSC     string
 	Swimmer *Swimmer
 }
 
-var tableClient *aztables.Client
+const (
+	swimmerTable = "swimmers1"
+	toplistTable = "toplists"
+)
 
-func getTableClient() (*aztables.Client, error) {
-	if tableClient == nil {
-		tableName := "swimmers"
-		accountName := "homeserverdata"
-		var err error
+var (
+	tableClients     = map[string]*aztables.Client{}
+	tableClientsLock = &sync.Mutex{}
+)
 
-		serviceURL := fmt.Sprintf("https://%s.table.core.windows.net/%s", accountName, tableName)
-		tableClient, err = aztables.NewClient(serviceURL, storage.AzureCredential, nil)
-		if err != nil {
-			return nil, err
-		}
-	}
+type TableEntity[T any] struct {
+	aztables.Entity
 
-	return tableClient, nil
+	Object *T
 }
 
-func flatEntity(entity *SwmimerEntity) ([]byte, error) {
-	data := make(map[string]any)
-	data["PartitionKey"] = entity.PartitionKey
-	data["RowKey"] = entity.RowKey
-	data["LSC"] = entity.LSC
-
-	swimmerBytes, err := json.Marshal(entity.Swimmer)
+func GetTableObject[T any](table, pkey, rkey string) (*T, error) {
+	client, err := getTableClient(table)
 	if err != nil {
 		return nil, err
 	}
 
-	var blocks []string
-	const maxBlockSize = 32 * 1024
-	for len(swimmerBytes) > 0 {
-		blockSize := len(swimmerBytes)
-		if blockSize > maxBlockSize {
-			blockSize = maxBlockSize
-		}
-		block := string(swimmerBytes[:blockSize])
-		blocks = append(blocks, block)
-		swimmerBytes = swimmerBytes[blockSize:]
-	}
-	data["Count"] = len(blocks)
-
-	for i, block := range blocks {
-		data[fmt.Sprintf("Block%d", i)] = block
+	entity, err := client.GetEntity(context.TODO(), pkey, rkey, nil)
+	if err != nil {
+		return nil, err
 	}
 
-	return json.Marshal(data)
+	return tableEntityToObject[T](entity.Value)
 }
 
-func unflatEntity(data []byte) (*SwmimerEntity, error) {
+func tableEntityToObject[T any](jsonString []byte) (*T, error) {
 	var flatData map[string]any
-	err := json.Unmarshal(data, &flatData)
+	err := json.Unmarshal(jsonString, &flatData)
 	if err != nil {
 		return nil, err
 	}
 
-	entity := &SwmimerEntity{
+	tableEntity := TableEntity[T]{
 		Entity: aztables.Entity{
 			PartitionKey: flatData["PartitionKey"].(string),
 			RowKey:       flatData["RowKey"].(string),
 		},
-		LSC: flatData["LSC"].(string),
 	}
 
-	count := int(flatData["Count"].(float64))
+	count := int(flatData["_count_"].(float64))
 	var blocks []string
 	for i := 0; i < count; i++ {
-		blockKey := fmt.Sprintf("Block%d", i)
+		blockKey := fmt.Sprintf("_block_%d_", i)
 		block := flatData[blockKey].(string)
 		blocks = append(blocks, block)
 	}
+	jsonBytes := []byte(strings.Join(blocks, ""))
 
-	swimmerBytes := []byte(strings.Join(blocks, ""))
-	err = json.Unmarshal(swimmerBytes, &entity.Swimmer)
-	if err != nil {
-		return nil, err
-	}
-
-	return entity, nil
+	err = json.Unmarshal(jsonBytes, &tableEntity.Object)
+	return tableEntity.Object, err
 }
 
-func loadSwimmersTable() (*Swimmers, error) {
-	client, err := getTableClient()
+func SaveTableObject[T any](table, pkey, rkey string, obj *T) error {
+
+	jsonBytes, err := objectToTableEntity(pkey, rkey, obj)
+	if err != nil {
+		return err
+	}
+
+	client, err := getTableClient(table)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.UpsertEntity(context.TODO(), jsonBytes, nil)
+
+	return err
+}
+
+func objectToTableEntity[T any](pkey, rkey string, obj *T) ([]byte, error) {
+	jsonBytes, err := json.Marshal(obj)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx := context.TODO()
-	swimmers := Swimmers{}
+	tableEntity := map[string]any{
+		"PartitionKey": pkey,
+		"RowKey":       rkey,
+	}
 
-	pager := client.NewListEntitiesPager(nil)
+	var blocks []string
+	const maxBlockSize = 32 * 1024
+	for len(jsonBytes) > 0 {
+		blockSize := len(jsonBytes)
+		if blockSize > maxBlockSize {
+			blockSize = maxBlockSize
+		}
+		block := string(jsonBytes[:blockSize])
+		blocks = append(blocks, block)
+		jsonBytes = jsonBytes[blockSize:]
+	}
+	tableEntity["_count_"] = len(blocks)
 
-	for pager.More() {
-		resp, err := pager.NextPage(ctx)
+	for i, block := range blocks {
+		tableEntity[fmt.Sprintf("_block_%d_", i)] = block
+	}
+
+	return json.Marshal(tableEntity)
+}
+
+func DeleteTableObjecty(table, pkey, rkey string) error {
+	client, err := getTableClient(table)
+	if err != nil {
+		return err
+	}
+
+	_, err = client.DeleteEntity(context.TODO(), pkey, rkey, nil)
+
+	return err
+}
+
+func getTableClient(tableName string) (*aztables.Client, error) {
+	tableClientsLock.Lock()
+	defer tableClientsLock.Unlock()
+	cred := storage.GetAzureCredential()
+
+	client, found := tableClients[tableName]
+	if !found {
+		accountName := "homeserverdata"
+		var err error
+
+		serviceURL := fmt.Sprintf("https://%s.table.core.windows.net/%s", accountName, tableName)
+		client, err = aztables.NewClient(serviceURL, cred, nil)
 		if err != nil {
 			return nil, err
 		}
 
-		fmt.Println(len(resp.Entities))
-
-		for _, entity := range resp.Entities {
-			swimmerEntity, err := unflatEntity(entity)
-			if err != nil {
-				return nil, err
-			}
-
-			lscId := strings.Replace(swimmerEntity.PartitionKey, "|", "/", -1)
-			lsc, ok := swimmers[lscId]
-			if !ok {
-				lsc = &Lsc{
-					LSC:      swimmerEntity.LSC,
-					Swimmers: map[string]*Swimmer{},
-				}
-				swimmers[lscId] = lsc
-			}
-
-			lsc.Swimmers[swimmerEntity.RowKey] = swimmerEntity.Swimmer
-		}
+		tableClients[tableName] = client
 	}
 
-	return &swimmers, nil
-}
-
-func saveSwimmersTable(swimmers *Swimmers) error {
-	client, err := getTableClient()
-	if err != nil {
-		return err
-	}
-
-	ctx := context.TODO()
-	const maxBatchSize = 64
-	for lscString, lsc := range *swimmers {
-		pkey := strings.Replace(lscString, "/", "|", -1)
-
-		batch := make([]aztables.TransactionAction, 0, maxBatchSize)
-		for _, swimmer := range lsc.Swimmers {
-
-			swmimerEntity := &SwmimerEntity{
-				Entity: aztables.Entity{
-					PartitionKey: pkey,
-					RowKey:       swimmer.ID,
-				},
-				LSC:     lsc.LSC,
-				Swimmer: swimmer,
-			}
-
-			entity, err := flatEntity(swmimerEntity)
-			if err != nil {
-				return err
-			}
-
-			batch = append(batch, aztables.TransactionAction{
-				ActionType: aztables.TransactionTypeInsertReplace,
-				Entity:     entity,
-			})
-
-			if len(batch) >= maxBatchSize {
-				resp, err := client.SubmitTransaction(ctx, batch, nil)
-				if err != nil {
-					return err
-				}
-				fmt.Println(len(batch), resp)
-				batch = make([]aztables.TransactionAction, 0, maxBatchSize)
-			}
-		}
-
-		if len(batch) > 0 {
-			resp, err := client.SubmitTransaction(ctx, batch, nil)
-			if err != nil {
-				return err
-			}
-			fmt.Println(len(batch), resp)
-		}
-	}
-
-	return nil
+	return client, nil
 }
 
 /*
-func saveTableEntry(lsc string, swimmer *Swimmer) error {
+func ReadSwimmer1Data() {
+	now := time.Now()
+	LoadSwimmerTable()
+	fmt.Println("ReadSwimmer1Data:", time.Since(now))
 
-	lsc = strings.Replace(lsc, "/", "|", -1)
-
-	entity := &SwmimerEntity{
-		Entity: aztables.Entity{
-			PartitionKey: lsc,
-			RowKey:       swimmer.ID,
-		},
-		Swimmer: swimmer,
-	}
-
-	item, err := flatEntity(entity)
-	if err != nil {
-		return err
-	}
-
-	client, err := getTableClient()
-	if err != nil {
-		return err
-	}
-
-	_, err = client.UpsertEntity(context.TODO(), item, nil)
-	return err
+	fmt.Println(len(_swimmerCache))
 }
 
-func getTableEntry(lsc, id string) (*Swimmer, error) {
-	fixed := strings.Replace(lsc, "/", "|", -1)
 
-	client, err := getTableClient()
-	if err != nil {
-		return nil, err
-	}
-
-	entity, err := client.GetEntity(context.TODO(), fixed, id, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	swimmerEntity, err := unflatEntity(entity.Value)
-	if err != nil {
-		return nil, err
-	}
-
-	return swimmerEntity.Swimmer, nil
-}
-
-func TableDataMigrationSave() {
-	var data Data
-	var file = storage.LocalFile{}
-	b, err := file.Read("bin/data.json")
+func DataMigrationToTable1() {
+	var recovered Data
+	now := time.Now()
+	err := recover("./backup/data-2024-02-27.gob.gzip", &recovered)
 	if err != nil {
 		panic(err)
+
 	}
 
-	err = json.Unmarshal(b, &data)
-	if err != nil {
-		panic(err)
-	}
-	text := getInfo(&data)
-	fmt.Println(text)
+	fmt.Printf("recover from gob gzip: %v\n", time.Since(now))
 
-	err = saveSwimmersTable(&data.Swimmers)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func TableDataMigrationLoad() {
-	var data Data
-	err := load("bin/data.json", &data)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(getInfo(&data))
-}
-
-func TableDataMigrationSingleSave() {
-
-	var data Data
-	var file = storage.LocalFile{}
-	b, err := file.Read("../../bin/data.json")
-	if err != nil {
-		panic(err)
-	}
-
-	err = json.Unmarshal(b, &data)
-	if err != nil {
-		panic(err)
-	}
-	text := getInfo(&data)
-	fmt.Println(text)
+	swimmers := recovered.Swimmers
 
 	count := 0
-	for lscstring, lsc := range data.Swimmers {
-		for _, swimmer := range lsc.Swimmers {
-			// LSC:     lsc.LSC,
-			// Swimmer: sid,
-			err := saveTableEntry(lscstring, swimmer)
+	for lscId, Lsc := range swimmers {
+		lscId = strings.Replace(lscId, "/", "|", -1)
+
+		for sid, swimmer := range Lsc.Swimmers {
+			if swimmer.ID != sid {
+				fmt.Errorf("expected id: %s, got: %s\n", sid, swimmer.ID)
+			}
+			swimmer.LSC = Lsc.LSC
+			swimmer.LscID = lscId
+
+			err := SaveTableObject[Swimmer](SwimmerTable, lscId, sid, swimmer)
 			if err != nil {
 				panic(err)
 			}
-
 			count++
-
-			_, err = getTableEntry(lscstring, swimmer.ID)
-			if err != nil {
-				panic(err)
+			if count%10 == 0 {
+				fmt.Print(".")
 			}
-
-			//test.Equal(t, newSwimmer, swimmer)
 		}
 	}
 
-	fmt.Print(count)
+	fmt.Printf("\n%v save to table: %v\n", count, time.Since(now))
 }
-*/
+//*/

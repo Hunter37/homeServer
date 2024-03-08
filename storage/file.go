@@ -6,15 +6,47 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 )
 
 var (
-	File            FileStorage = &LocalFile{}
-	AzureCredential *azidentity.ManagedIdentityCredential
-	// AzureCredential *azidentity.DefaultAzureCredential
+	File FileStorage = LocalFile{}
+
+	_azureCredential azcore.TokenCredential
+
+	_blobClient *azblob.Client
 )
+
+func GetAzureCredential() azcore.TokenCredential {
+	if _azureCredential == nil {
+		var err error
+		if os.Getenv("IDENTITY") == "MSI" {
+			_azureCredential, err = azidentity.NewManagedIdentityCredential(nil)
+		} else {
+			_azureCredential, err = azidentity.NewDefaultAzureCredential(nil)
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
+	return _azureCredential
+}
+
+func getAzureBlobClient() *azblob.Client {
+	if _blobClient == nil {
+		var err error
+		url := "https://homeserverdata.blob.core.windows.net/"
+		cred := GetAzureCredential()
+
+		_blobClient, err = azblob.NewClient(url, cred, nil)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return _blobClient
+}
 
 type FileStorage interface {
 	Read(path string) ([]byte, error)
@@ -23,24 +55,22 @@ type FileStorage interface {
 
 type LocalFile struct{}
 
-func (f *LocalFile) Read(path string) ([]byte, error) {
+func (f LocalFile) Read(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
-func (f *LocalFile) Write(path string, data []byte) error {
+func (f LocalFile) Write(path string, data []byte) error {
 	return os.WriteFile(path, data, 0o600)
 }
 
-type AzureBlobFile struct {
-	client *azblob.Client
-}
+type AzureBlobFile struct{}
 
-func (f *AzureBlobFile) Read(path string) ([]byte, error) {
+func (f AzureBlobFile) Read(path string) ([]byte, error) {
 	container, file := getAzureBlobFilePath(path)
 
 	// Download the blob
 	ctx := context.Background()
-	get, err := f.client.DownloadStream(ctx, container, file, nil)
+	get, err := getAzureBlobClient().DownloadStream(ctx, container, file, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -53,23 +83,9 @@ func (f *AzureBlobFile) Read(path string) ([]byte, error) {
 	return downloadedData.Bytes(), err
 }
 
-func (f *AzureBlobFile) Write(path string, data []byte) error {
+func (f AzureBlobFile) Write(path string, data []byte) error {
 	container, file := getAzureBlobFilePath(path)
-	_, err := f.client.UploadBuffer(context.Background(), container, file, data, &azblob.UploadBufferOptions{})
-	return err
-}
-
-func (f *AzureBlobFile) Init() error {
-	url := "https://homeserverdata.blob.core.windows.net/"
-
-	var err error
-	AzureCredential, err = azidentity.NewManagedIdentityCredential(nil)
-	// AzureCredential, err = azidentity.NewDefaultAzureCredential(nil)
-	if err != nil {
-		return err
-	}
-
-	f.client, err = azblob.NewClient(url, AzureCredential, nil)
+	_, err := getAzureBlobClient().UploadBuffer(context.Background(), container, file, data, &azblob.UploadBufferOptions{})
 	return err
 }
 

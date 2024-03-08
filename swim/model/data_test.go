@@ -6,19 +6,15 @@ import (
 	"compress/gzip"
 	"compress/lzw"
 	"compress/zlib"
-	"encoding/gob"
-	"encoding/json"
 	"fmt"
 	"io"
-	"path/filepath"
-	"reflect"
-	"runtime"
 	"testing"
 	"time"
 
 	"homeServer/test"
 )
 
+/*
 func gobMarshal(v any) ([]byte, error) {
 	var gobBuffer bytes.Buffer
 	gobEnc := gob.NewEncoder(&gobBuffer)
@@ -30,15 +26,15 @@ func gobMarshal(v any) ([]byte, error) {
 	}
 }
 
-// func TestRecoverData(t *testing.T) {
-// 	var recovered Data
-// 	err := recover(`C:\Users\xueweihan.REDMOND\Downloads\data-2024-02-27.gob.gzip`, &recovered)
-// 	test.NoError(t, err)
-// 	str, err := json.Marshal(recovered)
-// 	test.NoError(t, err)
-// 	err = storage.File.Write("recovered.json", str)
-// 	test.NoError(t, err)
-// }
+func TestRecoverData(t *testing.T) {
+	var recovered Data
+	err := recover(`C:\Users\xueweihan.REDMOND\Downloads\data-2024-02-27.gob.gzip`, &recovered)
+	test.NoError(t, err)
+	str, err := json.Marshal(recovered)
+	test.NoError(t, err)
+	err = storage.File.Write("recovered.json", str)
+	test.NoError(t, err)
+}
 
 func TestSerializeAndDeserialize(t *testing.T) {
 	var data Data
@@ -95,6 +91,7 @@ func TestSerializeAndDeserialize(t *testing.T) {
 		gzipTest(t, gobData)
 	}()
 }
+//*/
 
 func compressTest(t *testing.T, byteData []byte, name string,
 	cmpWriter func(writer io.Writer) (io.WriteCloser, error),

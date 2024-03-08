@@ -12,23 +12,21 @@ import (
 	"homeServer/utils"
 )
 
-func extractSwimmerAllData(url string) (string, error) {
-	sid := regex.MatchOne(url, "/([^/]+)_meets.html", 1)
-
+func extractSwimmerAllData(url string, swimmer *model.Swimmer) error {
 	body, err := httpPool.Get(url, true)
 	if err != nil {
 		utils.LogError(err)
-		return "", err
+		return err
 	}
 
-	extractSiwmmerInfoFromPage(sid, body)
+	extractSiwmmerInfoFromPage(body, swimmer)
 
-	extractEventsAndRanksFromPages(sid, body)
+	extractEventsAndRanksFromPages(body, swimmer)
 
-	return sid, nil
+	return model.WriteSwimmerToCache(swimmer)
 }
 
-func extractSiwmmerInfoFromPage(sid string, page string) {
+func extractSiwmmerInfoFromPage(page string, swimmer *model.Swimmer) {
 	name := regex.FindInnerPart(page, `<h1>`, `</h1>`)
 	ageTable := regex.FindInnerPart(page, `<th>Age</th>`, `</tr>`)
 	age := regex.MatchOne(ageTable, `>([^<>]+)</`, 1)
@@ -37,12 +35,15 @@ func extractSiwmmerInfoFromPage(sid string, page string) {
 	teamTable := regex.FindInnerPart(page, `<th>Team</th>`, `</tr>`)
 	team := regex.MatchOne(teamTable, `>([^<>]+)</`, 1)
 	lscName := regex.MatchOne(page, `LSC</th>[^>]*>([^<]+)</td>`, 1)
-	lscId := regex.MatchOne(page, `swimmingrank.com/([^/]+/[^/]+)/clubs.html`, 1)
 
-	model.AddSwimmer(lscId, lscName, sid, name, gender, team, utils.ParseInt(age))
+	swimmer.Name = name
+	swimmer.Gender = gender
+	swimmer.Team = strings.TrimSpace(team)
+	swimmer.Age = utils.ParseInt(age)
+	swimmer.LSC = lscName
 }
 
-func extractEventsAndRanksFromPages(sid, page string) {
+func extractEventsAndRanksFromPages(page string, swimmer *model.Swimmer) {
 	urls := getAllEventLinks(page)
 	pages := httpPool.BatchGet(urls, true)
 
@@ -57,7 +58,7 @@ func extractEventsAndRanksFromPages(sid, page string) {
 		page = removeFooter(removeHTMLSpace(page))
 
 		// extract all events data
-		extractEventDataFromPage(sid, page)
+		extractEventDataFromPage(page, swimmer)
 
 		// extract the rank of this page
 		for _, rank := range getRankDataFromPage(url, page) {
@@ -69,8 +70,7 @@ func extractEventsAndRanksFromPages(sid, page string) {
 		}
 	}
 
-	scy = append(scy, lcm...)
-	model.UpdateRankings(sid, &scy)
+	swimmer.Rankings = append(scy, lcm...)
 }
 
 func getAllEventLinks(body string) []string {
@@ -79,7 +79,7 @@ func getAllEventLinks(body string) []string {
 	return urls
 }
 
-func extractEventDataFromPage(sid, body string) {
+func extractEventDataFromPage(body string, swimmer *model.Swimmer) {
 	tables := regex.FindPartList(body, `<h3>`, `</table>`)
 	for _, table := range tables {
 		event := regex.FindInnerPart(table, `<h3>`, `</h3>`)
@@ -118,7 +118,7 @@ func extractEventDataFromPage(sid, body string) {
 				Meet:       row[6],
 			}
 
-			model.AddEvent(sid, course, stroke, length, dataEvent)
+			swimmer.AddEvent(course, stroke, length, dataEvent)
 		}
 	}
 }
@@ -217,17 +217,22 @@ func getCellValues(cells []string, columns []int) []string {
 	return result
 }
 
-func extractTopListsFromPages(urls []string) {
+func extractTopListsFromPages(urls []string, toplists []*model.TopList) {
 	pages := httpPool.BatchGet(urls, true)
 
 	for i, page := range pages {
 		if len(page) > 0 {
-			extractTopListFromPage(urls[i], page)
+			_, toplist := extractTopListFromPage(page)
+			toplists[i] = toplist
+
+			//model.AddTopList(url, tl)
+			model.SaveTopList(urls[i], toplist)
+
 		}
 	}
 }
 
-func extractTopListFromPage(url, page string) []string {
+func extractTopListFromPage(page string) ([]string, *model.TopList) {
 	links := make([]string, 0, 1000)
 
 	page = removeFooter(removeHTMLSpace(page))
@@ -300,8 +305,7 @@ func extractTopListFromPage(url, page string) []string {
 		tl.ImxTitle = title[scoreIndex-5 : scoreIndex]
 	}
 
-	model.AddTopList(url, tl)
-	return links
+	return links, tl
 }
 
 func removeFooter(body string) string {

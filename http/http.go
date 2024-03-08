@@ -22,10 +22,10 @@ func HttpPost(url, body string) (string, error) {
 
 	contextType := "application/x-www-form-urlencoded"
 	resp, err := hc.Post(url, contextType, bytes.NewBuffer([]byte(body)))
+	defer CloseBody(resp)
 	if err != nil {
 		return "", err
 	}
-	defer CloseBody(resp)
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}
@@ -68,11 +68,16 @@ func httpGet(url string) (string, error) {
 		utils.LogError(fmt.Errorf("bad url: %v", url))
 	}
 
+	if url == "" {
+		return "", fmt.Errorf("empty url")
+	}
+
 	resp, err := hc.Get(url)
+	defer CloseBody(resp)
 	if err != nil {
 		return "", err
 	}
-	defer CloseBody(resp)
+
 	if resp.StatusCode != 200 {
 		return "", fmt.Errorf("ERROR: %d %s %s", resp.StatusCode, resp.Status, resp.Body)
 	}

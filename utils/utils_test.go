@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"homeServer/test"
@@ -98,10 +99,10 @@ func TestDeepCloneWithNil(t *testing.T) {
 	arr := make([]*int, 0)
 	carr, err := deepClone(arr)
 	test.NoError(t, err)
-	test.Nil(t, carr) // clone empty arr [], will get a nil pointer, this is a gob side effect
+	test.True(t, reflect.DeepEqual(carr, arr))
 
 	arr = append(arr, nil)
 	carr2, err := deepClone(arr)
-	test.Error(t, err) // clone arr with nil [nil], will get an error
-	test.Nil(t, carr2) // clone arr with nil [nil], will get a nil pointer, this is a gob side effect
+	test.NoError(t, err)
+	test.True(t, reflect.DeepEqual(carr2, arr))
 }

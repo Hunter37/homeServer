@@ -11,10 +11,10 @@ import (
 
 type EventJob struct {
 	DownloadJob
-	sid       string
-	count     *int32 // remaining stroke job related to this sid
-	ranks     *[]model.Rankings
-	ranksLock *sync.Mutex
+	swimmer     *model.Swimmer
+	strokesLock *sync.Mutex
+	rankingLock *sync.Mutex
+	count       *int32 // remaining stroke job related to this sid
 }
 
 var sortMap = map[string]int{
@@ -38,25 +38,28 @@ func (job *EventJob) Do() {
 		page = removeFooter(removeHTMLSpace(page))
 
 		// extract events data
-		extractEventDataFromPage(job.sid, page)
+		utils.LockOperation(job.strokesLock, func() {
+			extractEventDataFromPage(page, job.swimmer)
+		})
 
 		// extract rank data in this page
 		for _, rank := range getRankDataFromPage(job.url, page) {
-			func() {
-				job.ranksLock.Lock()
-				defer job.ranksLock.Unlock()
-				*job.ranks = append(*job.ranks, rank)
-			}()
+			utils.LockOperation(job.rankingLock, func() {
+				job.swimmer.Rankings = append(job.swimmer.Rankings, rank)
+			})
 		}
 	}
 
-	if 0 == atomic.AddInt32(job.count, -1) {
-		ranks := *job.ranks
+	if atomic.AddInt32(job.count, -1) == 0 {
+		ranks := job.swimmer.Rankings
 		sort.Slice(ranks, func(i, j int) bool {
 			return sortMap[ranks[i].Course]+sortMap[ranks[i].Stroke]+ranks[i].Length <
 				sortMap[ranks[j].Course]+sortMap[ranks[j].Stroke]+ranks[j].Length
 		})
 
-		model.UpdateRankings(job.sid, &ranks)
+		job.swimmer.Rankings = ranks
+
+		// this is the last event job
+		model.WriteSwimmerToCache(job.swimmer)
 	}
 }

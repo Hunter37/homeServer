@@ -20,5 +20,6 @@ COPY --from=build-env /src/homeServer ./homeServer
 ARG TAG=0.0.0
 ENV TAG=$TAG
 ENV STORAGE=AZURE_BLOB
+ENV IDENTITY=MSI
 EXPOSE 8080
 CMD ["/app/homeServer"]

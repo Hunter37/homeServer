@@ -1,0 +1,17 @@
+{
+  "SearchMode": "cache",
+  "Standards": [
+    "wPNS",
+    "Region",
+    "WZone",
+    "SprSec",
+    "SumSec",
+    "Futures",
+    "JuniorW",
+    "JuniorN",
+    "UsOpen",
+    "Nation",
+    "Olympic"
+  ],
+  "CacheTimeInMinutes": 60
+}

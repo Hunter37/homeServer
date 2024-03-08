@@ -3,6 +3,8 @@ package threadpool
 import (
 	"sync"
 	"time"
+
+	"homeServer/utils"
 )
 
 type Pool struct {
@@ -71,9 +73,7 @@ func (q *Pool) dispatch() {
 			workerXChannel <- job           // here is your job worker x
 		case job := <-q.internalQueue:
 
-			func() {
-				q.extraQueueLock.Lock()
-				defer q.extraQueueLock.Unlock()
+			utils.LockOperation(&q.extraQueueLock, func() {
 
 				canAdd := true
 				for len(q.extraQueue) > 0 && canAdd {
@@ -84,7 +84,7 @@ func (q *Pool) dispatch() {
 						canAdd = false
 					}
 				}
-			}()
+			})
 
 			workerXChannel := <-q.readyPool //free worker x founded
 			workerXChannel <- job           // here is your job worker x
@@ -115,11 +115,9 @@ func (q *Pool) Enqueue(job Work) bool {
 		return true
 	default:
 
-		func() {
-			q.extraQueueLock.Lock()
-			defer q.extraQueueLock.Unlock()
+		utils.LockOperation(&q.extraQueueLock, func() {
 			q.extraQueue = append(q.extraQueue, job)
-		}()
+		})
 
 		return false
 	}
