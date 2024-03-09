@@ -44,14 +44,18 @@ jobs:
         docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
         # build main image
-        docker build -t ${{ secrets.DOCKER_USERNAME }}/home-server:$tag \
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/home-server      \
+                     -t ${{ secrets.DOCKER_USERNAME }}/home-server:$tag \
                      --build-arg TAG=$tag .
         docker push ${{ secrets.DOCKER_USERNAME }}/home-server:$tag
+        docker push ${{ secrets.DOCKER_USERNAME }}/home-server
 
         # build ping image
         cd ping
-        docker -t ${{ secrets.DOCKER_USERNAME }}/ping \
-               --build-arg TAG=$tag .
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/ping      \
+                     -t ${{ secrets.DOCKER_USERNAME }}/ping:$tag \
+                     --build-arg TAG=$tag .
+        docker push ${{ secrets.DOCKER_USERNAME }}/ping:$tag
         docker push ${{ secrets.DOCKER_USERNAME }}/ping
 
         docker logout
