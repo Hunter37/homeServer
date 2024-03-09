@@ -50,7 +50,12 @@ jobs:
         docker push ${{ secrets.DOCKER_USERNAME }}/home-server:$tag
         docker push ${{ secrets.DOCKER_USERNAME }}/home-server
 
-        # build ping image
+    - name: ping build and push
+      run: |
+        # tag=$(git describe --tags)
+        tag=${{ steps.version_tag.outputs.new_tag }}
+        tag=${tag#"v"}
+
         cd ping
         build -t ${{ secrets.DOCKER_USERNAME }}/ping      \
               -t ${{ secrets.DOCKER_USERNAME }}/ping:$tag \
