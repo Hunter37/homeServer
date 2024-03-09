@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  ping:
+    image: xueweihan/ping
+    environment:
+      - URLS=https://swimrank.azurewebsites.net/health
+    ports:
+      - 8088:8088
+
+# docker build -t xueweihan/ping --build-arg TAG=abc .
+# docker run --env URLS="<url1>,<url2>" -p 8088:8088 --name ping xueweihan/ping
