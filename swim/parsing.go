@@ -238,7 +238,7 @@ func extractTopListFromPage(page string) ([]string, *model.TopList) {
 	page = removeFooter(removeHTMLSpace(page))
 
 	title, rows := findTable(page, nil, func(row string) []string {
-		m := regex.MatchRow(row, `(https://www.swimmingrank.com/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
+		m := regex.MatchRow(row, `(https://[^/]+/[^/]+/strokes/strokes_[a-z]+/)[^A-Z]*([A-Z0-9_]+)_[0-9a-zA-Z]+.html`, []int{1, 2})
 		if len(m) == 0 {
 			return []string{}
 		}

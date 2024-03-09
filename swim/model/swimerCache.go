@@ -17,14 +17,13 @@ var (
 	_swimmerCacheReady = false
 )
 
-func IsSwimmerCacheReady() bool {
-	return _swimmerCacheReady
-}
-
 func GetSwimmerFormCache(fullID string) *Swimmer {
 	var swimmer *Swimmer
 
+	var ready bool
+
 	utils.ReadLockOperation(_swimmerCacheLock, func() {
+		ready = _swimmerCacheReady
 		s := _swimmerCache[fullID]
 		if s != nil {
 			tmp := utils.Clone(*s)
@@ -32,7 +31,7 @@ func GetSwimmerFormCache(fullID string) *Swimmer {
 		}
 	})
 
-	if swimmer == nil && !_swimmerCacheReady {
+	if swimmer == nil && !ready {
 		parts := strings.Split(fullID, ":")
 		if len(parts) == 2 {
 			var err error
@@ -49,7 +48,12 @@ func GetSwimmerFormCache(fullID string) *Swimmer {
 func GetSwimmerFormCacheByName(name string) []*Swimmer {
 	var swimmers []*Swimmer
 
-	if !_swimmerCacheReady {
+	var ready bool
+	utils.ReadLockOperation(_swimmerCacheLock, func() {
+		ready = _swimmerCacheReady
+	})
+
+	if !ready {
 		return swimmers
 	}
 
@@ -147,6 +151,9 @@ func LoadSwimmerCacheFromTable() error {
 
 	utils.Logf("%s swimmer cache loaded %v\n", utils.GetLogTime(), len(_swimmerCache))
 
-	_swimmerCacheReady = true
+	utils.WriteLockOperation(_swimmerCacheLock, func() {
+		_swimmerCacheReady = true
+	})
+
 	return nil
 }
