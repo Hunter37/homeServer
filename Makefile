@@ -26,10 +26,25 @@ build: dependencies
 	go build -o bin/
 	ln -sf bin/homeServer homeServer
 
+.PHONY: all
+all: clean format utest build
+
+
+
+.PHONY: dockerdbg
+dockerdbg:
+	-docker rmi -f home-server-dbg
+	docker build -t home-server-dbg -f Dockerfile_dbg .
+
+.PHONY: dockerrun
+dockerrun:
+	-docker rm -f home-server-dbg-run
+	docker run -p 40000:40000 -p 8080:8080 --name home-server-dbg-run home-server-dbg
+
 .PHONY: docker
 docker:
+	-docker rmi -f home-server
 	docker build -t home-server .
-#	docker run -p 8080:8080 home-server
 
 .PHONY: push
 push:
@@ -43,8 +58,6 @@ pushdh:
 	docker tag home-server xueweihan/home-server:0.1.0
 	docker push xueweihan/home-server:0.1.0
 
-.PHONY: all
-all: clean format utest build
 
 
 # Create azure app keys (json-auth):

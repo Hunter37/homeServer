@@ -1,0 +1,45 @@
+FROM golang:1.22.0
+
+# Install go debugger
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+# Install Azure cli
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+WORKDIR /app
+COPY . .
+
+RUN echo "az login --use-device-code">./run.sh
+RUN echo "/go/bin/dlv debug --listen=:40000 --headless --api-version=2 --accept-multiclient --log">>./run.sh
+RUN chmod +x ./run.sh
+
+ENV TAG=local
+ENV STORAGE=AZURE_BLOB
+EXPOSE 40000 8080
+CMD ["/bin/bash", "./run.sh"]
+
+# # build stage
+# FROM golang:1.22.0-alpine3.19 AS build-env
+
+# RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+# WORKDIR /app
+# COPY . .
+# RUN CGO_ENABLED=0 go build -gcflags="all=-N -l" -o ./release/homeServer .
+# RUN echo "az login --use-device-code">./release/run.sh
+# RUN echo "./dlv --listen=:40000 --headless --api-version=2 --accept-multiclient --log exec ./homeServer">>./release/run.sh
+# RUN chmod +x ./release/run.sh
+# RUN cp /go/bin/dlv ./release/
+
+
+# # final stage
+# FROM mcr.microsoft.com/azure-cli
+
+# WORKDIR /app
+# COPY --from=build-env /app/release/* ./
+
+# ENV TAG=local
+# ENV STORAGE=AZURE_BLOB
+# # ENV IDENTITY=MSI
+# EXPOSE 8080 40000
+# CMD ["/bin/bash", "/app/run.sh"]
