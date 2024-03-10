@@ -38,7 +38,7 @@ func main() {
 	go func() {
 		for {
 			for _, url := range urls {
-				func() {
+				go func(url string) {
 					resp, err := client.Get(url)
 					if err != nil {
 						log.Println(err)
@@ -52,14 +52,15 @@ func main() {
 						return
 					}
 
-					log.Printf("[%v]", string(body))
-				}()
+					log.Printf("OUT get:[%v]", string(body))
+				}(url)
 			}
 			time.Sleep(time.Minute * time.Duration(delay))
 		}
 	}()
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("IN get:[%s]", r.RemoteAddr)
 		w.WriteHeader(http.StatusOK)
 		w.Write(content)
 	})
