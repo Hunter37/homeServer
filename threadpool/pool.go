@@ -76,11 +76,11 @@ func (q *Pool) dispatch() {
 			utils.LockOperation(&q.extraStackLock, func() {
 
 				canAdd := true
-				n := len(q.extraStack)
-				for n > 0 && canAdd {
+				for len(q.extraStack) > 0 && canAdd {
+					n := len(q.extraStack) - 1
 					select {
-					case q.internalQueue <- q.extraStack[n-1]:
-						q.extraStack = q.extraStack[:n-1]
+					case q.internalQueue <- q.extraStack[n]:
+						q.extraStack = q.extraStack[:n]
 					default:
 						canAdd = false
 					}
