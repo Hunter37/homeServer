@@ -78,7 +78,11 @@ func GetCachedSwimmerFromMeetUrl(url string) *model.Swimmer {
 }
 
 func logDownloadUrl(url string) {
-	utils.Logf("%s \033[94m%s\033[0m\n", utils.GetLogTime(), url)
+	if utils.SimpleLog {
+		utils.Logf("%s %s\n", utils.GetLogTime(), url)
+	} else {
+		utils.Logf("%s \033[94m%s\033[0m\n", utils.GetLogTime(), url)
+	}
 }
 
 func search(text string) *Table {

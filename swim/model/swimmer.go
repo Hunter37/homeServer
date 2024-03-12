@@ -203,8 +203,8 @@ func (s *Swimmer) GetBirthday() (time.Time, time.Time) {
 			right = *s.Birthday
 			left = right
 		} else {
-			utils.LogError(fmt.Errorf("wrong B-day SID=%s Bday=%s Left=%s Right=%s",
-				s.ID, s.Birthday.Format("2006/01/02"), left.Format("2006/01/02"), right.Format("2006/01/02")))
+			utils.LogError(fmt.Errorf("wrong B-day SID=%s:%s Bday=%s Left=%s Right=%s",
+				s.LscID, s.ID, s.Birthday.Format("2006/01/02"), left.Format("2006/01/02"), right.Format("2006/01/02")))
 		}
 	}
 
