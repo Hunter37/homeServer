@@ -45,7 +45,7 @@ func birthday(url string) (time.Time, time.Time) {
 	swimmer := GetCachedSwimmerFromMeetUrl(url)
 	if swimmer.Name == "" {
 		logDownloadUrl(url)
-		err := extractSwimmerAllData(url, swimmer)
+		err := extractSwimmerAllData(url, swimmer, httpPool)
 		if err != nil {
 			utils.LogError(err)
 			return time.Now(), time.Now()
@@ -147,7 +147,7 @@ func getInfo(url string) *Table {
 	if needDownload {
 		logDownloadUrl(url)
 
-		err := extractSwimmerAllData(url, swimmer)
+		err := extractSwimmerAllData(url, swimmer, httpPool)
 		if err != nil {
 			return createErrorTable(err.Error())
 		}

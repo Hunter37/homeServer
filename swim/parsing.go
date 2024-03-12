@@ -7,13 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"homeServer/http"
 	"homeServer/regex"
 	"homeServer/swim/model"
 	"homeServer/utils"
 )
 
-func extractSwimmerAllData(url string, swimmer *model.Swimmer) error {
-	body, err := httpPool.Get(url, true)
+func extractSwimmerAllData(url string, swimmer *model.Swimmer, hPool *http.HttpPool) error {
+	body, err := hPool.Get(url, true)
 	if err != nil {
 		utils.LogError(err)
 		return err
@@ -21,7 +22,7 @@ func extractSwimmerAllData(url string, swimmer *model.Swimmer) error {
 
 	extractSiwmmerInfoFromPage(body, swimmer)
 
-	extractEventsAndRanksFromPages(body, swimmer)
+	extractEventsAndRanksFromPages(body, swimmer, hPool)
 
 	return model.WriteSwimmerToCache(swimmer)
 }
@@ -43,9 +44,9 @@ func extractSiwmmerInfoFromPage(page string, swimmer *model.Swimmer) {
 	swimmer.LSC = lscName
 }
 
-func extractEventsAndRanksFromPages(page string, swimmer *model.Swimmer) {
+func extractEventsAndRanksFromPages(page string, swimmer *model.Swimmer, hPool *http.HttpPool) {
 	urls := getAllEventLinks(page)
-	pages := httpPool.BatchGet(urls, true)
+	pages := hPool.BatchGet(urls, true)
 
 	scy := make([]model.Rankings, 0, 22+18)
 	lcm := make([]model.Rankings, 0, 18)

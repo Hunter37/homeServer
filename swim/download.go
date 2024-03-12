@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"homeServer/http"
 	"homeServer/storage"
 	"homeServer/swim/model"
 	"homeServer/threadpool"
@@ -19,6 +20,7 @@ type DownloadJob struct {
 	visited *map[string]bool
 	pool    *threadpool.Pool
 	url     string
+	phPool  *http.HttpPool
 
 	listJob    *int32
 	infoJob    *int32
@@ -34,6 +36,7 @@ func NewDownloadJob(currentJob *DownloadJob, url string, call func(job *Download
 		(*currentJob.visited)[url] = true
 
 		dj := &DownloadJob{
+			phPool:     currentJob.phPool,
 			lock:       currentJob.lock,
 			visited:    currentJob.visited,
 			pool:       currentJob.pool,
@@ -66,6 +69,7 @@ func createInt32() *int32 {
 func StartBackgroundDownloadPool(maxWorkers int) func() {
 	pool := threadpool.NewWorkerPool(maxWorkers, maxWorkers*2)
 	pool.Start()
+	backgroundHttpPool := http.StartHttpPool(maxWorkers)
 
 	quit := make(chan bool)
 	go func() {
@@ -88,6 +92,7 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 
 			visited := make(map[string]bool, 0)
 			dJob := &DownloadJob{
+				phPool:     backgroundHttpPool,
 				lock:       &sync.Mutex{},
 				visited:    &visited,
 				pool:       pool,
@@ -141,5 +146,6 @@ func StartBackgroundDownloadPool(maxWorkers int) func() {
 	return func() {
 		quit <- true
 		pool.Stop()
+		backgroundHttpPool.Stop()
 	}
 }
