@@ -76,7 +76,6 @@ func tableEntityToObject[T any](jsonString []byte) (*T, error) {
 }
 
 func SaveTableObject[T any](table, pkey, rkey string, obj *T) error {
-	return nil
 	jsonBytes, err := objectToTableEntity(pkey, rkey, obj)
 	if err != nil {
 		return err
