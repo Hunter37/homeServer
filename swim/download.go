@@ -3,6 +3,7 @@ package swim
 import (
 	"bufio"
 	"bytes"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -67,6 +68,10 @@ func createInt32() *int32 {
 }
 
 func StartBackgroundDownloadPool(maxWorkers int) func() {
+	if os.Getenv("BACKGROUND_DOWNLOAD") == "DISABLED" {
+		return func() {}
+	}
+
 	pool := threadpool.NewWorkerPool(maxWorkers, maxWorkers*2)
 	pool.Start()
 	backgroundHttpPool := http.StartHttpPool(maxWorkers)

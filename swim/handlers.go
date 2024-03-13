@@ -2,7 +2,6 @@ package swim
 
 import (
 	"bytes"
-	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,7 +31,7 @@ func SwimHandler(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	utils.LogHttpCaller(req, false)
-	gzipWrite(writer, nil, http.StatusNotFound)
+	utils.GzipWrite(writer, nil, http.StatusNotFound)
 }
 
 // mainPageHandler handle the main html page
@@ -41,7 +40,7 @@ func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")
-	gzipWrite(writer, body, http.StatusOK)
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 // settingsPageHandler handle the settings html page
@@ -50,7 +49,7 @@ func settingsPageHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")
-	gzipWrite(writer, body, http.StatusOK)
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 // searchHandler handle the main input json query in main page
@@ -65,7 +64,7 @@ func searchHandler(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 // birthdayHandler handle the birthday json query in the top list page
@@ -85,7 +84,7 @@ func birthdayHandler(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 // settingsHandler handle the read/write settings query in the settings page
@@ -103,7 +102,7 @@ func settingsHandler(writer http.ResponseWriter, request *http.Request) {
 	body, _ := json.Marshal(model.GetSettings())
 
 	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 // mergeSwimmerHandler merge to swimmer data in the settings page
@@ -111,29 +110,29 @@ func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
 	from := request.URL.Query().Get("from")
 	to := request.URL.Query().Get("to")
 	if from == to {
-		gzipWrite(writer, []byte("self copy"), http.StatusBadRequest)
+		utils.GzipWrite(writer, []byte("self copy"), http.StatusBadRequest)
 		return
 	}
 
 	if to != "DELETE" {
 		err := model.RemoveSwimmerFromCache(from)
 		if err != nil {
-			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
 			return
 		}
 	} else {
 		f := model.GetSwimmerFormCache(from)
 		if f == nil {
-			gzipWrite(writer, []byte("cannot found swimmer 'From'"), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte("cannot found swimmer 'From'"), http.StatusBadRequest)
 			return
 		}
 		t := model.GetSwimmerFormCache(to)
 		if t == nil {
-			gzipWrite(writer, []byte("cannot found swimmer 'To'"), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte("cannot found swimmer 'To'"), http.StatusBadRequest)
 			return
 		}
 		if f.Name != t.Name {
-			gzipWrite(writer, []byte("different name"), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte("different name"), http.StatusBadRequest)
 			return
 		}
 
@@ -153,12 +152,12 @@ func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
 
 		err := model.WriteSwimmerToCache(t)
 		if err != nil {
-			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
 			return
 		}
 	}
 
-	gzipWrite(writer, nil, http.StatusOK)
+	utils.GzipWrite(writer, nil, http.StatusOK)
 }
 
 // swimmerHandler handle the swimmer view and update json request in settings page
@@ -166,20 +165,20 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 	fullId := req.URL.Query().Get("id")
 	swimmer := model.GetSwimmerFormCache(fullId)
 	if swimmer == nil {
-		gzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
+		utils.GzipWrite(writer, []byte("Swimmer not found"), http.StatusNotFound)
 		return
 	}
 
 	if req.Method == http.MethodPut {
 		b, err := io.ReadAll(req.Body)
 		if err != nil {
-			gzipWrite(writer, []byte("Read request body failed"), http.StatusNotFound)
+			utils.GzipWrite(writer, []byte("Read request body failed"), http.StatusNotFound)
 			return
 		}
 
 		var s model.Swimmer
 		if err = json.Unmarshal(b, &s); err != nil {
-			gzipWrite(writer, []byte("Request body is not json object"), http.StatusNotFound)
+			utils.GzipWrite(writer, []byte("Request body is not json object"), http.StatusNotFound)
 			return
 		}
 
@@ -188,18 +187,18 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 		text = bytes.Replace(text, []byte(`\u003e`), []byte(">"), -1)
 		text = bytes.Replace(text, []byte(`\u0026`), []byte("&"), -1)
 		if len(text) != len(b) {
-			gzipWrite(writer, []byte("Request json schema is wrong"), http.StatusNotFound)
+			utils.GzipWrite(writer, []byte("Request json schema is wrong"), http.StatusNotFound)
 			return
 		}
 
 		if swimmer.ID != s.ID {
-			gzipWrite(writer, []byte("Swimmer id is wrong"), http.StatusNotFound)
+			utils.GzipWrite(writer, []byte("Swimmer id is wrong"), http.StatusNotFound)
 			return
 		}
 
 		err = model.WriteSwimmerToCache(&s)
 		if err != nil {
-			gzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
+			utils.GzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
 			return
 		}
 	}
@@ -207,32 +206,5 @@ func swimmerHandler(writer http.ResponseWriter, req *http.Request) {
 	body, _ := json.Marshal(swimmer)
 
 	writer.Header().Set("Content-Type", "text/json")
-	gzipWrite(writer, body, http.StatusOK)
-}
-
-func gzipWrite(writer http.ResponseWriter, body []byte, statusCode int) {
-	if len(body) <= 256 {
-		writer.WriteHeader(statusCode)
-		if _, err := writer.Write(body); err != nil {
-			utils.LogError(err)
-		}
-		return
-	}
-
-	gzipWriter, err := gzip.NewWriterLevel(writer, gzip.BestCompression)
-	if err != nil {
-		utils.LogError(err)
-		writer.WriteHeader(statusCode)
-		if _, err := writer.Write(body); err != nil {
-			utils.LogError(err)
-		}
-		return
-	}
-	defer gzipWriter.Close()
-
-	writer.Header().Set("Content-Encoding", "gzip")
-	writer.WriteHeader(statusCode)
-	if _, err := gzipWriter.Write(body); err != nil {
-		utils.LogError(err)
-	}
+	utils.GzipWrite(writer, body, http.StatusOK)
 }

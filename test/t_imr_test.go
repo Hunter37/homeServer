@@ -9,46 +9,46 @@ import (
 )
 
 func TestFindIMRelayPlayer(t *testing.T) {
-
 	text := `
-	1	Noah Arthiabah	31.86	11/18/23	10	2013/02/06	PN	Bellevue Club Swim Te	PN November AGI
-	2	Luke Han	34.32	11/18/23	10	2013/03/23	PN	Bellevue Club Swim Te	PN November AGI
-	3	Nikolai Ryndin	35.20	12/08/23	10	2013/12/01	PN	Bellevue Club Swim Te	PNS 14&U Short
-	4	Ethan Fei	37.78	11/18/23	9	2013/12/24	PN	Bellevue Club Swim Te	PN November AGI
-	5	David Fan	39.42	12/08/23	10	2012/12/12	PN	Bellevue Club Swim Te	PNS 14&U Short
-	6	Blake Gibbs	39.94	10/14/23	8	2015/03/15	PN	Bellevue Club Swim Te	PN CSC Fall Cla
+	1	Luke Han	33.06	2/23/24	10	2013/03/23	PN	Bellevue Club Swim Te	PN February Age
+	2	Nikolai Ryndin	34.55	2/03/24	10	2013/12/01	PN	Bellevue Club Swim Te	PN BISC Bluefin
+	3	Ethan Fei	36.37	2/23/24	10	2013/12/24	PN	Bellevue Club Swim Te	PN February Age
+	4	Fedor Ryndin	37.69	2/23/24	9	2015/01/18	PN	Bellevue Club Swim Te	PN February Age
+	5	Blake Gibbs	39.94	10/14/23	8	2015/03/15	PN	Bellevue Club Swim Te	PN CSC Fall Cla
+	6	Alexander Han	40.33	1/21/24	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PN BC 25th Annu
 	7	Ayush Belur	40.35	11/19/22	10	2013/06/22	PN	Bellevue Club Swim Te	PN Nov. AGI, Di
-	8	Lexton Chang	40.39	10/14/23	10	2012/12/09 - 2013/10/14	PN	Bellevue Club Swim Te	PN CSC Fall Cla
-			
-	1	Noah Arthiabah	34.99	11/04/23	10	2013/02/06	PN	Bellevue Club Swim Te	PN BISC Bob Mil
-	2	Alexander Han	39.39	12/08/23	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PNS 14&U Short
-	3	Luke Han	40.18	11/18/23	10	2013/03/23	PN	Bellevue Club Swim Te	PN November AGI
-	4	Lexton Chang	42.61	11/04/23	10	2012/12/09 - 2013/10/14	PN	Bellevue Club Swim Te	PN BISC Bob Mil
-	5	Zegen Brink	42.96	11/04/23	10	2013/11/30	PN	Bellevue Club Swim Te	PN BISC Bob Mil
-	6	David Fan	43.25	11/04/23	10	2012/12/12	PN	Bellevue Club Swim Te	PN BISC Bob Mil
-	7	Ethan Fei	46.06	11/18/23	9	2013/12/24	PN	Bellevue Club Swim Te	PN November AGI
-	8	Fedor Ryndin	47.20	10/14/23	8	2015/01/18	PN	Bellevue Club Swim Te	PN CSC Fall Cla
-			
-	1	Noah Arthiabah	28.42	12/08/23	10	2013/02/06	PN	Bellevue Club Swim Te	PNS 14&U Short
-	2	Luke Han	32.78	12/08/23	10	2013/03/23	PN	Bellevue Club Swim Te	PNS 14&U Short
-	3	Ethan Fei	35.93	11/18/23	9	2013/12/24	PN	Bellevue Club Swim Te	PN November AGI
-	4	Nikolai Ryndin	36.77	11/18/23	10	2013/12/01	PN	Bellevue Club Swim Te	PN November AGI
+	8	Zegen Brink	40.84	2/23/24	10	2013/11/30	PN	Bellevue Club Swim Te	PN February Age
+									
+	1	Alexander Han	39.39	12/08/23	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PNS 14&U Short
+	2	Luke Han	40.18	11/18/23	10	2013/03/23	PN	Bellevue Club Swim Te	PN November AGI
+	3	Zegen Brink	42.96	11/04/23	10	2013/11/30	PN	Bellevue Club Swim Te	PN BISC Bob Mil
+	4	Nikolai Ryndin	44.43	2/03/24	10	2013/12/01	PN	Bellevue Club Swim Te	PN BISC Bluefin
+	5	Ethan Fei	44.49	2/23/24	10	2013/12/24	PN	Bellevue Club Swim Te	PN February Age
+	6	Fedor Ryndin	46.80	2/03/24	9	2015/01/18	PN	Bellevue Club Swim Te	PN BISC Bluefin
+	7	Brennan Garr	47.22	2/23/24	9	2015/03/06	PN	Bellevue Club Swim Te	PN February Age
+	8	Blake Gibbs	47.79	10/14/23	8	2015/03/15	PN	Bellevue Club Swim Te	PN CSC Fall Cla
+									
+	1	Luke Han	32.10	2/23/24	10	2013/03/23	PN	Bellevue Club Swim Te	PN February Age
+	2	Ethan Fei	35.93	11/18/23	10	2013/12/24	PN	Bellevue Club Swim Te	PN November AGI
+	3	Nikolai Ryndin	36.20	2/03/24	10	2013/12/01	PN	Bellevue Club Swim Te	PN BISC Bluefin
+	4	Alexander Han	37.04	2/23/24	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PN February Age
 	5	Blake Gibbs	37.61	10/14/23	8	2015/03/15	PN	Bellevue Club Swim Te	PN CSC Fall Cla
-	6	Alexander Han	37.63	11/18/23	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PN November AGI
-	7	David Fan	37.95	12/02/23	10	2012/12/12	PN	Bellevue Club Swim Te	PN Fall Divisio
-	8	Ayush Belur	38.74	12/08/23	10	2013/06/22	PN	Bellevue Club Swim Te	PNS 14&U Short
-			
-	1	Noah Arthiabah	25.86	12/08/23	10	2013/02/06	PN	Bellevue Club Swim Te	PNS 14&U Short
-	2	Luke Han	30.02	11/18/23	10	2013/03/23	PN	Bellevue Club Swim Te	PN November AGI
-	3	Ethan Fei	31.30	12/08/23	9	2013/12/24	PN	Bellevue Club Swim Te	PNS 14&U Short
-	4	Nikolai Ryndin	31.58	11/18/23	10	2013/12/01	PN	Bellevue Club Swim Te	PN November AGI
-	5	Alexander Han	33.04	11/18/23	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PN November AGI
-	6	David Fan	34.00	11/18/23	10	2012/12/12	PN	Bellevue Club Swim Te	PN November AGI
-	7	Fedor Ryndin	34.36	12/02/23	8	2015/01/18	PN	Bellevue Club Swim Te	PN Fall Divisio
-	8	Zegen Brink	34.67	12/08/23	10	2013/11/30	PN	Bellevue Club Swim Te	PNS 14&U Short
-	`
+	6	Ayush Belur	37.77	2/23/24	10	2013/06/22	PN	Bellevue Club Swim Te	PN February Age
+	7	Ray Liu	38.29	2/23/24	9	2014/07/22 - 10/01	PN	Bellevue Club Swim Te	PN February Age
+	8	Zegen Brink	39.02	2/23/24	10	2013/11/30	PN	Bellevue Club Swim Te	PN February Age
+									
+	1	Luke Han	29.39	2/23/24	10	2013/03/23	PN	Bellevue Club Swim Te	PN February Age
+	2	Nikolai Ryndin	30.28	2/23/24	10	2013/12/01	PN	Bellevue Club Swim Te	PN February Age
+	3	Ethan Fei	30.82	2/23/24	10	2013/12/24	PN	Bellevue Club Swim Te	PN February Age
+	4	Alexander Han	32.25	2/23/24	9	2014/05/01 - 05/05	PN	Bellevue Club Swim Te	PN February Age
+	5	Fedor Ryndin	33.91	1/21/24	9	2015/01/18	PN	Bellevue Club Swim Te	PN BC 25th Annu
+	6	Zegen Brink	34.67	12/08/23	10	2013/11/30	PN	Bellevue Club Swim Te	PNS 14&U Short
+	7	Blake Gibbs	34.93	10/14/23	8	2015/03/15	PN	Bellevue Club Swim Te	PN CSC Fall Cla
+	8	Ayush Belur	35.20	7/21/23	10	2013/06/22	PN	Bellevue Club Swim Te	PN MET Short Co
+		`
 
 	data := make([][][]string, 0)
+	result := "\n"
 
 	scanner := bufio.NewScanner(strings.NewReader(text))
 	for scanner.Scan() {
@@ -78,7 +78,7 @@ func TestFindIMRelayPlayer(t *testing.T) {
 				break
 			}
 
-			fmt.Printf("MR %d\n%s%d:%02d.%02d\n\n", i+1, best, bestTime/100/60, bestTime/100%60, bestTime%100)
+			result += fmt.Sprintf("MR %d\n%s%d:%02d.%02d\n\n", i+1, best, bestTime/100/60, bestTime/100%60, bestTime%100)
 
 			for k := range inGroup {
 				used[k] = true
@@ -91,15 +91,17 @@ func TestFindIMRelayPlayer(t *testing.T) {
 	for end <= len(free) {
 		bestTime = 0
 
-		fmt.Printf("FR %d\n", (i+1)/4)
+		result += fmt.Sprintf("FR %d\n", (i+1)/4+1)
 		for ; i < end; i++ {
-			fmt.Println(strings.Join(free[i], "\t"))
+			result += fmt.Sprintln(strings.Join(free[i], "\t"))
 			bestTime += getTime(free[i][2])
 		}
-		fmt.Printf("%d:%02d.%02d\n\n", bestTime/100/60, bestTime/100%60, bestTime%100)
+		result += fmt.Sprintf("%d:%02d.%02d\n\n", bestTime/100/60, bestTime/100%60, bestTime%100)
 
 		end += 4
 	}
+
+	//t.Error(result)
 }
 
 var best string

@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"context"
+	"homeServer/utils"
 	"os"
 	"strings"
 
@@ -51,6 +52,7 @@ func getAzureBlobClient() *azblob.Client {
 type FileStorage interface {
 	Read(path string) ([]byte, error)
 	Write(path string, data []byte) error
+	List(path string) ([]string, error)
 }
 
 type LocalFile struct{}
@@ -63,7 +65,44 @@ func (f LocalFile) Write(path string, data []byte) error {
 	return os.WriteFile(path, data, 0o600)
 }
 
+func (f LocalFile) List(path string) ([]string, error) {
+	dir, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(dir))
+	for _, entry := range dir {
+		if entry.IsDir() {
+			continue
+		}
+		result = append(result, entry.Name())
+	}
+	return result, nil
+}
+
 type AzureBlobFile struct{}
+
+func (f AzureBlobFile) List(path string) ([]string, error) {
+	container, _ := getAzureBlobFilePath(path + "/")
+	ctx := context.Background()
+	result := make([]string, 0, 100)
+
+	pager := getAzureBlobClient().NewListBlobsFlatPager(container, nil)
+
+	for pager.More() {
+		resp, err := pager.NextPage(ctx)
+		if err != nil {
+			utils.LogError(err)
+			return nil, err
+		}
+
+		for _, blob := range resp.Segment.BlobItems {
+			result = append(result, *blob.Name)
+		}
+	}
+
+	return result, nil
+}
 
 func (f AzureBlobFile) Read(path string) ([]byte, error) {
 	container, file := getAzureBlobFilePath(path)

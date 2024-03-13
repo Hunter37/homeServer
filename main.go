@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"homeServer/file"
 	. "homeServer/http"
 	"homeServer/storage"
 	"homeServer/swim"
@@ -26,6 +27,7 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/favicon.ico":                      iconHandler,
 	"/health":                           healthHandler,
 	"/swim":                             swim.SwimHandler,
+	"/file":                             file.FileHandler,
 	"/apple-touch-icon.png":             appleIconHandler,
 	"/apple-touch-icon-precomposed.png": appleIconHandler,
 }
