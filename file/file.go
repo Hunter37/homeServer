@@ -12,8 +12,8 @@ import (
 func FileHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogHttpCaller(req, false)
 
-	fileName := req.URL.Query().Get("name")
-	if fileName == "" {
+	fileName := req.URL.Path
+	if fileName == "/files" || fileName == "/files/" {
 		files, err := storage.File.List("file/files")
 		utils.LogError(err)
 
@@ -32,10 +32,13 @@ func FileHandler(writer http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	fileName = fileName[7:]
+
 	body, err := storage.File.Read("file/files/" + fileName)
 	utils.LogError(err)
 	if err != nil {
 		utils.GzipWrite(writer, nil, http.StatusNotFound)
+		return
 	}
 
 	writer.Header().Set("Content-Type", getContentType(fileName))
