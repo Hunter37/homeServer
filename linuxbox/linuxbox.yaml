@@ -24,6 +24,6 @@ services:
 
 
 
-# docker run -d --name linuxbox -v "c:\\repos:/src" -v "//var/run/docker.sock:/var/run/docker.sock" xueweihan/devlinux sleep infinity
+# docker run -d --name linuxbox -v "c:\\repos:/src" -v "//var/run/docker.sock:/var/run/docker.sock" xueweihan/devlinux
 # docker exec -it linuxbox /bin/bash
 
