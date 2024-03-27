@@ -116,8 +116,8 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 
 	utils.LogHttpCaller(req, false)
 	writer.Header().Set("Connection", "close")
-	writer.Header().Set("Location", "http://localhost")
-	writer.WriteHeader(http.StatusMovedPermanently)
+	writer.Header().Set("Location", "/swim")
+	writer.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
