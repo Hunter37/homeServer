@@ -1,7 +1,7 @@
 {
   "SearchMode": "cache",
   "Standards": [
-    "wPNS",
+    "PNS",
     "Region",
     "WZone",
     "SprSec",
