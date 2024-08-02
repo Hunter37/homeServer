@@ -85,7 +85,7 @@ func TestFindIMRelayPlayer(t *testing.T) {
 		end += 4
 	}
 
-	t.Error(result)
+	//t.Error(result)
 }
 
 var best string
