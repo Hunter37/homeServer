@@ -114,7 +114,7 @@ func mergeSwimmerHandler(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if to != "DELETE" {
+	if to == "DELETE" {
 		err := model.RemoveSwimmerFromCache(from)
 		if err != nil {
 			utils.GzipWrite(writer, []byte(err.Error()), http.StatusBadRequest)
