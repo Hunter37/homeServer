@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Swim Info</title>
+</head>
+<style>
+    h1,
+    h2,
+    h3,
+    .center {
+        text-align: center;
+    }
+
+    .wt {
+        background: #FFF;
+    }
+
+    div {
+        margin: 10px;
+        font: 14px Verdana;
+    }
+
+    td,
+    th {
+        border: 1px solid black;
+        padding: 4px;
+    }
+
+    td {
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    td>a,
+    td>button {
+        padding: 0 5px;
+        display: inline-block;
+        width: 100%;
+        text-decoration: underline;
+        background: #0000;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    td * {
+        text-align: right;
+    }
+
+    button {
+        border: 0;
+        font: 14px Verdana;
+        color: inherit;
+    }
+
+    div.hide {
+        display: none;
+    }
+
+    .big,
+    select.gn,
+    select.bl,
+    select.rd {
+        font-size: 16px;
+    }
+
+    .left,
+    .left * {
+        text-align: left;
+    }
+
+    .row {
+        white-space: nowrap;
+    }
+
+    .row>* {
+        margin: auto 2px;
+        display: inline-block;
+    }
+
+    .container {
+        display: inline-block;
+    }
+
+    .match-size {
+        display: flex;
+    }
+
+    .match-size>div {
+        flex-grow: 1;
+        width: 0;
+    }
+
+    .match-size span {
+        display: inline-block;
+        padding: 5px 10px;
+    }
+
+    .match-size button {
+        padding: 3px 5px;
+        margin: 5px 7px;
+    }
+
+    tr:nth-child(odd) {
+        background-color: #0000;
+    }
+
+    tr:nth-child(even) {
+        background-color: #0002;
+    }
+
+    tr.d25 {
+        background-color: inherit;
+    }
+
+    .hd {
+        text-align: center;
+    }
+
+    .hd.FR {
+        background-color: #FDD;
+    }
+
+    .d50.FR {
+        background-color: #FF000030;
+    }
+
+    .d100.FR {
+        background-color: #FF000028;
+    }
+
+    .d200.FR {
+        background-color: #FF000020;
+    }
+
+    .d400.FR,
+    .d500.FR {
+        background-color: #FF000018;
+    }
+
+    .d800.FR,
+    .d1000.FR {
+        background-color: #FF000010;
+    }
+
+    .d1500.FR,
+    .d1650.FR {
+        background-color: #FF000008;
+    }
+
+    .hd.BK {
+        background-color: #CEF;
+    }
+
+    .d50.BK {
+        background-color: #0AF4;
+    }
+
+    .d100.BK {
+        background-color: #0AF3;
+    }
+
+    .d200.BK {
+        background-color: #0AF2;
+    }
+
+    .hd.BR {
+        background-color: #DFD;
+    }
+
+    .d50.BR {
+        background-color: #0F74;
+    }
+
+    .d100.BR {
+        background-color: #0F73;
+    }
+
+    .d200.BR {
+        background-color: #0F72;
+    }
+
+    .hd.FL {
+        background-color: #FFD;
+    }
+
+    .d50.FL {
+        background-color: #FF03;
+    }
+
+    .d100.FL {
+        background-color: #FF02;
+    }
+
+    .d200.FL {
+        background-color: #FF01;
+    }
+
+    .hd.IM {
+        background-color: #BFF;
+    }
+
+    .d100.IM {
+        background-color: #0FF6;
+    }
+
+    .d200.IM {
+        background-color: #0FF4;
+    }
+
+    .d400.IM {
+        background-color: #0FF2;
+    }
+
+    .age {
+        background-color: #DDD;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .ct {
+        position: relative;
+        padding: 2px 4px;
+        min-width: 52px;
+    }
+
+    .ct>.std,
+    .ct>.dd {
+        user-select: none;
+        position: absolute;
+        z-index: -1;
+        bottom: 0;
+        left: 0;
+        margin: 1px 2px;
+        color: #555;
+        font-size: x-small;
+    }
+
+    .ct>.dd {
+        right: 0;
+    }
+
+    .ct>.dp {
+        color: #284
+    }
+
+    .ct>.ad {
+        color: #A00
+    }
+
+    .ct>div {
+        margin: 0 0 10px 0;
+        display: inline-block;
+    }
+
+    .ct>.r {
+        margin: 0;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        background-color: #0004;
+        z-index: -1;
+    }
+
+    .gn>td,
+    select.gn {
+        background-color: #0F72;
+    }
+
+    .bl>td,
+    select.bl {
+        background-color: #07F2;
+    }
+
+    .rd>td,
+    select.rd {
+        background-color: #F002;
+    }
+
+    .loader {
+        border: 5px solid #BBB;
+        border-top: 5px solid #39D;
+        border-radius: 50%;
+        width: 7px;
+        height: 7px;
+        animation: spin 2s linear infinite;
+        margin: 0;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<body>
+    <div class="row">
+        <input id="input" autofocus style="width:100%; max-width: 800px" class="big" />
+        <button onclick="search()" style="width:120px" class="big">search</button>
+    </div>
+    <div id="filter" class="hide row">
+        <div>Meet date:</div>
+        <input id="date" type="date" class="big" onchange="onSelectionChange()" />
+        <div>Meet cut:</div>
+        <select id="standard0" class="gn" onchange="onSelectionChange()"></select>
+        <select id="standard1" class="bl" onchange="onSelectionChange()"></select>
+        <select id="standard2" class="rd" onchange="onSelectionChange()"></select>
+        <button onclick="loadBirthday()" class="big">Find out 10 more</button>
+    </div>
+    <div id="table" class="container"></div>
+</body>
+<script>
+    Date.prototype.toDateInputValue = (function () {
+        let local = new Date(this);
+        local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
+        return local.toJSON().slice(0, 10);
+    });
+
+    const inputElem = document.getElementById('input');
+    let birthdayMap = new Map;
+    let birthdayDisplayMap = new Map;
+
+    // document.getElementById('date').value = new Date().toDateInputValue();
+
+    inputElem.addEventListener('keypress', (event) => {
+        if (event.key == 'Enter') {
+            search();
+        }
+    });
+
+    function onSelectionChange() {
+        showTable(getHistory());
+    }
+
+    async function loadBirthday() {
+        for (let i = 0; i < 10; ++i) {
+            let button = document.getElementsByClassName('birthday')[0];
+            if (button) {
+                button.click();
+            }
+        }
+    }
+
+    async function birthday(element, link) {
+        let parent = element.parentElement;
+        parent.innerHTML = 'Loading...';
+        let response = await fetch('swim/birthday?link=' + encodeURIComponent(link))
+        if (!response.ok) {
+            parent.innerHTML = response.url;
+        } else {
+            let birthday = await response.json();
+            parent.innerHTML = birthday.Display;
+            birthdayMap.set(link, birthday.Right);
+            birthdayDisplayMap.set(link, birthday.Display);
+        }
+    }
+
+    const _postHeader = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+    };
+    const _strokeOrder = ['FR', 'FL', 'BK', 'BR', 'IM'];
+    const _storkeMap = {
+        'FR': 'Free',
+        'BK': 'Back',
+        'BR': 'Breast',
+        'FL': 'Fly',
+        'IM': 'IM'
+    };
+    _meetShortNames = {
+        "Futures (LCM)": "FU",
+        "Winter Juniors (SCY)": "WJ",
+        "Summer Juniors (LCM)": "SJ",
+        "Winter US Open (SCY)": "WO",
+        "Winter US Open (LCM)": "WO",
+        "Summer US Open": "SO",
+        "Winter Nationals (LCM)": "WN",
+        "Summer Nationals (LCM)": "SN",
+        "Olympic Trials": "OT",
+        "Olympic Trials Wave I": "OT1",
+        "Olympic Trials Wave II": "OT2",
+    };
+
+    async function details(_, pkey) {
+        updateContent('Loading....');
+        let swimmerCall = fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql?trc=sdk-ui-1.11.0', {
+            method: 'POST',
+            headers: _postHeader,
+            body: JSON.stringify({
+                metadata: [
+                    {
+                        dim: "[Persons.PersonKey]",
+                        datatype: "numeric",
+                        filter: {
+                            equals: pkey
+                        },
+                        panel: "scope"
+                    },
+                    {
+                        dim: "[Persons.FirstAndPreferredName]",
+                        datatype: "text"
+                    },
+                    {
+                        dim: "[Persons.LastName]",
+                        datatype: "text"
+                    },
+                    {
+                        dim: "[Persons.Age]",
+                        datatype: "numeric"
+                    },
+                    {
+                        dim: "[Persons.ClubName]",
+                        datatype: "text",
+                    }
+                ],
+                count: 1
+            })
+        });
+        let eventsCall = fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql?trc=sdk-ui-1.11.0',
+            {
+                method: 'POST',
+                headers: _postHeader,
+                body: JSON.stringify({
+                    metadata: [
+                        {
+                            dim: "[UsasSwimTime.PersonKey]",
+                            datatype: "numeric",
+                            filter: {
+                                equals: pkey
+                            },
+                            panel: "scope",
+                        },
+                        {
+                            dim: "[SwimEvent.EventCode]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[UsasSwimTime.SwimTimeFormatted]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[UsasSwimTime.AgeAtMeetKey]",
+                            datatype: "numeric"
+                        },
+                        {
+                            dim: "[TimeStandard.TimeStandardName]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[Meet.MeetName]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[OrgUnit.Level3Code]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[OrgUnit.Level4Name]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[SeasonCalendar.CalendarDate (Calendar)]",
+                            datatype: "datetime",
+                            level: "days",
+                            sort: "asc"
+                        },
+                        {
+                            dim: "[UsasSwimTime.SwimEventKey]",
+                            datatype: "numeric"
+                        },
+                        {
+                            dim: "[UsasSwimTime.MeetKey]",
+                            datatype: "numeric"
+                        },
+                        {
+                            dim: "[EventCompetitionCategory.TypeName]",
+                            datatype: "text",
+                        },
+                        {
+                            dim: "[OrgUnit.Level4Code]",
+                            datatype: "text"
+                        },
+                        {
+                            dim: "[OrgUnit.Level2Code]",
+                            datatype: "text"
+                        },
+                    ],
+                    count: 5000
+                })
+            }
+        )
+
+        let [swimmerResponse, eventsResponse] = await Promise.all([swimmerCall, eventsCall]);
+        if (!swimmerResponse.ok || !eventsResponse.ok) {
+            updateContent('Cannot get data for ' + pkey);
+            return;
+        }
+
+        let data = await eventsResponse.json();
+        data.type = 'details';
+        data.SwimmerData = await swimmerResponse.json();
+        pushHistory("details-" + pkey, data);
+    }
+
+    async function search(_, name) {
+        setButtonStatus();
+        updateContent('Loading....');
+
+        if (!name) {
+            name = inputElem.value;
+        }
+
+        let values = await trySwimmerSearch(name);
+        if (values.length == 0) {
+            values = await tryClubSearch(name);
+        }
+
+        if (values.length == 0) {
+            updateContent('No result found');
+        } else {
+            pushHistory('search-' + name, { type: 'search', values: values });
+        }
+    }
+
+    async function tryClubSearch(value) {
+        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql?trc=sdk-ui-1.11.0', {
+            method: 'POST',
+            headers: _postHeader,
+            body: JSON.stringify({
+                metadata: [
+                    {
+                        dim: "[Persons.FullName]",
+                        datatype: "text"
+                    },
+                    {
+                        dim: "[Persons.Age]",
+                        datatype: "numeric",
+                        filter: {
+                            "<=": 18
+                        }
+                    },
+                    {
+                        dim: "[Persons.ClubName]",
+                        datatype: "text",
+                        sort: "asc",
+                        filter: {
+                            contains: value
+                        }
+                    },
+                    {
+                        dim: "[Persons.LscCode]",
+                        datatype: "text"
+                    },
+                    {
+                        dim: "[Persons.PersonKey]",
+                        datatype: "numeric"
+                    }
+                ],
+                count: 5000
+            })
+        });
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const data = await response.json();
+        return data.values;
+    }
+
+    async function trySwimmerSearch(value) {
+
+        let names = splitNameBySpaces(value);
+        let calls = [];
+        for (let [firstName, lastName] of names) {
+            calls.push(swimmerFirstAndLastNameSearch(firstName, lastName));
+        }
+
+        let values = [];
+        let data = await Promise.all(calls);
+        for (let v of data) {
+            values.push(...v);
+        }
+
+        return values;
+    }
+
+    async function swimmerFirstAndLastNameSearch(firstName, lastName) {
+        let result = [];
+
+        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql?trc=sdk-ui-1.11.0', {
+            method: 'POST',
+            headers: _postHeader,
+            body: JSON.stringify({
+                metadata: [
+                    {
+                        title: "Name",
+                        dim: "[Persons.FullName]",
+                        datatype: "text"
+                    },
+                    {
+                        title: "Age",
+                        dim: "[Persons.Age]",
+                        datatype: "numeric"
+                    },
+                    {
+                        title: "Club",
+                        dim: "[Persons.ClubName]",
+                        datatype: "text",
+                        sort: "asc"
+                    },
+                    {
+                        title: "LSC",
+                        dim: "[Persons.LscCode]",
+                        datatype: "text"
+                    },
+                    {
+                        title: "PersonKey",
+                        dim: "[Persons.PersonKey]",
+                        datatype: "numeric"
+                    },
+                    {
+                        title: "Club",
+                        dim: "[Persons.ClubName]",
+                        datatype: "text",
+                    },
+                    {
+                        dim: "[Persons.LastName]",
+                        filter: {
+                            contains: lastName
+                        }
+                    },
+                    {
+                        dim: "[Persons.FirstAndPreferredName]",
+                        filter: {
+                            contains: firstName
+                        },
+                        panel: "scope"
+                    }
+                ],
+                count: 5000
+            })
+        });
+
+        if (response.ok) {
+            let data = await response.json();
+            for (let row of data.values) {
+                if (row[6].toLowerCase().startsWith(lastName.toLowerCase())) {
+                    result.push(row);
+                }
+            }
+        }
+
+        return result;
+    }
+
+    function getTimeStandard(selectId) {
+        let timeStandard = 0;
+        let standardElem = document.getElementById(selectId);
+        if (standardElem.value) {
+            let idx = standardElem.value.indexOf(')');
+            timeStandard = parseInt(standardElem.value.substring(idx + 1).replace(':', '').replace('.', ''))
+            return [timeStandard, standardElem.className]
+        }
+        return null;
+    }
+
+    function createTable(table) {
+        if (!table) {
+            return '';
+        }
+
+        let filterDate = null;
+        let dateElem = document.getElementById('date');
+        if (dateElem.value != new Date().toDateInputValue()) {
+            let year = parseInt(dateElem.value) - 1 - table.Age;
+            filterDate = year + dateElem.value.substring(4);
+        }
+
+        let timeStandards = [];
+        for (let i = 0; i < 3; ++i) {
+            let time = getTimeStandard('standard' + i);
+            if (time) {
+                timeStandards.push(time);
+            }
+        }
+        timeStandards.sort((a, b) => a[0] < b[0] ? -1 : 1);
+
+        let html = [];
+
+        if (table.Additions) {
+            html.push('<div class="match-size"><div>');
+            for (const element of table.Additions) {
+                if (element.Link) {
+                    if (element.Action && element.Action != 'href') {
+                        html.push('<button class="', element.Action, '" onclick="', element.Action, '(this, \'', element.Link, '\')">', element.Text, '</button>');
+                    } else {
+                        html.push('<span><a href="', element.Link, '" target="_blank">', element.Text, '</a></span>');
+                    }
+                } else {
+                    html.push('<span>', element.Text, '</span>');
+                }
+                if (element.Log) {
+                    console.log(element.Log);
+                }
+            }
+            html.push('</div></div>');
+        }
+
+        if (table.Title) {
+            html.push('<h2>');
+            html.push(table.Title);
+            html.push('</h2>');
+        }
+
+        html.push('<table style="border-collapse:collapse"><tbody>');
+        if (table.Header) {
+            html.push('<tr>');
+            if (table.ShowOrder) {
+                html.push('<th></th>');
+            }
+            for (const h of table.Header) {
+                if (h.startsWith('<')) {
+                    html.push(h);
+                } else {
+                    html.push('<th>', h, '</th>');
+                }
+            }
+            html.push('</tr>');
+        }
+
+        if (!table.Value) {
+            table.Value = [];
+            for (let i = 0; i < table.Header.length; ++i) {
+                table.Value.push(i);
+            }
+        }
+
+        if (table.Items) {
+            let index = 0
+            for (const row of table.Items) {
+
+                for (let i = 0; i < table.Value.length; ++i) {
+                    if (table.Link && table.Link[i] > -1) {
+                        let link = row[table.Link[i]];
+                        if (link && link.startsWith('{') && table.Action && table.Action[i] == 'birthday') {
+                            let object = JSON.parse(link);
+                            birthdayMap.set(object.Link, object.Right);
+                            birthdayDisplayMap.set(object.Link, object.Display);
+                            row[table.Link[i]] = object.Link;
+                        }
+                    }
+                }
+
+                let date = birthdayMap.get(row[table.FilterColumn]);
+                if (!!date && filterDate != 'NaN' && date <= filterDate) {
+                    continue;
+                }
+
+                let trCls = '';
+                if (row[table.TrClass]) {
+                    trCls = row[table.TrClass].toLowerCase();
+                }
+                if (timeStandards && row[table.StandardColumn]) {
+                    let time = row[table.StandardColumn];
+                    for (let ts of timeStandards) {
+                        if (time <= ts[0]) {
+                            trCls += ts[1];
+                            break;
+                        }
+                    }
+                }
+                html.push('<tr' + (trCls ? ' class="' + trCls + '"' : '') + '>');
+
+                if (table.ShowOrder) {
+                    html.push('<td>', ++index, '</td>');
+                }
+                for (let i = 0; i < table.Value.length; ++i) {
+                    let value = row[table.Value[i]] || '';
+                    let tdElem = (table.LeftAlign && table.LeftAlign[i]) ? '<td class="left">' : '<td>';
+                    if (typeof value == 'string' && value.startsWith('>')) {
+                    } else if (typeof value == 'string' && value.startsWith('<')) {
+                        html.push(value);
+                    } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
+                        let link = row[table.Link[i]];
+                        if (table.Action && table.Action[i] != 'href') {
+                            if (table.Action[i] == 'birthday') {
+                                if (birthdayDisplayMap.get(link)) {
+                                    html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
+                                } else {
+                                    html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                                }
+                            } else {
+                                html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                            }
+                        } else {
+                            html.push(tdElem, '<a href="', link, '" target="_blank">', value, '</a></td>');
+                        }
+                    } else {
+                        html.push(tdElem, value, '</td>');
+                    }
+                }
+                html.push('</tr>');
+            }
+        }
+
+        html.push('</tbody></table>');
+
+        html.push(createTable(table.Next));
+
+        return html.join('');
+    }
+
+    function setButtonStatus(table) {
+        let filterElem = document.getElementById('filter');
+
+        if (table && table.FilterColumn > 0) {
+            filterElem.classList.remove('hide');
+        } else {
+            filterElem.classList.add('hide');
+        }
+
+        for (let i = 0; i < 3; ++i) {
+            setSelect(table, 'standard' + i);
+        }
+
+        return table;
+    }
+
+    function setSelect(table, selectId) {
+        let standardElem = document.getElementById(selectId)
+        if (table && table.Standards) {
+            let selected = standardElem.value;
+            standardElem.innerHTML = '<option value=""></option>';
+            let std = table.Standards;
+            for (let i = 0; i < std.length;) {
+                let meet = std[i].Meet;
+                standardElem.innerHTML += '<optgroup label="' + meet + '">';
+                for (; i < std.length && meet == std[i].Meet; ++i) {
+                    let val = meet + ' (' + std[i].Age + ') ' + std[i].Time
+                    standardElem.innerHTML += '<option value="' + val + '">' + val + '</option>';
+                    if (selected) {
+                        let idx = selected.indexOf(')');
+                        if (idx > 0 && selected.substring(0, idx) == val.substring(0, idx)) {
+                            selected = val;
+                        }
+                    }
+                }
+                standardElem.innerHTML += '</optgroup>'
+            }
+            standardElem.value = selected;
+        }
+    }
+
+    // integrate with browser navigation buttons
+    let jsonMap = new Map
+
+    function pushHistory(hash, data) {
+        hash = '#' + encodeURIComponent(hash);
+
+        jsonMap.set(hash, data);
+        if (window.location.hash != hash) {
+            window.location.hash = hash;
+        }
+    }
+
+    function getHistory() {
+        return jsonMap.get(window.location.hash);
+    }
+
+    window.addEventListener('hashchange', loadContent);
+    window.addEventListener('load', loadContent);
+
+    async function loadContent() {
+        let data = getHistory();
+        if (!data) {
+            let value = decodeURIComponent(window.location.hash.substring(1));
+            let values = value.split('-');
+            if (values[0] == 'search') {
+                await search(null, values[1]);
+                data = getHistory();
+            } else if (values[0] == 'details') {
+                await details(null, Number(values[1]));
+                data = getHistory();
+            }
+        }
+        if (data) {
+            if (data.type == 'search') {
+                showSearch(data);
+            } else if (data.type == 'details') {
+                showDetails(data);
+            } else {
+                showTable(data);
+            }
+        } else {
+            updateContent('Input name or URL');
+        }
+    }
+
+    function updateContent(html) {
+        document.getElementById('table').innerHTML = html;
+    }
+
+    function showTable(data) {
+        updateContent(createTable(setButtonStatus(data)));
+    }
+
+    function showSearch(data) {
+        let html = [];
+        // name, age, club, lsc, pkey
+
+        html.push('<table style="border-collapse:collapse"><tbody>');
+        let index = 0;
+        for (let [name, age, club, lsc, pkey] of data.values) {
+            html.push('<tr><td>', ++index, '</td><td class="left"><button class="search" onclick="details(this,', pkey, ')">',
+                name, '</button></td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
+        }
+        html.push('</tbody></table>');
+
+        updateContent(html.join(''));
+    }
+
+    function createDetailsPageTitle(data, meetDate) {
+        let html = [];
+        let [firstName, lastName, age, club] = data.SwimmerData.values[0];
+        let [left, right] = calculateBrithday(data, meetDate);
+
+        if (firstName.charAt(firstName.length - 1) != ' ') {
+            parts = firstName.split(' ');
+            firstName = parts[parts.length - 1] + ' ';
+        }
+
+        html.push('<div class="match-size"><span>', firstName, lastName, '</span><span>');
+        if (data.values.length > 0) {
+            html.push(data.values[0][10], '</span><span>');
+        }
+        html.push(age, '</span><span>', club, '</span><span>Brithday: ', formatDateRange(left, right), '</span><span>Total Event:', data.values.length, '</span></div>');
+
+        return html.join('');
+    }
+
+    function getFastRowByEvent(data) {
+        // get unique event keys
+        let eventKeys = new Set();
+        for (let row of data.values) {
+            eventKeys.add(row[8]);
+        }
+        let uniqueEventKeys = [...eventKeys];
+        uniqueEventKeys.sort((a, b) => a - b);
+
+        // find the fast time for each event
+        let fastRow = {};
+        for (let row of data.values) {
+            let eventKey = row[8];
+            if (!fastRow[eventKey] || timeConvert(row[1]) <= timeConvert(fastRow[eventKey][1])) {
+                fastRow[eventKey] = row;
+            }
+        }
+        // convert fastRow to a list ordered by the key of fastRow map
+        let fastRowList = Object.entries(fastRow).sort((a, b) => a[0] - b[0]).map(entry => entry[1]);
+
+        return fastRowList;
+    }
+
+    function showDetails(data) {
+        let html = [];
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+
+        // build title
+        let meetDate = getMeetDate(data);
+        html.push(createDetailsPageTitle(data, meetDate));
+
+        if (data.values.length > 0) {
+
+            let fastRowList = getFastRowByEvent(data);
+
+            // find out the table row span for first two tables
+            let courseLast = '';
+            let courseCount = 0;
+            let strokeLast = '';
+            let strokeCount = 0;
+            let courseSpan = [];
+            let strokeSpan = [];
+            for (let row of fastRowList) {
+                let [dist, stroke, course] = row[0].split(' ');
+                if (course != courseLast) {
+                    courseSpan.push(courseCount);
+                    strokeSpan.push(strokeCount);
+                    courseLast = course;
+                    strokeLast = stroke;
+                    courseCount = 1;
+                    strokeCount = 1;
+                } else if (stroke != strokeLast) {
+                    strokeSpan.push(strokeCount);
+                    strokeLast = stroke;
+                    strokeCount = 1;
+                    courseCount++;
+                } else {
+                    strokeCount++;
+                    courseCount++;
+                }
+            }
+            if (courseCount > 0) {
+                courseSpan.push(courseCount);
+            }
+            if (strokeCount > 0) {
+                strokeSpan.push(strokeCount);
+            }
+
+            // build the best time table
+            html.push(createBestTimeTable(data, fastRowList, [...courseSpan], [...strokeSpan]));
+
+            // build age best time table
+            html.push(createAgeBestTimeTable(data, fastRowList, courseSpan, strokeSpan));
+
+            // build meet table
+            html.push(createMeetTable(data, meetDate));
+        }
+
+        updateContent(html.join(''));
+    }
+
+    function createBestTimeTable(data, fastRowList, courseSpan, strokeSpan) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+        let html = ['<table style="border-collapse:collapse"><tbody>'];
+
+        // create the table header
+        let lastRow = data.values[data.values.length - 1];
+        html.push('<tr><th>Course</th><th>Stroke</th><th>Dist</th><th>Time</th><th>Date</th><th>CT</th><th>',
+            lastRow[11], '</th><th>', lastRow[5], '</th><th>', lastRow[12], '</th><th>USA</th></tr>');
+
+        // create the best time table body
+        let first = true;
+        for (let row of fastRowList) {
+            let eventKey = row[8];
+            let [dist, stroke, course] = row[0].split(' ');
+
+            if (courseSpan[0] == 0 && !first) {
+                html.push('<tr><td colspan="10" class="wt"></td></tr>');
+            }
+            first = false;
+
+            html.push('<tr class="d', dist, ' ', stroke, '">');
+            if (courseSpan[0] == 0) {
+                courseSpan.shift();
+                html.push('<td class="age" rowspan="', courseSpan[0], '">', course, '</td>');
+            }
+            if (strokeSpan[0] == 0) {
+                strokeSpan.shift();
+                html.push('<td class="hd ', stroke, '" rowspan="', strokeSpan[0], '">', stroke, '</td>');
+            }
+            courseSpan[0]--;
+            strokeSpan[0]--;
+
+            // count the event for the swimmer
+            let count = 0;
+            for (let row of data.values) {
+                if (row[8] === eventKey) {
+                    count++;
+                }
+            }
+
+            html.push('<td>', dist, '</td><td>', row[1], '</td><td>', formatDate(row[7]), '</td><td>', count,
+                '</td><td><div class="loader"></div></td><td><div class="loader"></div></td><td><div class="loader"></div></td><td><div class="loader"></div></td>');
+            //html.push('<td>', row[8], '</td>');
+            html.push('</tr>');
+        }
+
+        html.push('</tbody></table>');
+
+        return html.join('');
+    }
+
+    function createAgeBestTimeTable(data, fastRowList, courseSpan, strokeSpan) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+        let html = ['<h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
+
+        // get all age column
+        let ages = new Set();
+        for (let row of data.values) {
+            ages.add(row[2]);
+        }
+        let uniqueAges = [...ages];
+        uniqueAges.sort((a, b) => b - a);
+
+        // create the table header
+        html.push('<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Dist</th>');
+        for (let age of uniqueAges) {
+            html.push('<th colspan="3">', age, '</th>');
+        }
+        html.push('</tr><tr>');
+        for (let age of uniqueAges) {
+            html.push('<td>Time</td><td>Std</td><td>Date</td>');
+        }
+        html.push('</tr>');
+
+        for (let row of fastRowList) {
+            let eventKey = row[8];
+            let [dist, stroke, course] = row[0].split(' ');
+
+            html.push('<tr class="d', dist, ' ', stroke, '">');
+            if (courseSpan[0] == 0) {
+                courseSpan.shift();
+                html.push('<td class="age" rowspan="', courseSpan[0], '">', course, '</td>');
+            }
+            if (strokeSpan[0] == 0) {
+                strokeSpan.shift();
+                html.push('<td class="hd ', stroke, '" rowspan="', strokeSpan[0], '">', stroke, '</td>');
+            }
+            courseSpan[0]--;
+            strokeSpan[0]--;
+
+            // count the event for the swimmer
+            let count = 0;
+            for (let row of data.values) {
+                if (row[8] === eventKey) {
+                    count++;
+                }
+            }
+
+            html.push('<td>', dist, '</td>');
+            for (let age of uniqueAges) {
+                let bestTime = findBestTimeByAge(data, eventKey, age);
+                if (bestTime) {
+                    html.push('<td>', bestTime[1], '</td><td>', formatStandard(bestTime[3]), '</td><td>', formatDate(bestTime[7]), '</td>');
+                } else {
+                    html.push('<td></td><td></td><td></td>');
+                }
+            }
+
+            html.push('</tr>');
+        }
+
+        html.push('</tbody></table>');
+
+        return html.join('');
+    }
+
+    function getMeetDate(data) {
+        // get all meet date
+        let meetDate = {};
+        for (let row of data.values) {
+            let meetKey = row[9];
+            if (!meetDate[meetKey] || row[7] < meetDate[meetKey]) {
+                meetDate[meetKey] = row[7];
+            }
+        }
+        return meetDate;
+    }
+
+    function calculateBrithday(data, meetDate) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+
+        let left = new Date('1900-01-01');
+        let right = new Date();
+        for (let row of data.values) {
+            let meetKey = row[9];
+            let mDate = meetDate[meetKey].substring(0, 10);
+            let meetAge = row[2];
+            let d = new Date(mDate);
+            d.setUTCFullYear(d.getUTCFullYear() - meetAge, d.getUTCMonth(), d.getUTCDate());
+            right = dateMin(d, right);
+            d = new Date(mDate);
+            d.setUTCFullYear(d.getUTCFullYear() - meetAge - 1, d.getUTCMonth(), d.getUTCDate() + 1);
+            left = dateMax(d, left);
+        }
+
+        return [left, right];
+    }
+
+    function dateMin(a, b) {
+        return a < b ? a : b;
+    }
+
+    function dateMax(a, b) {
+        return a > b ? a : b;
+    }
+
+    function formatDateRange(left, right) {
+        let html = [];
+        html.push(left.getUTCFullYear() ,'/' , left.getUTCMonth() + 1 , '/' , left.getUTCDate());
+        if (left != right) {
+            html.push(' - ');
+            if (left.getUTCFullYear() != right.getUTCFullYear()){
+                html.push(right.getUTCFullYear() ,'/');
+            }
+            html.push(right.getUTCMonth() + 1 , '/' , right.getUTCDate());
+        }
+        return html.join('');
+    }
+
+
+    function createMeetTable(data, meetDate) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+
+        // group meet by course
+        let courses = {};
+        for (let row of data.values) {
+            let course = row[0].split(' ')[2];
+            if (!courses[course]) {
+                courses[course] = [];
+            }
+            courses[course].push(row);
+        }
+
+        let html = ['<h2>Meets</h2>'];
+
+        // create the meet tables
+        for (let course of ['SCY', 'SCM', 'LCM']) {
+            html.push(createMeetTableByCourse(course, courses[course], meetDate));
+        }
+
+        return html.join('');
+    }
+
+    function createMeetTableByCourse(course, events, meetDate) {
+        if (!events) {
+            return '';
+        }
+
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone, (delta)
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12    13
+
+        let html = [];
+        html.push('<div class="match-size"><span>', course, ' Total event: ', events.length,
+            '</span></div><table style="border-collapse:collapse"><tbody>');
+
+        // remove dup event in one meet
+        let meetEvents = {};
+        for (let row of events) {
+            let meetKey = row[9];
+            let meetEventKey = meetKey + '-' + row[8];
+            if (!meetEvents[meetEventKey] || timeConvert(row[1]) < timeConvert(meetEvents[meetEventKey][1])) {
+                meetEvents[meetEventKey] = row;
+            }
+        }
+        let eventList = Object.values(meetEvents);
+        eventList.sort((a, b) => a[7] < b[7] ? -1 : 1);
+
+        // calculate event time delta
+        let eventBestTime = {}
+        for (let row of eventList) {
+            let eventKey = row[8];
+            let convertedTime = timeConvert(row[1]);
+            if (!eventBestTime[eventKey]) {
+                row.push(null);
+                eventBestTime[eventKey] = convertedTime;
+            } else {
+                row.push((convertedTime - eventBestTime[eventKey]) / 100);
+                if (convertedTime < eventBestTime[eventKey]) {
+                    eventBestTime[eventKey] = convertedTime;
+                }
+            }
+        }
+
+        // talbe column info & row info
+        let columnInfo = countEventTypeByStroke(eventList);
+        let rowInfo = countMeetByAge(eventList, meetDate);
+
+        let rowCount = 0;
+        for (let rows of rowInfo) {
+            rowCount += rows.length - 1;
+        }
+
+        html.push('<tr><th rowspan="2"></th><th rowspan="2">Age</th><th rowspan="2">Date</th>');
+        for (let col of columnInfo) {
+            html.push('<th colspan="', col.length - 1, '">', _storkeMap[col[0]], '</th>');
+        }
+        html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr>');
+        for (let col of columnInfo) {
+            for (let i = 1; i < col.length; ++i) {
+                html.push('<td>', col[i], '</td>');
+            }
+        }
+        html.push('</tr>');
+
+
+        // create the meet table body
+        let cellInfo = {};
+        for (let row of eventList) {
+            let cellKey = row[9] + '-' + row[0];
+            cellInfo[cellKey] = row;
+        }
+
+        let first = true;
+        for (let rows of rowInfo) {
+            for (let i = 0; i < rows.length; ++i) {
+                html.push('<tr>');
+                if (first) {
+                    first = false;
+                    html.push('<td rowspan="', rowCount, '" class="age">', course, '</td>');
+                }
+
+                if (i == 0) {
+                    html.push('<td rowspan="', rows.length - 1, '" class="age">', rows[0], '</td>');
+                    ++i;
+                }
+
+                let meetKey = rows[i];
+                html.push('<td>', formatDate(meetDate[meetKey]), '</td>');
+
+                let meetName, clubName;
+                for (let cols of columnInfo) {
+                    let stroke = cols[0];
+                    for (let j = 1; j < cols.length; ++j) {
+                        let dist = cols[j];
+                        html.push('<td class="ct d', dist, ' ', stroke, '">');
+
+                        let cellKey = meetKey + '-' + dist + ' ' + stroke + ' ' + course;
+                        let cell = cellInfo[cellKey];
+                        if (cell) {
+                            let delta = cell[13];
+                            let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
+                            html.push('<div class="', style, '">', cell[1], '</div><div class="std">', formatStandard(cell[3], true),
+                                '</div><div class="dd ', style, '">', formatDelta(delta), '</div>');
+                            meetName = cell[4];
+                            clubName = cell[6];
+                        }
+                        html.push('</td>');
+
+                    }
+                }
+
+                html.push('<td class="left">', meetName, '</td><td class="left">', clubName, '</td></tr>');
+            }
+        }
+
+        html.push('</tbody></table>');
+
+        return html.join('');
+    }
+
+    function countMeetByAge(eventList, meetDate) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone, (delta)
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12    13
+
+        let ages = {};
+        for (let row of eventList) {
+            let age = row[2];
+            if (!ages[age]) {
+                ages[age] = new Set();
+            }
+            ages[age].add(row[9]);
+        }
+
+        let resultArray = [];
+        let ageList = Object.keys(ages);
+        ageList.sort((a, b) => Number(b) - Number(a));
+
+        for (let age of ageList) {
+            let meetArray = [...ages[age]];
+            meetArray.sort((a, b) => meetDate[b] < meetDate[a] ? -1 : 1);
+            resultArray.push([Number(age), ...meetArray]);
+        }
+        return resultArray;
+    }
+
+    function countEventTypeByStroke(eventList) {
+        let result = {};
+        for (let row of eventList) {
+            let [dist, stroke, course] = row[0].split(' ');
+            if (!result[stroke]) {
+                result[stroke] = new Set();
+            }
+
+            result[stroke].add(Number(dist));
+        }
+
+        let resultArray = [];
+        for (let stroke of _strokeOrder) {
+            if (result[stroke]) {
+                let array = [...result[stroke]];
+                array.sort((a, b) => Number(a) - Number(b));
+                resultArray.push([stroke, ...array]);
+            }
+        }
+
+        return resultArray;
+    }
+
+    function findBestTimeByAge(data, eventKey, age) {
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+        let bestTime = null;
+        for (let row of data.values) {
+            if (row[8] === eventKey && row[2] === age) {
+                if (!bestTime || timeConvert(row[1]) < timeConvert(bestTime[1])) {
+                    bestTime = row;
+                }
+            }
+        }
+        return bestTime;
+    }
+
+    function splitNameBySpaces(input) {
+        const result = [];
+        const words = input.split(' ');
+
+        for (let i = 0; i <= words.length; i++) {
+            const firstPart = words.slice(0, i).join(' ');
+            const secondPart = words.slice(i).join(' ');
+            result.push([firstPart, secondPart]);
+        }
+
+        return result;
+    }
+
+    function timeConvert(stime) {
+        let result = 0;
+        let parts = stime.split(':');
+        if (parts.length == 2) {
+            result = parseInt(parts[0]) * 6000;
+            parts[0] = parts[1];
+        }
+        parts = parts[0].split('.');
+        result += parseInt(parts[0]) * 100 + parseInt(parts[1]);
+        return result;
+    }
+
+    function formatDate(date) {
+        return date.substring(5, 7) + '/' + date.substring(8, 10) + '/' + date.substring(2, 4);
+    }
+
+    function formatStandard(standard, short) {
+        if (standard.startsWith('"')) {
+            standard = '';
+        } else {
+            let parts = standard.split(' ')
+            parts.shift()
+            standard = parts.join(' ');
+            if (short) {
+                if (_meetShortNames[standard]) {
+                    standard = _meetShortNames[standard];
+                }
+            }
+        }
+        return standard
+    }
+
+    function formatDelta(delta) {
+        return (delta > 0 ? '+' : '') + (delta != null ? delta.toFixed(2) : '');
+    }
+
+</script>
+
+</html>
