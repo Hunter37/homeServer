@@ -53,6 +53,7 @@
         border: 0;
         font: 14px Verdana;
         color: inherit;
+        cursor: pointer;
     }
 
     div.hide {
@@ -1498,7 +1499,7 @@
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
 
-        await showRank(values);
+        await showRank(mapKey, values);
     }
 
     async function loadRankData(mapKey) {
@@ -1762,67 +1763,55 @@
         return result;
     }
 
-    async function showRank(values) {
+    async function showRank(key, values) {
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
         let html = [];
-        let [gender, eventCode, ageKey, zone, lsc, clubCode] = window.location.hash.substring(6).split('_');
+        let [gender, eventCode, ageKey, zone, lsc, clubCode] = key.split('_');
 
-        html.push(`<div>Age Group: <select id="ageGroup" class="big" onchange="go('rank', this.value)">`);
-        for (let g of ['Female', 'Male']) {
-            html.push(`<optgroup label="${g}">`)
-            for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
-                let selected = ag == ageKey && g == gender ? 'selected' : '';
-                html.push(`<option value="${getRankDataMapKey(g, eventCode, ag, zone, lsc, clubCode)}" ${selected}>${ag}</option>`);
-            }
-            html.push('</optgroup>');
-        }
+        html.push(`<div>Age Group: <select id="age-group" class="big" onchange="updateRankTable(this.value)">`);
+        html.push(getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode));
+        html.push(`</select> &nbsp; Course: <select id="course" class="big" onchange="updateRankTable(this.value)">`);
+        html.push(getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode));
+        html.push('</select></div>');
 
-        html.push(`</select> &nbsp; Course: <select id="course" class="big" onchange="go('rank', this.value)"">`);
+        html.push('<div id="rank-table">', await showRankTable(values, gender, eventCode, ageKey, zone, lsc, clubCode), '</div>');
+
+        updateContent(html.join(''));
+    }
+
+    async function showRankTable(values, gender, eventCode, ageKey, zone, lsc, clubCode) {
+        let html = [];
         let eventParts = _eventList[eventCode].split(' ');
-        let course = eventParts[2]
-        for (let cs of ['SCY', 'SCM', 'LCM']) {
-            eventParts[2] = cs;
-            newEvent = fixDistance(eventParts.join(' '));
-            let newEventCode = _eventIndexMap.get(newEvent);
-            if (newEventCode) {
-                html.push(`<option value="${getRankDataMapKey(gender, newEventCode, ageKey, zone, lsc, clubCode)}"${course == cs ? ' selected' : ''}>${cs}</option>`);
-            }
-        }
-        html.push('</select></div><div class="match-size">');
+        let course = eventParts[2];
+
+        html.push('<div class="match-size" style="width:1000px">');
 
         for (let i = 1; i < _eventList.length; ++i) {
             let event = _eventList[i];
             let eventParts = event.split(' ');
             if (eventParts.pop() == course && eventParts[0] != '_') {
-                html.push(`<button class="search" onclick="go('rank', '${getRankDataMapKey(gender, i, ageKey, zone, lsc, clubCode)}')">${eventParts.join(' ')}</button>`);
+                html.push(`<button class="search" onclick="updateRankTable('${getRankDataMapKey(gender, i, ageKey, zone, lsc, clubCode)}')">${eventParts.join(' ')}</button>`);
             }
         }
 
-        html.push('</div>');
-
-        if (values.length == 0) {
-            html.push('<div>No rank data</div>');
-            updateContent(html.join(''));
-            return;
-        }
-
-        html.push('<h2>')
+        html.push('</div><h2>')
         if (clubCode) {
-            html.push(values[0][5]);
+            html.push(values.length > 0 ? values[0][5] : clubCode);
         } else if (lsc) {
-            html.push(lsc);
+            html.push(lscMap.get(lsc)[0]);
         } else if (zone) {
             html.push(zone, ' Zone');
         } else {
             html.push('USA');
         }
-        html.push('</h2><h3>', values[0][4], ' &nbsp &nbsp ', ageKey, ' ', gender, '</h3>');
+        html.push('</h2><h3>', _eventList[eventCode], ' &nbsp &nbsp ', ageKey, ' ', gender, '</h3>');
 
-        // show meet date timepicker
-        // show meet cut drop down
-        // show event switcher button
-        // show table
+        if (values.length == 0) {
+            html.push('No ranking data found.');
+            return html.join('');
+        }
+
         html.push('<table style="border-collapse:collapse"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
         let index = 0;
         let stdKeyBase = `${gender} ${ageKey} ${_eventList[eventCode]}`;
@@ -1843,11 +1832,57 @@
 
             html.push('<tr><td>', ++index, `</td><td class="left"><button onclick="go('details', ${row[9]})">`,
                 row[1], '</button></td><td class="ct"><div>', row[3], '</div><div class="std">', maxStd,
-                '</div><div class="dd">', formatDelta(timeInt - maxStdInt) ,'</div></td><td>', formatDate(row[2]), '</td><td>', row[10], '<td class="left">', formatDateRange(await load('bday', row[9], _10YearsInSec)),
+                '</div><div class="dd">', formatDelta(timeInt - maxStdInt), '</div></td><td>', formatDate(row[2]), '</td><td>', row[10], '<td class="left">', formatDateRange(await load('bday', row[9], _10YearsInSec)),
                 '</td><td class="left">', row[5], '</td><td class="left">', row[6], '</td><td class="left">', row[7], '</td></tr>');
         }
         html.push('</tbody></table>');
-        updateContent(html.join(''));
+        return html.join('');
+    }
+
+    async function updateRankTable(key) {
+        let table = document.getElementById('rank-table');
+        table.innerHTML = 'Loading ranking data...';
+
+        let values = await loadRankData(key);
+        let [gender, eventCode, ageKey, zone, lsc, clubCode] = key.split('_');
+
+        table.innerHTML = await showRankTable(values, gender, eventCode, ageKey, zone, lsc, clubCode);
+
+
+        // update slecet elements
+        let courseElement = document.getElementById('course');
+        courseElement.innerHTML = getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode);
+        let ageGroupElement = document.getElementById('age-group');
+        ageGroupElement.innerHTML = getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode);
+
+    }
+
+    function getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode) {
+        let html = [];
+        for (let g of ['Female', 'Male']) {
+            html.push(`<optgroup label="${g}">`)
+            for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
+                let selected = ag == ageKey && g == gender ? 'selected' : '';
+                html.push(`<option value="${getRankDataMapKey(g, eventCode, ag, zone, lsc, clubCode)}" ${selected}>${ag}</option>`);
+            }
+            html.push('</optgroup>');
+        }
+        return html.join('');
+    }
+
+    function getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode) {
+        let html = [];
+        let eventParts = _eventList[eventCode].split(' ');
+        let course = eventParts[2];
+        for (let cs of ['SCY', 'SCM', 'LCM']) {
+            eventParts[2] = cs;
+            newEvent = fixDistance(eventParts.join(' '));
+            let newEventCode = _eventIndexMap.get(newEvent);
+            if (newEventCode) {
+                html.push(`<option value="${getRankDataMapKey(gender, newEventCode, ageKey, zone, lsc, clubCode)}"${course == cs ? ' selected' : ''}>${cs}</option>`);
+            }
+        }
+        return html.join('');
     }
 
     function fixDistance(event) {
@@ -1869,222 +1904,196 @@
     // old functions
 </script>
 <script>
-    (function () {
-        let birthdayMap = new Map;
-        let birthdayDisplayMap = new Map;
+//https://github.com/DVLP/localStorageDB
+(function () {
+    var win = typeof window !== 'undefined' ? window : {}
+    var indexedDB = win.indexedDB || win.mozIndexedDB || win.webkitIndexedDB || win.msIndexedDB;
+    if (typeof window !== 'undefined' && !indexedDB) {
+        console.error('indexDB not supported');
+        return;
+    }
+    var db,
+        request = indexedDB.open('ldb', 1);
+    request.onsuccess = function (evt) {
+        db = this.result;
+    };
+    request.onerror = function (event) {
+        console.error('indexedDB request error');
+        console.log(event);
+    };
 
-        // document.getElementById('date').value = new Date().toDateInputValue();
+    request.onupgradeneeded = function (event) {
+        db = null;
+        var store = event.target.result.createObjectStore('s', {
+            keyPath: 'k'
+        });
 
-        function onSelectionChange() {
-            showTable(getHistory());
-        }
+        store.transaction.oncomplete = function (e) {
+            db = e.target.db;
+        };
+    };
 
-        async function loadBirthday() {
-            for (let i = 0; i < 10; ++i) {
-                let button = document.getElementsByClassName('birthday')[0];
-                if (button) {
-                    button.click();
-                }
-            }
-        }
+    // if using proxy mode comment this
 
-        async function birthday(element, link) {
-            let parent = element.parentElement;
-            parent.innerHTML = 'Loading...';
-            let response = await fetch('swim/birthday?link=' + encodeURIComponent(link))
-            if (!response.ok) {
-                parent.innerHTML = response.url;
-            } else {
-                let birthday = await response.json();
-                parent.innerHTML = birthday.Display;
-                birthdayMap.set(link, birthday.Right);
-                birthdayDisplayMap.set(link, birthday.Display);
-            }
-        }
-
-        function setButtonStatus(table) {
-            let filterElem = document.getElementById('filter');
-
-            if (table && table.FilterColumn > 0) {
-                filterElem.classList.remove('hide');
-            } else {
-                filterElem.classList.add('hide');
-            }
-
-            for (let i = 0; i < 3; ++i) {
-                setSelect(table, 'standard' + i);
-            }
-
-            return table;
-        }
-
-        function setSelect(table, selectId) {
-            let standardElem = document.getElementById(selectId)
-            if (table && table.Standards) {
-                let selected = standardElem.value;
-                standardElem.innerHTML = '<option value=""></option>';
-                let std = table.Standards;
-                for (let i = 0; i < std.length;) {
-                    let meet = std[i].Meet;
-                    standardElem.innerHTML += '<optgroup label="' + meet + '">';
-                    for (; i < std.length && meet == std[i].Meet; ++i) {
-                        let val = meet + ' (' + std[i].Age + ') ' + std[i].Time
-                        standardElem.innerHTML += '<option value="' + val + '">' + val + '</option>';
-                        if (selected) {
-                            let idx = selected.indexOf(')');
-                            if (idx > 0 && selected.substring(0, idx) == val.substring(0, idx)) {
-                                selected = val;
-                            }
-                        }
-                    }
-                    standardElem.innerHTML += '</optgroup>'
-                }
-                standardElem.value = selected;
-            }
-        }
-    })()
-</script>
-<script>
-        (function () {
-            var win = typeof window !== 'undefined' ? window : {}
-            var indexedDB = win.indexedDB || win.mozIndexedDB || win.webkitIndexedDB || win.msIndexedDB;
-            if (typeof window !== 'undefined' && !indexedDB) {
-                console.error('indexDB not supported');
+    var ldb = {
+        ready: false,
+        get: function (key, callback) {
+            if (!db) {
+                setTimeout(function () { ldb.get(key, callback); }, 50);
                 return;
             }
-            var db,
-                request = indexedDB.open('ldb', 1);
-            request.onsuccess = function (evt) {
-                db = this.result;
+            db.transaction('s').objectStore('s').get(key).onsuccess = function (event) {
+                var result = (event.target.result && event.target.result['v']) || null;
+                callback(result);
             };
-            request.onerror = function (event) {
-                console.error('indexedDB request error');
-                console.log(event);
-            };
-
-            request.onupgradeneeded = function (event) {
-                db = null;
-                var store = event.target.result.createObjectStore('s', {
-                    keyPath: 'k'
-                });
-
-                store.transaction.oncomplete = function (e) {
-                    db = e.target.db;
-                };
-            };
-
-            // if using proxy mode comment this
-
-            var ldb = {
-                ready: false,
-                get: function (key, callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.get(key, callback); }, 50);
-                        return;
-                    }
-                    db.transaction('s').objectStore('s').get(key).onsuccess = function (event) {
-                        var result = (event.target.result && event.target.result['v']) || null;
-                        callback(result);
-                    };
-                },
-                set: function (key, value, callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.set(key, value, callback); }, 50);
-                        return;
-                    }
-                    let txn = db.transaction('s', 'readwrite');
-                    txn.oncomplete = function (event) {
-                        var toString$ = {}.toString;
-                        if (toString$.call(callback).slice(8, -1) === 'Function') {
-                            callback();
-                        }
-                    }
-                    txn.objectStore('s').put({
-                        'k': key,
-                        'v': value,
-                    });
-                    txn.commit();
-                },
-                delete: function (key, callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.delete(key, callback); }, 50);
-                        return;
-                    }
-                    db.transaction('s', 'readwrite').objectStore('s').delete(key).onsuccess = function (event) {
-                        if (callback) callback();
-                    };
-                },
-                list: function (callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.list(callback); }, 50);
-                        return;
-                    }
-                    db.transaction('s').objectStore('s').getAllKeys().onsuccess = function (event) {
-                        var result = (event.target.result) || null;
-                        callback(result);
-                    };
-                },
-                getAll: function (callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.getAll(callback); }, 50);
-                        return;
-                    }
-                    db.transaction('s').objectStore('s').getAll().onsuccess = function (event) {
-                        var result = (event.target.result) || null;
-                        callback(result);
-                    };
-                },
-                clear: function (callback) {
-                    if (!db) {
-                        setTimeout(function () { ldb.clear(callback); }, 50);
-                        return;
-                    }
-                    db.transaction('s', 'readwrite').objectStore('s').clear().onsuccess = function (event) {
-                        if (callback) callback();
-                    };
-                },
+        },
+        set: function (key, value, callback) {
+            if (!db) {
+                setTimeout(function () { ldb.set(key, value, callback); }, 50);
+                return;
             }
-            const exported = {
-                'get': ldb.get,
-                'set': ldb.set,
-                'delete': ldb.delete,
-                'list': ldb.list,
-                'getAll': ldb.getAll,
-                'clear': ldb.clear,
-            };
-            win['ldb'] = exported
-            if (typeof module !== 'undefined') {
-                module.exports = exported;
+            let txn = db.transaction('s', 'readwrite');
+            txn.oncomplete = function (event) {
+                var toString$ = {}.toString;
+                if (toString$.call(callback).slice(8, -1) === 'Function') {
+                    callback();
+                }
             }
+            txn.objectStore('s').put({
+                'k': key,
+                'v': value,
+            });
+            txn.commit();
+        },
+        delete: function (key, callback) {
+            if (!db) {
+                setTimeout(function () { ldb.delete(key, callback); }, 50);
+                return;
+            }
+            db.transaction('s', 'readwrite').objectStore('s').delete(key).onsuccess = function (event) {
+                if (callback) callback();
+            };
+        },
+        list: function (callback) {
+            if (!db) {
+                setTimeout(function () { ldb.list(callback); }, 50);
+                return;
+            }
+            db.transaction('s').objectStore('s').getAllKeys().onsuccess = function (event) {
+                var result = (event.target.result) || null;
+                callback(result);
+            };
+        },
+        getAll: function (callback) {
+            if (!db) {
+                setTimeout(function () { ldb.getAll(callback); }, 50);
+                return;
+            }
+            db.transaction('s').objectStore('s').getAll().onsuccess = function (event) {
+                var result = (event.target.result) || null;
+                callback(result);
+            };
+        },
+        clear: function (callback) {
+            if (!db) {
+                setTimeout(function () { ldb.clear(callback); }, 50);
+                return;
+            }
+            db.transaction('s', 'readwrite').objectStore('s').clear().onsuccess = function (event) {
+                if (callback) callback();
+            };
+        },
+    }
+    const exported = {
+        'get': ldb.get,
+        'set': ldb.set,
+        'delete': ldb.delete,
+        'list': ldb.list,
+        'getAll': ldb.getAll,
+        'clear': ldb.clear,
+    };
+    win['ldb'] = exported
+    if (typeof module !== 'undefined') {
+        module.exports = exported;
+    }
+})();
 
-            // Use only for apps that will only work on latest devices only
 
-            // window.ldb = new Proxy({}, {
-            //   get: function(func, key, callback) {
-            //     return (key === 'get') ? getValue : function(callback) {
-            //       return getValue(key, callback)
-            //     };
-            //   },
-            //   set: function(func, key, value) {
-            //    let txn = db.transaction('s', 'readwrite'); 
-            //    txn.oncomplete = function(event) {
-            //      var toString$ = {}.toString;
-            //      if (toString$.call(callback).slice(8, -1) === 'Function') {
-            //        callback();
-            //      }
-            //    }
-            //    txn.objectStore('s').put({
-            //   'k': key,
-            //   'v': value,
-            // });
-            //    txn.commit();
-            //   }
-            // });
-        })();
-</script>
-<script>
-    (function () {
-        let data = `
+(function () {
+    let data = `
+Adirondack Swimming-AD-Eastern
+Alaska Swimming-AK-Western
+Allegheny Mountain Swimming-AM-Eastern
+Arkansas Swimming-AR-Central
+Arizona Swimming-AZ-Western
+Border Swimming-BD-Southern
+Central California Swimming-CC-Western
+Colorado Swimming-CO-Western
+Connecticut Swimming-CT-Eastern
+Florida Swimming-FL-Southern
+Florida Gold Coast Swimming-FG-Southern
+Georgia Swimming-GA-Southern
+Gulf Swimming-GU-Southern
+Hawaiian Swimming-HI-Western
+Illinois Swimming-IL-Central
+Indiana Swimming-IN-Central
+Inland Empire Swimming-IE-Western
+Iowa Swimming-IA-Central
+Kentucky Swimming-KY-Southern
+Lake Erie Swimming-LE-Central
+Louisiana Swimming-LA-Southern
+Maine Swimming-ME-Eastern
+Maryland Swimming-MD-Eastern
+Metropolitan Swimming-MR-Eastern
+Michigan Swimming-MI-Central
+Middle Atlantic Swimming-MA-Eastern
+Midwestern Swimming-MW-Central
+Minnesota Swimming-MN-Central
+Mississippi Swimming-MS-Southern
+Missouri Valley Swimming-MV-Central
+Montana Swimming-MT-Western
+New England Swimming-NE-Eastern
+New Jersey Swimming-NJ-Eastern
+New Mexico Swimming-NM-Western
+Niagara Swimming-NI-Eastern
+North Carolina Swimming-NC-Southern
+North Dakota Swimming-ND-Central
+North Texas Swimming-NT-Southern
+Ohio Swimming-OH-Central
+Oklahoma Swimming-OK-Central
+Oregon Swimming-OR-Western
+Ozark Swimming-OZ-Central
+Pacific Swimming-PC-Western
+Pacific Northwest Swimming-PN-Western
+Potomac Valley Swimming-PV-Eastern
+San Diego-Imperial Swimming-SI-Western
+Sierra Nevada Swimming-SN-Western
+Snake River Swimming-SR-Western
+South Carolina Swimming-SC-Southern
+South Dakota Swimming-SD-Central
+South Texas Swimming-ST-Southern
+Southeastern Swimming-SE-Southern
+Southern California Swimming-CA-Western
+Utah Swimming-UT-Western
+Virginia Swimming-VA-Eastern
+West Texas Swimming-WT-Southern
+West Virginia Swimming-WV-Southern
+Wisconsin Swimming-WI-Central
+Wyoming Swimming-WY-Western`;
+    let lines = data.split('\n');
+    let map = new Map();
+    for (let line of lines) {
+        let parts = line.split('-');
+        if (parts.length == 3) {
+            map.set(parts[1], [parts[0], parts[2]]);
+        }
+    }
+    window.lscMap = map;
+})();
+
+
+(function () {
+    let data = `
 # USA Swimming 2024-2028 Motivational Standards
 # 8/29/2024 1:21:39 AM
 # B BB A AA AAA AAAA AAAA AAA AA A BB B
@@ -2463,55 +2472,53 @@
 
 # Page 8 of 8
 `;
-        function timeToInt(stime) {
-            let result = 0;
-            if (stime) {
-                let parts = stime.split(':');
-                if (parts.length == 2) {
-                    result = parseInt(parts[0]) * 6000;
-                    parts[0] = parts[1];
-                }
-                parts = parts[0].split('.');
-                result += parseInt(parts[0]) * 100 + parseInt(parts[1]);
+    function timeToInt(stime) {
+        let result = 0;
+        if (stime) {
+            let parts = stime.split(':');
+            if (parts.length == 2) {
+                result = parseInt(parts[0]) * 6000;
+                parts[0] = parts[1];
             }
-            return result;
+            parts = parts[0].split('.');
+            result += parseInt(parts[0]) * 100 + parseInt(parts[1]);
+        }
+        return result;
+    }
+
+    const times = new Map();
+
+    let rows = data.split('\n');
+    let ageKey;
+    for (row of rows) {
+        if (row.startsWith('#') || row.trim() === '') {
+            continue;
+        }
+        let parts = row.split(' ');
+        if (parts.length == 1) {
+            ageKey = parts[0];
+            continue;
         }
 
-        const times = new Map();
+        let stds = ('B BB A AA AAA AAAA d s c AAAA AAA AA A BB B').split(' ');
 
-        let rows = data.split('\n');
-        let ageKey;
-        for (row of rows) {
-            if (row.startsWith('#') || row.trim() === '') {
-                continue;
-            }
-            let parts = row.split(' ');
-            if (parts.length == 1) {
-                ageKey = parts[0];
-                continue;
-            }
+        let std = `${ageKey} ${parts[6]} ${parts[7]} ${parts[8]}`;
 
-            let stds = ('B BB A AA AAA AAAA d s c AAAA AAA AA A BB B').split(' ');
-
-            let std = `${ageKey} ${parts[6]} ${parts[7]} ${parts[8]}`;
-
-            for (i = 0; i < 6; ++i) {
-                times.set(`Female ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
-            }
-
-            for (i = 9; i < 15; ++i) {
-                times.set(`Male ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
-            }
+        for (i = 0; i < 6; ++i) {
+            times.set(`Female ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
         }
 
-        function getAgeGroupMotivationTime(key) {
-            return times.get(key) || ['', 0]
+        for (i = 9; i < 15; ++i) {
+            times.set(`Male ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
         }
+    }
 
-        var win = typeof window !== 'undefined' ? window : {}
-        win['getAgeGroupMotivationTime'] = getAgeGroupMotivationTime;
-        win['timeToInt'] = timeToInt;
-    })()
+    function getAgeGroupMotivationTime(key) {
+        return times.get(key) || ['', 0]
+    }
+
+    window.getAgeGroupMotivationTime = getAgeGroupMotivationTime;
+    window.timeToInt = timeToInt;
+})()
 </script>
-
 </html>
