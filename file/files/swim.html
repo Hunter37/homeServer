@@ -1092,7 +1092,7 @@
             let [dist, stroke, course] = row[0].split(' ');
 
             if (courseSpan[0] == 0 && !first) {
-                html.push('<tr><td colspan="10" class="wt"></td></tr>');
+                html.push('<tr><td colspan="50" class="wt"></td></tr>');
             }
             first = false;
 
@@ -1235,9 +1235,15 @@
         }
         html.push('</tr>');
 
+        let first = true
         for (let row of fastRowList) {
             let eventKey = row[8];
             let [dist, stroke, course] = row[0].split(' ');
+
+            if (courseSpan[0] == 0 && !first) {
+                html.push('<tr><td colspan="50" class="wt"></td></tr>');
+            }
+            first = false;
 
             html.push('<tr class="d', dist, ' ', stroke, '">');
             if (courseSpan[0] == 0) {
