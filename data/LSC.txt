@@ -1,0 +1,59 @@
+Adirondack Swimming-AD-Eastern
+Alaska Swimming-AK-Western
+Allegheny Mountain Swimming-AM-Eastern
+Arkansas Swimming-AR-Central
+Arizona Swimming-AZ-Western
+Border Swimming-BD-Southern
+Central California Swimming-CC-Western
+Colorado Swimming-CO-Western
+Connecticut Swimming-CT-Eastern
+Florida Swimming-FL-Southern
+Florida Gold Coast Swimming-FG-Southern
+Georgia Swimming-GA-Southern
+Gulf Swimming-GU-Southern
+Hawaiian Swimming-HI-Western
+Illinois Swimming-IL-Central
+Indiana Swimming-IN-Central
+Inland Empire Swimming-IE-Western
+Iowa Swimming-IA-Central
+Kentucky Swimming-KY-Southern
+Lake Erie Swimming-LE-Central
+Louisiana Swimming-LA-Southern
+Maine Swimming-ME-Eastern
+Maryland Swimming-MD-Eastern
+Metropolitan Swimming-MR-Eastern
+Michigan Swimming-MI-Central
+Middle Atlantic Swimming-MA-Eastern
+Midwestern Swimming-MW-Central
+Minnesota Swimming-MN-Central
+Mississippi Swimming-MS-Southern
+Missouri Valley Swimming-MV-Central
+Montana Swimming-MT-Western
+New England Swimming-NE-Eastern
+New Jersey Swimming-NJ-Eastern
+New Mexico Swimming-NM-Western
+Niagara Swimming-NI-Eastern
+North Carolina Swimming-NC-Southern
+North Dakota Swimming-ND-Central
+North Texas Swimming-NT-Southern
+Ohio Swimming-OH-Central
+Oklahoma Swimming-OK-Central
+Oregon Swimming-OR-Western
+Ozark Swimming-OZ-Central
+Pacific Swimming-PC-Western
+Pacific Northwest Swimming-PN-Western
+Potomac Valley Swimming-PV-Eastern
+San Diego-Imperial Swimming-SI-Western
+Sierra Nevada Swimming-SN-Western
+Snake River Swimming-SR-Western
+South Carolina Swimming-SC-Southern
+South Dakota Swimming-SD-Central
+South Texas Swimming-ST-Southern
+Southeastern Swimming-SE-Southern
+Southern California Swimming-CA-Western
+Utah Swimming-UT-Western
+Virginia Swimming-VA-Eastern
+West Texas Swimming-WT-Southern
+West Virginia Swimming-WV-Southern
+Wisconsin Swimming-WI-Central
+Wyoming Swimming-WY-Western
