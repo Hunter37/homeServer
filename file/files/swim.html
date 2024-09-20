@@ -334,10 +334,6 @@
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // shared const
 
-    const _postHeader = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
-    };
     const _strokeOrder = ['FR', 'FL', 'BK', 'BR', 'IM'];
     const _storkeMap = {
         'FR': 'Free',
@@ -360,7 +356,9 @@
         "Olympic Trials Wave II": "OT2",
     };
     const _1DayInSec = 24 * 60 * 60;
-    const _10YearsInSec = 10 * 365 * 24 * 60 * 60;
+    const _1WeekInSec = 7 * _1DayInSec;
+    const _10YearsInSec = 10 * 365 * _1DayInSec;
+
 
     //   1            2             3            4             5               6              7          8          9         10
     const _eventList = ['_ _ _',
@@ -448,15 +446,16 @@
     // storage functions
 
     function save(group, key, value) {
-        ldb.set(group + "%" + key, { time: new Date(), data: value });
-    }
-
-    async function ldbGetAsync(k) {
-        return new Promise(resolve => ldb.get(k, r => resolve(r)));
+        ldb.set(group + "/" + key, { time: new Date(), data: value });
     }
 
     async function load(group, key, timeoutInSec) {
-        let item = await ldbGetAsync(group + "%" + key);
+
+        async function ldbGetAsync(k) {
+            return new Promise(resolve => ldb.get(k, r => resolve(r)));
+        }
+
+        let item = await ldbGetAsync(group + "/" + key);
 
         if (!item) {
             return null;
@@ -468,6 +467,34 @@
         }
 
         return item.data;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // usa swimming data fetch utility functions
+
+    async function fetchSwimValues(bodyObj, event) {
+        let url = event ? 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql'
+            : 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql';
+
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+            },
+            body: JSON.stringify(bodyObj)
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        let data = await response.json();
+        if (data.error || !data.values) {
+            return;
+        }
+
+        return data.values;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -563,6 +590,7 @@
             if (values.length == 0) {
                 values = await loadClubSearch(name, all);
             }
+            values = values || [];
 
             values.sort((a, b) => a[1] - b[1]);
             save('search', key, values);
@@ -628,26 +656,11 @@
 
         if (!all) {
             bodyObj.metadata[1].filter = {
-                "<=": 18
+                to: 18
             }
         }
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
-
-        if (!response.ok) {
-            return [];
-        }
-
-        const data = await response.json();
-        if (data.error || !data.values) {
-            return [];
-        }
-
-        return data.values;
+        return await fetchSwimValues(bodyObj);
     }
 
     async function loadSwimmerSearch(value, all) {
@@ -681,8 +694,6 @@
     }
 
     async function loadSwimmerSearchByFirstAndLastName(firstName, lastName, all) {
-        let result = [];
-
         let bodyObj = {
             metadata: [
                 {
@@ -719,7 +730,7 @@
                 {
                     dim: "[Persons.LastName]",
                     filter: {
-                        contains: lastName
+                        startsWith: lastName
                     }
                 },
                 {
@@ -735,30 +746,11 @@
 
         if (!all) {
             bodyObj.metadata[1].filter = {
-                "<=": 18
+                to: 18
             }
         }
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
-
-        if (response.ok) {
-            let data = await response.json();
-            if (data.error || !data.values) {
-                return [];
-            }
-
-            for (let row of data.values) {
-                if (row[6].toLowerCase().startsWith(lastName.toLowerCase())) {
-                    result.push(row);
-                }
-            }
-        }
-
-        return result;
+        return await fetchSwimValues(bodyObj);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -771,169 +763,161 @@
 
     async function loadDetails(pkey) {
         let data = await load('details', pkey);
-        if (!data) {
-
-            let swimmerCall = loadSwimerInfo(pkey);
-
-            let eventsCall = fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
-                {
-                    method: 'POST',
-                    headers: _postHeader,
-                    body: JSON.stringify({
-                        metadata: [
-                            {
-                                dim: "[UsasSwimTime.PersonKey]",
-                                datatype: "numeric",
-                                filter: {
-                                    equals: pkey
-                                },
-                                panel: "scope",
-                            },
-                            {
-                                dim: "[SwimEvent.EventCode]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[UsasSwimTime.SwimTimeFormatted]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[UsasSwimTime.AgeAtMeetKey]",
-                                datatype: "numeric"
-                            },
-                            {
-                                dim: "[TimeStandard.TimeStandardName]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[Meet.MeetName]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[OrgUnit.Level3Code]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[OrgUnit.Level4Name]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                                datatype: "datetime",
-                                level: "days",
-                                sort: "asc"
-                            },
-                            {
-                                dim: "[UsasSwimTime.SwimEventKey]",
-                                datatype: "numeric"
-                            },
-                            {
-                                dim: "[UsasSwimTime.MeetKey]",
-                                datatype: "numeric"
-                            },
-                            {
-                                dim: "[EventCompetitionCategory.TypeName]",
-                                datatype: "text",
-                            },
-                            {
-                                dim: "[OrgUnit.Level4Code]",
-                                datatype: "text"
-                            },
-                            {
-                                dim: "[OrgUnit.Level2Code]",
-                                datatype: "text"
-                            },
-                        ],
-                        count: 5000
-                    })
-                }
-            )
-
-            let [swimmerInfo, eventsResponse] = await Promise.all([swimmerCall, eventsCall]);
-            if (!swimmerInfo || !eventsResponse.ok) {
-                updateContent('Cannot get data for ' + pkey);
-                return;
-            }
-
-            data = await eventsResponse.json();
-            if (data.error || !data.values) {
-                return;
-            }
-            // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
-            // 0      1     2    3         4     5    6     7     8         9        10      11        12
-
-            data.SwimmerInfo = swimmerInfo;
-            // firstName, lastName, age, club, lsc, pkey, clubCode, zone
-            // 0          1         2    3     4    5     6         7
-
-            save('details', pkey, data);
+        if (data) {
+            return data;
         }
+
+        let swimmerCall = loadSwimerInfo(pkey);
+        let eventsCall = loadEventDetails(pkey);
+
+        let [swimmerInfo, events] = await Promise.all([swimmerCall, eventsCall]);
+        if (!swimmerInfo || !events) {
+            updateContent('Cannot get data for ' + pkey);
+            return;
+        }
+
+        data = {
+            SwimmerInfo: swimmerInfo,
+            values: events
+        };
+
+        // firstName, lastName, age, club, lsc, pkey, clubCode, zone
+        // 0          1         2    3     4    5     6         7
+        // event, time, age, standard, meet, lsc, club, date, eventKey, meetKey, gender, clubcode, zone
+        // 0      1     2    3         4     5    6     7     8         9        10      11        12
+
+        save('details', pkey, data);
         return data;
     }
 
+    async function loadEventDetails(pkey) {
+        let bodyObj = {
+            metadata: [
+                {
+                    dim: "[UsasSwimTime.PersonKey]",
+                    datatype: "numeric",
+                    filter: {
+                        equals: pkey
+                    },
+                    panel: "scope",
+                },
+                {
+                    dim: "[SwimEvent.EventCode]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[UsasSwimTime.SwimTimeFormatted]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[UsasSwimTime.AgeAtMeetKey]",
+                    datatype: "numeric"
+                },
+                {
+                    dim: "[TimeStandard.TimeStandardName]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[Meet.MeetName]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[OrgUnit.Level3Code]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[OrgUnit.Level4Name]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[SeasonCalendar.CalendarDate (Calendar)]",
+                    datatype: "datetime",
+                    level: "days",
+                    sort: "asc"
+                },
+                {
+                    dim: "[UsasSwimTime.SwimEventKey]",
+                    datatype: "numeric"
+                },
+                {
+                    dim: "[UsasSwimTime.MeetKey]",
+                    datatype: "numeric"
+                },
+                {
+                    dim: "[EventCompetitionCategory.TypeName]",
+                    datatype: "text",
+                },
+                {
+                    dim: "[OrgUnit.Level4Code]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[OrgUnit.Level2Code]",
+                    datatype: "text"
+                },
+            ],
+            count: 5000
+        };
+
+        return await fetchSwimValues(bodyObj, true);
+    }
+
     async function loadSwimerInfo(pkey) {
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify({
-                metadata: [
-                    {
-                        dim: "[Persons.FirstAndPreferredName]",
-                        datatype: "text"
-                    },
-                    {
-                        dim: "[Persons.LastName]",
-                        datatype: "text"
-                    },
-                    {
-                        dim: "[Persons.Age]",
-                        datatype: "numeric"
-                    },
-                    {
-                        dim: "[Persons.ClubName]",
-                        datatype: "text",
-                    },
-                    {
-                        dim: "[Persons.LscCode]",
-                        datatype: "text"
-                    },
-                    {
-                        dim: "[Persons.PersonKey]",
-                        datatype: "numeric",
-                        filter: {
-                            equals: pkey
-                        }
+        let bodyObj = {
+            metadata: [
+                {
+                    dim: "[Persons.FirstAndPreferredName]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[Persons.LastName]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[Persons.Age]",
+                    datatype: "numeric"
+                },
+                {
+                    dim: "[Persons.ClubName]",
+                    datatype: "text",
+                },
+                {
+                    dim: "[Persons.LscCode]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[Persons.PersonKey]",
+                    datatype: "numeric",
+                    filter: {
+                        equals: pkey
                     }
-                ],
-                count: 1
-            })
-        });
+                }
+            ],
+            count: 1
+        };
 
-        if (!response.ok) {
+        let values = await fetchSwimValues(bodyObj);
+        if (!values) {
             return;
         }
+        // firstName, lastName, age, clubName, lsc, pkey
+        // 0          1         2    3         4    5
 
-        let data = await response.json();
-        if (data.error || !data.values) {
-            return;
-        }
-        // firstName, lastName, age, club, lsc, pkey
-        // 0          1         2    3     4    5
-        let lsc = data.values[0][4];
-        let club = data.values[0][3];
+        let lsc = values[0][4];
+        let clubName = values[0][3];
 
         // create the table header
-        let clubCode = await loadClubCode(lsc, club);
+        let clubCode = await loadClubCode(lsc, clubName);
         if (!clubCode) {
             return;
         }
         let [_, zone] = lscMap.get(lsc);
 
-        data.values[0].push(clubCode, zone);
+        values[0].push(clubCode, zone);
         // firstName, lastName, age, club, lsc, pkey, clubCode, zone
         // 0          1         2    3     4    5     6         7
 
-        return data.values[0];
+        return values[0];
     }
 
     async function showDetails(data) {
@@ -1183,49 +1167,13 @@
         return html.join('');
     }
 
-    async function loadClubCode(lsc, club) {
-        let bodyObj = {
-            metadata: [
-                {
-                    dim: "[OrgUnit.Level4Code]",
-                    datatype: "text",
-                },
-                {
-                    dim: "[OrgUnit.Level4Name]",
-                    datatype: "text",
-                    filter: {
-                        equals: club,
-                    },
-                    panel: "scope"
-                },
-                {
-                    dim: "[OrgUnit.Level3Code]",
-                    datatype: "text",
-                    filter: {
-                        equals: lsc,
-                    },
-                    panel: "scope"
-                }
-            ],
-            count: 1
+    async function loadClubCode(lsc, clubName) {
+        let clubMap = await loadClubDict(lsc);
+        if (!clubMap) {
+            return clubName;
         }
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
-
-        if (!response.ok) {
-            return;
-        }
-
-        let data = await response.json();
-        if (data.error || !data.values) {
-            return;
-        }
-
-        return data.values[0][0];
+        return clubMap.get(clubName) || clubName;
     }
 
     async function buildTD(row, pkey, age, timeInt, zone, lsc, club) {
@@ -1604,84 +1552,43 @@
 
     async function loadRankData(mapKey) {
         let values = await load('rank', mapKey);
-        if (!values) {
-            let [gender, eventKey, ageKey, zone, lsc, club] = decodeRankMapKey(mapKey);
-
-            if (club) {
-                values = await loadRankDataByClub(mapKey);
-
-            } else {
-                let bodyObj = prepareRankLoadPayload(mapKey);
-
-                let response = await fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql', {
-                    method: 'POST',
-                    headers: _postHeader,
-                    body: JSON.stringify(bodyObj)
-                });
-
-                if (!response.ok) {
-                    return;
-                }
-
-                let data = await response.json();
-                if (data.error || !data.values) {
-                    return [];
-                }
-                // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey
-                // 0        1     2     3     4          5     6        7     8         9
-
-                values = await filterByAge(data.values, ageKey);
-                // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
-                // 0        1     2     3     4          5     6        7     8         9     10
-            }
-            save('rank', mapKey, values);
+        if (values) {
+            return values;
         }
+
+        let [gender, eventKey, ageKey, zone, lsc, club] = decodeRankMapKey(mapKey);
+
+        if (club) {
+            values = await loadRankDataByClub(mapKey);
+
+        } else {
+            values = await LoadRankDataAll(mapKey);
+            // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey
+            // 0        1     2     3     4          5     6        7     8         9
+
+            values = await filterByAge(values, ageKey);
+            // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
+            // 0        1     2     3     4          5     6        7     8         9     10
+        }
+
+        save('rank', mapKey, values);
         return values;
     }
 
     async function loadClubName(lsc, club) {
-        let bodyObj = {
-            metadata: [
-                {
-                    dim: "[OrgUnit.Level4Name]",
-                    datatype: "text",
-                },
-                {
-                    dim: "[OrgUnit.Level4Code]",
-                    datatype: "text",
-                    filter: {
-                        equals: club,
-                    },
-                    panel: "scope"
-                },
-                {
-                    dim: "[OrgUnit.Level3Code]",
-                    datatype: "text",
-                    filter: {
-                        equals: lsc,
-                    },
-                    panel: "scope"
-                }
-            ],
-            count: 1
-        }
-
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
-
-        if (!response.ok) {
+        let clubMap = await loadClubDict(lsc);
+        if (!clubMap) {
             return;
         }
 
-        let data = await response.json();
-        if (data.error || !data.values) {
-            return;
+        for (let [clubName, clubCode] of clubMap) {
+            if (club == clubCode) {
+                club = clubName;
+                break;
+            }
         }
 
-        return data.values[0][0];
+        return club;
     }
 
     async function loadSwimmerList(lsc, clubName, ageKey) {
@@ -1717,27 +1624,87 @@
                     },
                     panel: "scope"
                 }
-
             ],
             count: 1000
         };
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
+        return await fetchSwimValues(bodyObj);
+    }
 
-        if (!response.ok) {
+    let _tempAllClubDict = new Map();
+    async function loadClubDict(lsc) {
+        let dict = _tempAllClubDict.get(lsc);
+        if (dict) {
+            return dict;
+        }
+
+        let cacheKey = 'clubDict';
+        let dictData = await load(cacheKey, lsc, _1WeekInSec);
+        if (dictData) {
+            dict = new Map(dictData);
+            _tempAllClubDict.set(lsc, dict);
+            return dict;
+        }
+
+        let bodyObj = {
+            metadata: [
+                {
+                    dim: "[Persons.ClubName]",
+                    datatype: "text"
+                },
+                {
+                    dim: "[Persons.LscCode]",
+                    datatype: "text",
+                    filter: {
+                        equals: lsc
+                    },
+                    panel: "scope"
+                }
+            ],
+            count: 5000
+        };
+
+        let values = await fetchSwimValues(bodyObj);
+        if (!values) {
             return;
         }
 
-        const data = await response.json();
-        if (data.error || !data.values) {
+        values = values.map(row => row[0])
+
+        bodyObj = {
+            metadata: [
+                {
+                    dim: "[OrgUnit.Level4Name]",
+                    datatype: "text",
+                    filter: {
+                        members: values
+                    }
+                },
+                {
+                    dim: "[OrgUnit.Level4Code]",
+                    datatype: "text",
+                },
+                {
+                    dim: "[OrgUnit.Level3Code]",
+                    datatype: "text",
+                    filter: {
+                        equals: lsc,
+                    },
+                    panel: "scope"
+                }
+            ],
+            count: values.length
+        }
+
+        values = await fetchSwimValues(bodyObj, true);
+        if (!values) {
             return;
         }
 
-        return data.values;
+        save(cacheKey, lsc, values);
+        let clubDict = new Map(values);
+        _tempAllClubDict.set(lsc, clubDict);
+        return clubDict;
     }
 
     async function loadRankDataByClub(mapKey) {
@@ -1825,30 +1792,17 @@
             count: 5000
         }
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify(bodyObj)
-        });
-
-        if (!response.ok) {
-            return;
-        }
-
-        let data = await response.json();
-        if (data.error || !data.values) {
+        let list = await fetchSwimValues(bodyObj, true);
+        if (!list) {
             return;
         }
 
         // Create a mapping of pkey to age
-        let pkeyToAgeMap = new Map();
-        for (let swimmer of swimmerList) {
-            pkeyToAgeMap.set(swimmer[0], swimmer[1]);
-        }
+        let pkeyToAgeMap = new Map(swimmerList);
 
-        // Append the age to the end of each row of data.values
+        // Filter to get the first(fast) time of each swimmer & append the age to the end of each row of list
         let values = [];
-        for (let row of data.values) {
+        for (let row of list) {
             let pkey = row[9];
             let age = pkeyToAgeMap.get(pkey);
             if (age) {
@@ -1866,8 +1820,7 @@
     }
 
     function decodeRankMapKey(mapKey) {
-        let parts = mapKey.split('_');
-        return parts;
+        return mapKey.split('_');
     }
 
     function getSessionYear() {
@@ -1877,7 +1830,7 @@
         return month < 9 ? year : year + 1;
     }
 
-    function prepareRankLoadPayload(mapKey) {
+    async function LoadRankDataAll(mapKey) {
         let [gender, eventKey, ageKey, zone, lsc, club] = decodeRankMapKey(mapKey);
 
         let year = getSessionYear();
@@ -1998,7 +1951,7 @@
             });
         }
 
-        return bodyObj;
+        return await fetchSwimValues(bodyObj, true);
     }
 
     function decodeAgeKey(ageKey) {
@@ -2025,54 +1978,40 @@
         }
 
         // dedup the pkey
-        let pkeys = new Set()
-        for (let row of values) {
-            pkeys.add(row[9]);
-        }
+        let pkeys = new Set(values.map(row => row[9]));
 
         let [from, to] = decodeAgeKey(ageKey);
 
-        let response = await fetch('https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql', {
-            method: 'POST',
-            headers: _postHeader,
-            body: JSON.stringify({
-                metadata: [
-                    {
-                        dim: "[Persons.PersonKey]",
-                        datatype: "numeric",
-                        filter: {
-                            members: [...pkeys]
-                        }
-                    },
-                    {
-                        dim: "[Persons.Age]",
-                        datatype: "numeric",
-                        filter: {
-                            from: from,
-                            to: to
-                        },
+        let bodyObj = {
+            metadata: [
+                {
+                    dim: "[Persons.PersonKey]",
+                    datatype: "numeric",
+                    filter: {
+                        members: [...pkeys]
                     }
-                ],
-                count: pkeys.length
-            })
-        });
+                },
+                {
+                    dim: "[Persons.Age]",
+                    datatype: "numeric",
+                    filter: {
+                        from: from,
+                        to: to
+                    },
+                }
+            ],
+            count: pkeys.length
+        };
 
-        if (!response.ok) {
-            return values;
-        }
-
-        let data = await response.json();
-        if (data.error || !data.values) {
+        let pkeyToAgeList = await fetchSwimValues(bodyObj);
+        if (!pkeyToAgeList) {
             return values;
         }
         // pkey, age
         // 0     1
 
         // create new pkey set by age response.
-        let pkeyAge = new Map();
-        for (let row of data.values) {
-            pkeyAge.set(row[0], row[1]);
-        }
+        let pkeyAge = new Map(pkeyToAgeList);
 
         let result = [];
         for (let row of values) {
@@ -2094,11 +2033,11 @@
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
         let html = [];
-        let [gender, eventCode, ageKey, zone, lsc, clubCode] = key.split('_');
+        let [gender, eventCode, ageKey, zone, lsc, clubCode] = decodeRankMapKey(key);
 
-        html.push(`<div>Age Group: <select id="age-group" class="big" onchange="updateRankTable(this.value)">`);
+        html.push(`<div>Age Group: <select id="age-group" class="big" onchange="go('rank', this.value)">`);
         html.push(getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode));
-        html.push(`</select> &nbsp; Course: <select id="course" class="big" onchange="updateRankTable(this.value)">`);
+        html.push(`</select> &nbsp; Course: <select id="course" class="big" onchange="go('rank', this.value)">`);
         html.push(getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode));
         html.push('</select></div>');
 
@@ -2118,7 +2057,7 @@
             let event = _eventList[i];
             let eventParts = event.split(' ');
             if (eventParts.pop() == course && eventParts[0] != '_') {
-                html.push(`<button class="search" onclick="updateRankTable('${getRankDataMapKey(gender, i, ageKey, zone, lsc, clubCode)}')">${eventParts.join(' ')}</button>`);
+                html.push(`<button class="search" onclick="go('rank', '${getRankDataMapKey(gender, i, ageKey, zone, lsc, clubCode)}')">${eventParts.join(' ')}</button>`);
             }
         }
 
@@ -2164,24 +2103,6 @@
         }
         html.push('</tbody></table>');
         return html.join('');
-    }
-
-    async function updateRankTable(key) {
-        let table = document.getElementById('rank-table');
-        table.innerHTML = 'Loading ranking data...';
-
-        let values = await loadRankData(key);
-        let [gender, eventCode, ageKey, zone, lsc, clubCode] = key.split('_');
-
-        table.innerHTML = await showRankTable(values, gender, eventCode, ageKey, zone, lsc, clubCode);
-
-
-        // update slecet elements
-        let courseElement = document.getElementById('course');
-        courseElement.innerHTML = getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode);
-        let ageGroupElement = document.getElementById('age-group');
-        ageGroupElement.innerHTML = getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode);
-
     }
 
     function getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode) {
@@ -2845,4 +2766,5 @@ Wyoming Swimming-WY-Western`;
         window.timeToInt = timeToInt;
     })()
 </script>
+
 </html>
