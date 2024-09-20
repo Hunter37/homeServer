@@ -305,6 +305,10 @@
             transform: rotate(360deg);
         }
     }
+
+    .selected {
+        background-color: #0002;
+    }
 </style>
 
 <body>
@@ -2030,18 +2034,20 @@
     }
 
     async function showRank(key, values) {
-        // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
-        // 0        1     2     3     4          5     6        7     8         9     10
+        // sortkey, name, date, time, eventName, club, lsc, meet, event, pkey, age
+        // 0        1     2     3     4          5     6    7     8      9     10
         let html = [];
-        let [gender, eventCode, ageKey, zone, lsc, clubCode] = decodeRankMapKey(key);
+        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
 
-        html.push(`<div>Age Group: <select id="age-group" class="big" onchange="go('rank', this.value)">`);
-        html.push(getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode));
-        html.push(`</select> &nbsp; Course: <select id="course" class="big" onchange="go('rank', this.value)">`);
-        html.push(getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode));
+        html.push(`<div>Age Group: <select class="big" onchange="go('rank', this.value)">`);
+        html.push(getAgeGroupSelections(gender, event, ageKey, zone, lsc, club));
+        html.push(`</select> &nbsp; Course: <select class="big" onchange="go('rank', this.value)">`);
+        html.push(getCourseSelections(gender, event, ageKey, zone, lsc, club));
+        html.push(`</select> &nbsp; Club: <select class="big" onchange="go('rank', this.value)">`);
+        html.push(await loadClubSelections(gender, event, ageKey, zone, lsc, club));
         html.push('</select></div>');
 
-        html.push('<div id="rank-table">', await showRankTable(values, gender, eventCode, ageKey, zone, lsc, clubCode), '</div>');
+        html.push('<div id="rank-table">', await showRankTable(values, gender, event, ageKey, zone, lsc, club), '</div>');
 
         updateContent(html.join(''));
     }
@@ -2105,31 +2111,69 @@
         return html.join('');
     }
 
-    function getAgeGroupSelections(gender, ageKey, eventCode, zone, lsc, clubCode) {
+    function getAgeGroupSelections(gender, event, ageKey, zone, lsc, club) {
         let html = [];
         for (let g of ['Female', 'Male']) {
             html.push(`<optgroup label="${g}">`)
             for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
                 let selected = ag == ageKey && g == gender ? 'selected' : '';
-                html.push(`<option value="${getRankDataMapKey(g, eventCode, ag, zone, lsc, clubCode)}" ${selected}>${ag}</option>`);
+                html.push(`<option value="${getRankDataMapKey(g, event, ag, zone, lsc, club)}" ${selected}>${ag}</option>`);
             }
             html.push('</optgroup>');
         }
         return html.join('');
     }
 
-    function getCourseSelections(gender, eventCode, ageKey, zone, lsc, clubCode) {
+    function getCourseSelections(gender, event, ageKey, zone, lsc, club) {
         let html = [];
-        let eventParts = _eventList[eventCode].split(' ');
+        let eventParts = _eventList[event].split(' ');
         let course = eventParts[2];
         for (let cs of ['SCY', 'SCM', 'LCM']) {
             eventParts[2] = cs;
             newEvent = fixDistance(eventParts.join(' '));
             let newEventCode = _eventIndexMap.get(newEvent);
             if (newEventCode) {
-                html.push(`<option value="${getRankDataMapKey(gender, newEventCode, ageKey, zone, lsc, clubCode)}"${course == cs ? ' selected' : ''}>${cs}</option>`);
+                html.push(`<option value="${getRankDataMapKey(gender, newEventCode, ageKey, zone, lsc, club)}"${course == cs ? ' selected' : ''}>${cs}</option>`);
             }
         }
+        return html.join('');
+    }
+
+    async function loadClubSelections(gender, event, ageKey, zone, lsc, club) {
+        let html = [`<option class="selected" value="${getRankDataMapKey(gender, event, ageKey)}">USA</option>`];
+
+        html.push(`<optgroup label="Zone">`)
+        for (let zoneCode of ['Central', 'Eastern', 'Southern', 'Western']) {
+            let selected = !lsc && zoneCode == zone ? ' selected' : '';
+            let cls = zone == zoneCode ? ' class="selected"' : '';
+            html.push(`<option ${cls}value="${getRankDataMapKey(gender, event, ageKey, zoneCode)}"${selected}>${zoneCode}</option>`);
+        }
+        html.push('</optgroup>');
+
+        if (zone) {
+            html.push(`<optgroup label="${zone} Zone">`)
+            for (let [lscCode, [lscName, zoneCode]] of lscMap) {
+                if (zoneCode == zone) {
+                    let selected = !club && lscCode == lsc ? ' selected' : '';
+                    let cls = lsc == lscCode ? ' class="selected"' : '';
+                    html.push(`<option ${cls}value="${getRankDataMapKey(gender, event, ageKey, zone, lscCode)}"${selected}>${lscName} (${lscCode})</option>`);
+                }
+            }
+            html.push('</optgroup>');
+        }
+
+        if (lsc) {
+            let clubDict = await loadClubDict(lsc);
+
+            html.push(`<optgroup label="${lscMap.get(lsc)[0]} (${lsc})">`)
+            for (let [clubName, clubCode] of clubDict) {
+                let selected = clubCode == club ? ' selected' : '';
+                let cls = club == clubCode ? ' class="selected"' : '';
+                html.push(`<option ${cls}value="${getRankDataMapKey(gender, event, ageKey, zone, lsc, clubCode)}"${selected}>${clubName} (${clubCode})</option>`);
+            }
+            html.push('</optgroup>');
+        }
+
         return html.join('');
     }
 
