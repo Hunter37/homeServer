@@ -480,12 +480,17 @@
     window.addEventListener('hashchange', loadContent);
     window.addEventListener('load', loadContent);
 
+    function clearCache() {
+        ldb.clear();
+        //window.location.reload();
+    }
+
     async function loadContent() {
         _backgroundActions.length = 0;
 
         let hash = window.location.hash.substring(1);
         if (!hash) {
-            updateContent('Please enter swimmer name or club name');
+            updateContent('Please enter swimmer name or club name<div><button onclick="clearCache()">Clear App Cache</div>');
             return;
         }
 
