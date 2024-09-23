@@ -333,15 +333,6 @@
         <button onclick="onSearch()" style="width:100px" class="big">SEARCH</button>
         <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
     </div>
-    <div id="filter" class="hide row">
-        <div>Meet date:</div>
-        <input id="date" type="date" class="big" onchange="onSelectionChange()" />
-        <div>Meet cut:</div>
-        <select id="standard0" class="gn" onchange="onSelectionChange()"></select>
-        <select id="standard1" class="bl" onchange="onSelectionChange()"></select>
-        <select id="standard2" class="rd" onchange="onSelectionChange()"></select>
-        <button onclick="loadBirthday()" class="big">Find out 10 more</button>
-    </div>
     <div id="table" class="container"></div>
 </body>
 <script>
@@ -2218,7 +2209,7 @@
         // sortkey, name, date, time, eventName, club, lsc, meet, event, pkey, (age)
         // 0        1     2     3     4          5     6    7     8      9     10
         let html = [];
-        
+
         html.push(addHide25Botton());
 
         let noSelect = !(navigator.userAgent.indexOf('Chrome/120') < 0);
@@ -2240,17 +2231,29 @@
             html.push('</select></div>');
         }
 
-        html.push(await showRankTable(values, key));
+        html.push(showEventButtons(key));
+        html.push(showRankTableTitle(values, key));
+
+        let meetDate = localStorage.getItem('meetDate');
+        html.push(`<div id="filter" class="row"><div>Meet date:</div><input id="date" type="date" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"></div>`);
+
+        html.push('<div id="rank-table">', await showRankTable(values, key), '</div>');
 
         updateContent(html.join(''));
     }
 
-    async function showRankTable(values, key) {
+    async function onMeetDateChange(value, key) {
+        let table = document.getElementById('rank-table');
+        let values = await loadRankData(key);
+        localStorage.setItem('meetDate', value);
+        table.innerHTML = await showRankTable(values, key);
+    }
+
+    function showEventButtons(key) {
         let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
-        let idx = values.idx;
         let html = [];
         let eventParts = _eventList[event].split(' ');
         let course = eventParts[2];
@@ -2266,7 +2269,19 @@
             }
         }
 
-        html.push('</div><h2>')
+        html.push('</div>');
+        return html.join('');
+    }
+
+    function showRankTableTitle(values, key) {
+        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+
+        // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
+        // 0        1     2     3     4          5         6    7         8      9     10
+        let idx = values.idx;
+        let html = [];
+
+        html.push('<h2>');
         if (club) {
             html.push(values.length > 0 ? values[0][idx.clubName] : club);
         } else if (lsc) {
@@ -2278,6 +2293,19 @@
         }
         html.push('</h2><h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', gender, '</h3>');
 
+        return html.join('');
+    }
+
+    async function showRankTable(values, key) {
+        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [from, to] = decodeAgeKey(ageKey);
+        let meetDate = localStorage.getItem('meetDate');
+
+        // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
+        // 0        1     2     3     4          5         6    7         8      9     10
+        let idx = values.idx;
+        let html = [];
+
         if (values.length == 0) {
             html.push('No ranking data found.');
             return html.join('');
@@ -2287,6 +2315,15 @@
         let index = 0;
         let stdKeyBase = `${gender} ${ageKey} ${_eventList[event]}`;
         for (let row of values) {
+
+            let range = await load('bday', row[idx.pkey], _10YearsInSec);
+            if (range && meetDate) {
+                let bday = new Date(range[1]);
+                bday.setUTCFullYear(bday.getUTCFullYear() + to + 1);
+                if (bday <= new Date(meetDate)) {
+                    continue;
+                }
+            }
 
             let timeInt = timeToInt(row[idx.time]);
             let maxStd = '';
@@ -2302,9 +2339,9 @@
             }
 
             html.push('<tr><td>', ++index, `</td><td class="left"><button onclick="go('details', ${row[idx.pkey]})">`,
-                row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'), '</td><td>',
-                formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', formatDateRange(await load('bday', row[idx.pkey], _10YearsInSec)),
-                '</td><td class="left">', row[idx.clubName], '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
+                row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
+                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', formatDateRange(range), '</td><td class="left">',
+                row[idx.clubName], '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
         }
         html.push('</tbody></table>');
         return html.join('');
