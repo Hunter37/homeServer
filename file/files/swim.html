@@ -391,6 +391,10 @@
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // page utility functions
 
+    function getEventCourse(event) {
+        return _eventList[event].split(' ')[2];
+    }
+
     function updateContent(html) {
         document.getElementById('table').innerHTML = html;
     }
@@ -1017,7 +1021,7 @@
         if (!club) {
             return;
         }
-        let [_, zone] = lscMap.get(swimmer.lsc);
+        let zone = getLSCZone(swimmer.lsc);
 
         swimmer.club = club;
         swimmer.zone = zone;
@@ -1457,7 +1461,7 @@
         // group meet by course
         let courses = {};
         for (let row of events) {
-            let course = _eventList[row[idx.event]].split(' ')[2];
+            let course = getEventCourse(row[idx.event]);
             if (!courses[course]) {
                 courses[course] = [];
                 courses[course].idx = idx;
@@ -2212,9 +2216,9 @@
 
         html.push(addHide25Botton());
 
-        let noSelect = !(navigator.userAgent.indexOf('Chrome/120') < 0);
+        let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
 
-        if (noSelect) {
+        if (oldBrowser) {
             html.push('<div class="match-size">');
             html.push(getAgeGroupSelections(key, true));
             html.push('</div><div class="match-size">');
@@ -2235,7 +2239,8 @@
         html.push(showRankTableTitle(values, key));
 
         let meetDate = localStorage.getItem('meetDate');
-        html.push(`<div id="filter" class="row"><div>Meet date:</div><input id="date" type="date" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"></div>`);
+        let inputType = oldBrowser ? 'text' : 'date';
+        html.push(`<div class="row"><div>Meet date:</div><input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"></div>`);
 
         html.push('<div id="rank-table">', await showRankTable(values, key), '</div>');
 
@@ -2255,8 +2260,7 @@
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
         let html = [];
-        let eventParts = _eventList[event].split(' ');
-        let course = eventParts[2];
+        let course = getEventCourse(event);
         let hide25 = localStorage.getItem('hide25');
 
         html.push('<div class="match-size">');
@@ -2285,7 +2289,7 @@
         if (club) {
             html.push(values.length > 0 ? values[0][idx.clubName] : club);
         } else if (lsc) {
-            html.push(lscMap.get(lsc)[0]);
+            html.push(getLSCName(lsc));
         } else if (zone) {
             html.push(zone, ' Zone');
         } else {
@@ -2375,11 +2379,9 @@
         let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [];
-        let eventParts = _eventList[event].split(' ');
-        let course = eventParts[2];
+        let [dist, style, course] = _eventList[event].split(' ');
         for (let cs of _courseOrder) {
-            eventParts[2] = cs;
-            let newEvent = fixDistance(eventParts.join(' '));
+            let newEvent = fixDistance([dist, style, cs].join(' '));
             let newEventCode = _eventIndexMap.get(newEvent);
             let pageKey = getRankDataKey(gender, newEventCode, ageKey, zone, lsc, club);
             if (newEventCode) {
@@ -2422,7 +2424,7 @@
         if (lsc) {
             let clubDict = await loadClubDict(lsc);
 
-            html.push(`<optgroup label="${lscMap.get(lsc)[0]} (${lsc})">`)
+            html.push(`<optgroup label="${getLSCName(lsc)} (${lsc})">`)
             for (let [clubName, clubCode] of clubDict) {
                 let selected = clubCode == club ? ' selected' : '';
                 let cls = club == clubCode ? ' class="selected"' : '';
@@ -2635,6 +2637,12 @@ Wyoming Swimming-WY-Western`;
             }
         }
         window.lscMap = map;
+        window.getLSCName = function (lsc) {
+            return map.get(lsc)[0];
+        }
+        window.getLSCZone = function (lsc) {
+            return map.get(lsc)[1];
+        }
     })();
 
 
