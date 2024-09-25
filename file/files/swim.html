@@ -325,6 +325,32 @@
     .selected {
         background-color: #0002;
     }
+
+    /* popup */
+    .bs {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .bs .pop {
+        visibility: hidden;
+        padding: 5px;
+        background-color: #CCC;
+        border-radius: 8px;
+        white-space: nowrap;
+
+        /* Position the tooltip */
+        position: absolute;
+        z-index: 1;
+        top: 50%;
+        transition-property: visibility;
+        transition-delay: 0s;
+    }
+
+    .bs:hover .pop {
+        visibility: visible;
+        transition-delay: 0.3s;
+    }
 </style>
 
 <body>
@@ -1210,6 +1236,14 @@
         return _courseOrder.indexOf(course) * 100_000 + _strokeOrder.indexOf(stroke) * 10_000 + Number(dist);
     }
 
+    function buildPopup(text, popupText) {
+        if (!text || text == popupText) {
+            return '';
+        }
+
+        return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
+    }
+
     async function createBestTimeTable(data, fastRowList, rowInfo) {
         // swimmer
         // firstName, lastName, age, clubName, lsc, pkey, club, zone
@@ -1242,6 +1276,11 @@
             }
         }
 
+        let meetStds = getMeetStandards(data.swimmer.age);
+        for (let std of meetStds) {
+            html.push('<th>', buildPopup(std.short, std.meet), '</th>');
+        }
+
         html.push('</tr>');
 
         // create the best time table body
@@ -1253,7 +1292,6 @@
             let timeInt = timeToInt(time);
             let eventStr = _eventList[event];
             let [dist, stroke, course] = eventStr.split(' ');
-            let stdKey = `${genderStr} ${ageKey} ${eventStr}`;
 
             if (rowInfo[i].length == 2 && i > 0) {
                 html.push('<tr><td colspan="50" class="wt"></td></tr>');
@@ -1270,26 +1308,38 @@
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
-
             html.push('<td>', dist, '</td><td>', time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey));
 
-            if (data.swimmer.age < 19) {
-                let preTime;
-                for (let std of stdName) {
-                    let [stdStr, stdInt] = getAgeGroupMotivationTime(`${stdKey} ${std}`);
+            let stds = [];
 
-                    preTime = (preTime || stdInt * 1.15);
-                    let precent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
-                    percent = 100 - (precent < 5 && precent > 0 ? 5 : Math.floor(precent))
-                    let cls = timeInt <= stdInt ? 'dp' : 'ad';
-                    html.push('<td>', buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
-                    preTime = stdInt;
+            if (data.swimmer.age < 19) {
+                let stdKey = `${genderStr} ${ageKey} ${eventStr}`;
+                for (let std of stdName) {
+                    stds.push(getAgeGroupMotivationTime(`${stdKey} ${std}`));
                 }
             }
+            for (let std of meetStds) {
+                stds.push(std[genderStr].get(eventStr) || ['', 0]);
+            }
+
+            let preTime;
+            for (let [stdStr, stdInt] of stds) {
+                if (!stdInt) {
+                    html.push('<td></td>');
+                    continue;
+                }
+                preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
+                let precent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
+                percent = 100 - (precent < 5 && precent > 0 ? 5 : Math.floor(precent))
+                let cls = timeInt <= stdInt ? 'dp' : 'ad';
+                html.push('<td>', buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
+                preTime = stdInt;
+            }
+
             html.push('</tr>');
         }
 
@@ -1407,10 +1457,11 @@
                 if (bestTimeEvent) {
                     let preBestTime = findPreBestTimeByAge(events, event, age);
                     let bestTime = bestTimeEvent[idx.time];
-                    let std = formatStandard(bestTimeEvent[idx.std]);
+                    let std = bestTimeEvent[idx.std];
+                    let short = formatStandard(std, true);
                     let date = formatDate(bestTimeEvent[idx.date]);
                     let cls = !preBestTime ? '' : timeToInt(bestTime) < timeToInt(preBestTime) ? 'dp' : 'ad';
-                    html.push('<td>', buildTimeCell(bestTime, std, date, cls), '</td>');
+                    html.push('<td>', buildTimeCell(bestTime, buildPopup(short, std), date, cls), '</td>');
                 } else {
                     html.push('<td></td>');
                 }
@@ -1585,9 +1636,10 @@
                             let delta = cell[idx.delta];
                             let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
                             let time = cell[idx.time];
-                            let std = formatStandard(cell[idx.std], true);
+                            let std = cell[idx.std];
+                            let short = formatStandard(std, true);
 
-                            html.push(buildTimeCell(time, std, formatDelta(delta), style));
+                            html.push(buildTimeCell(time, buildPopup(short, std), formatDelta(delta), style));
                             clubName = cell[idx.clubName];
                         }
                         html.push('</td>');
@@ -2238,7 +2290,7 @@
         html.push(showEventButtons(key));
         html.push(showRankTableTitle(values, key));
 
-        let meetDate = localStorage.getItem('meetDate');
+        let meetDate = localStorage.getItem('meetDate') || '';
         let inputType = oldBrowser ? 'text' : 'date';
         html.push(`<div class="row"><div>Meet date:</div><input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"></div>`);
 
@@ -2435,7 +2487,8 @@
 
         return html.join('');
     }
-
+</script>
+<script>
     function fixDistance(event) {
         let map = {
             "400 FR SCY": "500 FR SCY",
@@ -2450,8 +2503,21 @@
         };
         return map[event] || event;
     }
-</script>
-<script>
+
+    function timeToInt(stime) {
+        let result = 0;
+        if (stime) {
+            let parts = stime.split(':');
+            if (parts.length == 2) {
+                result = parseInt(parts[0]) * 6000;
+                parts[0] = parts[1];
+            }
+            parts = parts[0].split('.');
+            result += parseInt(parts[0]) * 100 + parseInt(parts[1]);
+        }
+        return result;
+    }
+
     //https://github.com/DVLP/localStorageDB
     (function () {
         var win = typeof window !== 'undefined' ? window : {}
@@ -3026,20 +3092,6 @@ Wyoming Swimming-WY-Western`;
 
 # Page 8 of 8
 `;
-        function timeToInt(stime) {
-            let result = 0;
-            if (stime) {
-                let parts = stime.split(':');
-                if (parts.length == 2) {
-                    result = parseInt(parts[0]) * 6000;
-                    parts[0] = parts[1];
-                }
-                parts = parts[0].split('.');
-                result += parseInt(parts[0]) * 100 + parseInt(parts[1]);
-            }
-            return result;
-        }
-
         const times = new Map();
 
         let rows = data.split('\n');
@@ -3072,8 +3124,175 @@ Wyoming Swimming-WY-Western`;
         }
 
         window.getAgeGroupMotivationTime = getAgeGroupMotivationTime;
-        window.timeToInt = timeToInt;
-    })()
+    })();
+
+
+    (function () {
+        let data = `
+meet: SprSec : 2024 Spring Speedo Sectional
+11-18 Female Male SCY SCM LCM
+24.99 27.76 28.44 50 FR 25.79 24.72 22.41
+53.71 59.04 1:01.26 100 FR 55.89 53.27 48.46
+1:56.22 2:07.92 2:12.75 200 FR 2:02.20 1:56.48 1:45.84
+5:13.17 4:29.34 4:43.21 400 FR 4:23.21 4:10.18 4:49.98
+10:52.09 9:27.35 9:48.19 800 FR 9:19.51 8:53.74 10:10.58
+18:19.78 18:07.11 18:54.49 1500 FR 17:45.59 16:53.43 17:13.16
+59.50 1:06.33 1:09.54 100 BK 1:04.26 1:00.66 54.42
+2:07.80 2:22.78 2:29.20 200 BK 2:20.40 2:12.65 1:58.45
+1:08.46 1:15.15 1:20.46 100 BR 1:13.70 1:07.35 1:01.53
+2:29.07 2:43.68 2:54.86 200 BR 2:40.88 2:27.80 2:15.19
+58.86 1:04.55 1:06.87 100 FL 1:00.97 59.43 53.46
+2:12.26 2:26.43 2:32.74 200 FL 2:20.25 2:14.37 2:00.94
+2:11.81 2:25.85 2:32.19 200 IM 2:19.28 2:12.30 1:59.85
+4:39.34 5:07.75 5:21.68 400 IM 5:00.19 4:45.76 4:18.37
+
+meet: SumSec : 2024 Summer Speedo Sectional
+11-18 Female Male SCY SCM LCM
+24.55 27.30 28.14 50 FR 25.49 24.35 22.05
+53.09 58.20 1:00.69 100 FR 55.29 52.60 47.70
+1:54.86 2:06.54 2:11.55 200 FR 2:01.00 1:55.49 1:44.33
+5:09.03 4:26.82 4:39.11 400 FR 4:20.00 4:07.51 4:45.94
+10:46.09 9:22.55 9:42.19 800 FR 9:12.79 8:48.32 10:03.86
+18:09.88 17:58.11 18:44.59 1500 FR 17:36.59 16:44.43 17:03.26
+58.99 1:05.55 1:08.94 100 BK 1:03.66 59.47 53.55
+2:07.19 2:21.52 2:28.00 200 BK 2:19.00 2:10.89 1:56.75
+1:07.46 1:14.11 1:19.63 100 BR 1:12.09 1:05.11 59.79
+2:27.11 2:41.52 2:53.49 200 BR 2:38.50 2:23.36 2:11.63
+58.19 1:03.73 1:06.27 100 FL 1:00.36 58:61 52.61
+2:10.19 2:24.26 2:31.16 200 FL 2:19.05 2:11.94 1:58.81
+2:09.73 2:23.08 2:30.51 200 IM 2:17.70 2:10.12 1:57.77
+4:36.50 5:04.87 5:18.84 400 IM 4:57.79 4:40.45 4:13.34
+
+meet: Futures : 2024 Futures Championships
+11-18 Female Male SCY LCM
+23.89 27.39 50 FR 24.59 21.29
+51.89 59.29 100 FR 53.59 46.39
+1:52.29 2:07.79 200 FR 1:57.79 1:41.59
+5:02.59 4:28.79 400 FR 4:09.99 4:37.09
+10:20.49 9:13.79 800 FR 8:40.69 9:34.29
+17:14.39 17:40.19 1500 FR 16:38.99 16:05.49
+57.09 1:06.79 100 BK 1:00.59 51.49
+2:04.19 2:23.99 200 BK 2:11.89 1:52.79
+1:05.49 1:15.99 100 BR 1:08.19 57.99
+2:22.69 2:43.39 200 BR 2:29.09 2:07.99
+56.59 1:04.69 100 FL 57.99 50.59
+2:05.39 2:21.89 200 FL 2:10.19 1:53.69
+2:06.39 2:26.19 200 IM 2:12.79 1:53.89
+4:30.69 5:07.29 400 IM 4:42.39 4:06.99
+
+meet: Winter : 2024 Speedo Winter Junior Championships
+11-18 Female Male SCY LCM
+23.29 26.89 50 FR 24.09 20.59
+50.39 58.19 100 FR 52.59 44.99
+1:49.09 2:04.99 200 FR 1:55.29 1:38.59
+4:53.59 4:26.69 400 FR 4:05.29 4:29.29
+10:11.49 9:06.79 800 FR 8:28.19 9:24.29
+17:02.19 17:26.79 1500 FR 16:14.79 15:40.39
+55.09 1:04.79 100 BK 58.79 49.29
+1:59.39 2:19.59 200 BK 2:08.29 1:47.99
+1:03.09 1:13.79 100 BR 1:05.99 55.69
+2:17.19 2:38.59 200 BR 2:24.39 2:01.89
+54.69 1:02.69 100 FL 56.59 48.79
+2:01.69 2:18.39 200 FL 2:06.39 1:49.29
+2:02.19 2:22.09 200 IM 2:09.49 1:49.79
+4:21.69 5:00.29 400 IM 4:35.89 3:56.99
+
+meet: Summer : 2024 Speedo Summer Championships
+11-18 Female Male SCY LCM
+22.79 26.59 50 FR 23.79 20.39
+49.69 57.59 100 FR 51.99 44.39
+1:47.39 2:04.29 200 FR 1:54.09 1:38.09
+4:48.09 4:21.39 400 FR 4:02.79 4:27.69
+9:56.79 8:58.69 800 FR 8:23.09 9:13.19
+16:32.59 17:11.29 1500 FR 16:05.09 15:34.19
+54.49 1:04.39 100 BK 58.19 48.89
+1:57.69 2:18.29 200 BK 2:06.99 1:47.09
+1:02.79 1:13.29 100 BR 1:05.29 55.29
+2:15.49 2:38.29 200 BR 2:22.89 2:00.99
+53.99 1:02.39 100 FL 55.99 48.39
+1:59.39 2:16.99 200 FL 2:05.09 1:47.89
+2:00.59 2:20.99 200 IM 2:08.19 1:48.89
+4:15.19 4:57.29 400 IM 4:33.09 3:52.69
+
+meet: Open : 2024 Toyota U.S. Open Championships
+13-99 Female Male SCY LCM
+22.79 26.59 50 FR 23.79 20.39
+49.69 57.59 100 FR 51.99 44.39
+1:47.39 2:04.29 200 FR 1:54.09 1:38.09
+4:48.09 4:21.39 400 FR 4:02.79 4:24.69
+9:56.79 8:58.69 800 FR 8:23.09 9:13.19
+16:32.59 17:11.29 1500 FR 16:05.09 15:34.19
+54.49 1:04.39 100 BK 58.19 48.89
+1:57.69 2:18.29 200 BK 2:06.99 1:47.09
+1:02.79 1:13.29 100 BR 1:05.29 55.29
+2:15.49 2:38.29 200 BR 2:22.89 2:00.99
+53.99 1:02.39 100 FL 55.99 48.39
+1:59.39 2:16.99 200 FL 2:05.09 1:47.89
+2:00.59 2:20.99 200 IM 2:08.19 1:48.89
+4:15.19 4:57.29 400 IM 4:33.09 3:52.69
+
+meet: OTrials : 2024 U.S. Olympic Team Trials
+13-18 Female Male LCM
+25.69 50 FR 22.79
+55.79 100 FR 49.99
+2:00.89 200 FR 1:49.99
+4:15.49 400 FR 3:55.59
+8:45.79 800 FR 8:09.69
+16:45.69 1500 FR 15:39.89
+1:01.89 100 BK 55.69
+2:13.59 200 BK 2:01.69
+1:10.29 100 BR 1:02.19
+2:31.69 200 BR 2:15.99
+1:00.19 100 FL 53.59
+2:13.69 200 FL 2:00.49
+2:16.09 200 IM 2:03.49
+4:49.89 400 IM 4:25.19
+
+# onlineocr.net
+`;
+        const times = [];
+
+        let rows = data.split('\n');
+        let genderKey;
+        let courseKey;
+        let courseCount;
+        let currentMeet;
+        for (row of rows) {
+            if (row.startsWith('#') || row.trim() === '') {
+                continue;
+            }
+            if (row.startsWith('meet:')) {
+                let [_, short, full] = row.split(':');
+                currentMeet = {
+                    meet: full.trim(),
+                    short: short.trim(),
+                };
+                times.push(currentMeet);
+                continue;
+            }
+            let parts = row.split(' ');
+            if (parts[0].indexOf('-') > 0) {
+                currentMeet.age = parts[0].split('-').map(x => Number(x));
+                genderKey = [parts[1], parts[2]];
+                currentMeet[genderKey[0]] = new Map();
+                currentMeet[genderKey[1]] = new Map();
+                courseKey = parts.slice(3);
+                courseCount = courseKey.length;
+                courseKey = [...courseKey, ...courseKey.reverse()];
+                continue;
+            }
+
+            let event = parts.splice(courseCount, 2).join(' ');
+            for (let i = 0; i < parts.length; ++i) {
+                let key = fixDistance(event + ' ' + courseKey[i]);
+                currentMeet[genderKey[Math.floor(i / courseCount)]].set(key, [parts[i], timeToInt(parts[i])]);
+            }
+        }
+
+        window.getMeetStandards = function (age) {
+            return times.filter(x => x.age[0] <= age && age <= x.age[1]);
+        };
+    })();
 </script>
 
 </html>
