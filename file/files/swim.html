@@ -351,6 +351,38 @@
         visibility: visible;
         transition-delay: 0.3s;
     }
+
+    /* modal */
+    #modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: none;
+        background-color: #0004
+    }
+
+    /* Modal Content/Box */
+    .mc {
+        background-color: #FFF;
+        margin: 10% auto;
+        width: 80%;
+        padding: 20px;
+        border: 1px solid #888;
+        overflow: auto;
+    }
+
+    .clickable {
+        cursor: pointer;
+    }
+
+    canvas {
+        border: 1px solid #000;
+    }
 </style>
 
 <body>
@@ -360,6 +392,11 @@
         <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
     </div>
     <div id="table" class="container"></div>
+    <div id="modal" onclick="this.style.display=(window.event.target==this?'none':'block')">
+        <div class="mc">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
 </body>
 <script>
     Date.prototype.toDateInputValue = (function () {
@@ -396,6 +433,8 @@
     const _1DayInSec = 24 * 60 * 60;
     const _1WeekInSec = 7 * _1DayInSec;
     const _10YearsInSec = 10 * 365 * _1DayInSec;
+
+    const _1DayInMilliSeconds = _1DayInSec * 1000;
 
 
     //   1            2             3            4             5               6              7          8          9         10
@@ -1068,6 +1107,7 @@
             return;
         }
 
+        setModalData(data);
         let idx = data.events.idx;
 
         let hide25 = localStorage.getItem('hide25');
@@ -1308,7 +1348,9 @@
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
-            html.push('<td>', dist, '</td><td>', time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
+            let action = `showGraph(${event})`;
+            html.push('<td>', buildClickableDiv(dist, action), '</td><td>', buildClickableDiv(time, action), '</td><td>'
+                , buildClickableDiv(formatDate(date), action), '</td><td>', buildClickableDiv(count, action), '</td>',
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone),
@@ -1348,6 +1390,45 @@
         return html.join('');
     }
 
+    function showGraph(event) {
+        const height = 500;
+        let data = showModal();
+        let idx = data.events.idx;
+        let values = data.events.filter(e => e[data.events.idx.event] == event);
+        let slowest = 0;
+        let fastest = Infinity;
+        let earliest = new Date();
+        let latest = new Date();
+        for (let row of values) {
+            let t = timeToInt(row[idx.time]);
+            slowest = max(slowest, t);
+            fastest = min(fastest, t);
+            let d = new Date(row[idx.date]);
+            earliest = min(earliest, d);
+        }
+        let delta = slowest - fastest;
+        let duration = latest - earliest;
+
+        // console.log('slowest:', slowest, 'fastest:', fastest);
+        // console.log('earliest:', earliest, 'latest:', latest, 'duration:',  duration);
+
+        let canvas = document.getElementById('canvas');
+        canvas.height = height;
+        canvas.width = duration / _1DayInMilliSeconds / 2;
+        let ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.moveTo(0, 0);
+        for (let row of values) {
+            let t = timeToInt(row[idx.time]);
+            let d = new Date(row[idx.date]);
+            let x = Math.floor((d - earliest) / duration * canvas.width);
+            let y = height - Math.floor((t - fastest) / delta * height);
+            ctx.lineTo(x, y);
+            // console.log('x:', x, 'y:', y);
+        }
+        ctx.stroke();
+    }
+
     async function loadClubCode(lsc, clubName) {
         let clubMap = await loadClubDict(lsc);
         if (!clubMap) {
@@ -1376,6 +1457,10 @@
         }
 
         return html.join('');
+    }
+
+    function buildClickableDiv(content, action) {
+        return `<div class="clickable" onclick="${action}">${content}</div>`;
     }
 
     async function getRank(params) {
@@ -1753,7 +1838,7 @@
             return values;
         }
 
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         if (club) {
             values = await loadRankDataByClub(key);
@@ -1910,7 +1995,7 @@
     }
 
     async function loadRankDataByClub(key) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let year = getSessionYear();
 
@@ -2034,7 +2119,7 @@
     }
 
     function getRankDataKey(genderStr, event, ageKey, zone, lsc, club) {
-        return genderStr + '_' + event + '_' + ageKey + '_' + (zone || '') + '_' + (lsc || '') + '_' + (club || '');
+        return genderStr + '_' + ageKey + '_' + event + '_' + (zone || '') + '_' + (lsc || '') + '_' + (club || '');
     }
 
     function decodeRankMapKey(mapKey) {
@@ -2049,7 +2134,7 @@
     }
 
     async function LoadRankDataAll(mapKey) {
-        let [gender, eventKey, ageKey, zone, lsc, club] = decodeRankMapKey(mapKey);
+        let [gender, ageKey, eventKey, zone, lsc, club] = decodeRankMapKey(mapKey);
 
         let year = getSessionYear();
 
@@ -2307,7 +2392,7 @@
     }
 
     function showEventButtons(key) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
@@ -2330,7 +2415,7 @@
     }
 
     function showRankTableTitle(values, key) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
@@ -2353,7 +2438,7 @@
     }
 
     async function showRankTable(values, key) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
         let meetDate = localStorage.getItem('meetDate');
 
@@ -2404,7 +2489,7 @@
     }
 
     function getAgeGroupSelections(key, button) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [];
         for (let g of ['Female', 'Male']) {
@@ -2428,7 +2513,7 @@
     }
 
     function getCourseSelections(key, button) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [];
         let [dist, style, course] = _eventList[event].split(' ');
@@ -2449,7 +2534,7 @@
     }
 
     async function loadClubSelections(key) {
-        let [gender, event, ageKey, zone, lsc, club] = decodeRankMapKey(key);
+        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [`<option class="selected" value="${getRankDataKey(gender, event, ageKey)}">USA</option>`];
 
@@ -3292,6 +3377,18 @@ meet: OTrials : 2024 U.S. Olympic Team Trials
         window.getMeetStandards = function (age) {
             return times.filter(x => x.age[0] <= age && age <= x.age[1]);
         };
+    })();
+
+
+    (function () {
+        let data;
+        window.setModalData = (d) => {
+            data = d;
+        }
+        window.showModal = () => {
+            document.getElementById('modal').style.display = 'block';
+            return data;
+        }
     })();
 </script>
 
