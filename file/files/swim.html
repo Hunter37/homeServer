@@ -335,8 +335,9 @@
     .bs .pop {
         visibility: hidden;
         padding: 5px;
-        background-color: #CCC;
+        background-color: #FFF;
         border-radius: 8px;
+        border: 1px solid #000;
         white-space: nowrap;
 
         /* Position the tooltip */
@@ -371,9 +372,8 @@
         background-color: #FFF;
         margin: 10% auto;
         width: 80%;
-        padding: 20px;
-        border: 1px solid #888;
         overflow: auto;
+        border: 1px solid #000;
     }
 
     .clickable {
@@ -381,7 +381,7 @@
     }
 
     canvas {
-        border: 1px solid #000;
+        overflow: none;
     }
 </style>
 
@@ -392,9 +392,9 @@
         <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
     </div>
     <div id="table" class="container"></div>
-    <div id="modal" onclick="this.style.display=(window.event.target==this?'none':'block')">
+    <div id="modal" onclick="hideModal()">
         <div class="mc">
-            <canvas id="canvas"></canvas>
+            <canvas id="canvas" onmousemove="onCanvasMouseMove(this)"></canvas>
         </div>
     </div>
 </body>
@@ -610,6 +610,7 @@
 
     async function loadContent() {
         _backgroundActions.length = 0;
+        hideModal();
 
         let hash = window.location.hash.substring(1);
         if (!hash) {
@@ -1390,43 +1391,143 @@
         return html.join('');
     }
 
-    function showGraph(event) {
-        const height = 500;
+    function onCanvasMouseMove(canvas) {
+        let e = window.event;
+        e.preventDefault();
+        e.stopPropagation();
+
+        let offset = canvas.getBoundingClientRect();
+        showGraph(null, e.clientX - offset.left, e.clientY - offset.top);
+    }
+
+    function showGraph(event, mouseX, mouseY) {
+        const height = 400;
+        const margin = 50;
         let data = showModal();
-        let idx = data.events.idx;
-        let values = data.events.filter(e => e[data.events.idx.event] == event);
+        event = event || data.event;
+        data.event = event;
+
+        let eventStrs = [];
+        let values = [];
         let slowest = 0;
         let fastest = Infinity;
         let earliest = new Date();
         let latest = new Date();
-        for (let row of values) {
-            let t = timeToInt(row[idx.time]);
-            slowest = max(slowest, t);
-            fastest = min(fastest, t);
-            let d = new Date(row[idx.date]);
-            earliest = min(earliest, d);
+
+        let idx = data.events.idx;
+        let [dist, stroke, course] = _eventList[event].split(' ');
+        for (let c of _courseOrder) {
+            let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
+            let evt = _eventIndexMap.get(eventStr);
+            let value = data.events.filter(e => e[idx.event] == evt);
+            for (let row of value) {
+                let t = timeToInt(row[idx.time]);
+                slowest = max(slowest, t);
+                fastest = min(fastest, t);
+                earliest = min(earliest, new Date(row[idx.date]));
+            }
+            eventStrs.push(eventStr);
+            values.push(value);
         }
+
+        earliest.setMonth(earliest.getMonth() - 1);
+        earliest.setDate(1);
+        latest.setMonth(latest.getMonth() + 3);
+        fastest *= 0.95;
+        slowest *= 1.05;
+
         let delta = slowest - fastest;
         let duration = latest - earliest;
-
-        // console.log('slowest:', slowest, 'fastest:', fastest);
-        // console.log('earliest:', earliest, 'latest:', latest, 'duration:',  duration);
+        let width = duration / _1DayInMilliSeconds / 3;
 
         let canvas = document.getElementById('canvas');
-        canvas.height = height;
-        canvas.width = duration / _1DayInMilliSeconds / 2;
+        canvas.height = height + margin * 2;
+        canvas.width = width + margin * 2;
+
         let ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(margin, margin);
+        ctx.font = "12px Verdana";
+
+        // draw the axis
+        ctx.strokeStyle = 'black';
+        ctx.fillStyle = 'blue';
         ctx.moveTo(0, 0);
-        for (let row of values) {
-            let t = timeToInt(row[idx.time]);
-            let d = new Date(row[idx.date]);
-            let x = Math.floor((d - earliest) / duration * canvas.width);
-            let y = height - Math.floor((t - fastest) / delta * height);
-            ctx.lineTo(x, y);
-            // console.log('x:', x, 'y:', y);
+        ctx.lineTo(0, height);
+        ctx.lineTo(width, height);
+
+        // draw the x-scale
+        for (let date = new Date(earliest); date < latest; date.setMonth(date.getMonth() + 1)) {
+            let x = (date - earliest) / duration * width;
+            ctx.moveTo(x, height);
+            if (date.getMonth() === 0) {
+                ctx.lineTo(x, height - 12);
+                ctx.fillText(date.getFullYear(), x - 10, height + 15);
+            } else {
+                ctx.lineTo(x, height - (date.getMonth() % 6 === 0 ? 9 : 5));
+            }
         }
+
+        // draw the y-scale
+        let interval = (Math.floor(delta / 1000) || 1) * 100;
+        for (let t = Math.ceil(fastest / 100) * 100; t <= slowest; t += interval) {
+            let y = height - (t - fastest) / delta * height;
+            ctx.moveTo(0, y);
+            ctx.lineTo(5, y);
+            let time = formatTime(t).slice(0, -3);
+            ctx.fillText(time, -10 - 5.7 * time.length, y + 3);
+        }
+
         ctx.stroke();
+
+        // draw the cruve and dots, then find the tip row
+        const colors = ['#0AF', '#A66', '#0C4'];
+        ctx.font = "14px Verdana";
+        let tipRow;
+        for (let [index, value] of values.entries()) {
+            let pre;
+            ctx.beginPath();
+            ctx.strokeStyle = ctx.fillStyle = colors[index];
+            for (let row of value) {
+                let t = timeToInt(row[idx.time]);
+                let d = new Date(row[idx.date]);
+                let x = (d - earliest) / duration * width;
+                let y = height - (t - fastest) / delta * height;
+
+                pre = pre || [x, y];
+                ctx.moveTo(pre[0], pre[1]);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                pre = [x, y];
+
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.closePath();
+
+                if (!tipRow && ctx.isPointInPath(mouseX, mouseY)) {
+                    tipRow = row;
+                    mouseX = x;
+                    mouseY = y;
+                }
+            }
+
+            ctx.fillText(eventStrs[index], 100 * index + 20, 0);
+        }
+
+        ctx.fillStyle = 'blue';
+        if (tipRow) {
+            ctx.fillText(tipRow[idx.time], mouseX + 10, mouseY - 7);
+            ctx.fillText(formatDate(tipRow[idx.date]), mouseX + 10, mouseY - 21);
+        }
+    }
+
+    function formatTime(time) {
+        let min = Math.floor(time / 6000);
+        let sec = time % 6000;
+        let minStr = min ? (min + ':') : '';
+        let secStr = (sec / 100).toFixed(2).padStart(5, '0');
+        return minStr + secStr;
     }
 
     async function loadClubCode(lsc, clubName) {
@@ -2574,7 +2675,7 @@
     }
 </script>
 <script>
-    function fixDistance(event) {
+    function fixDistance(eventStr) {
         let map = {
             "400 FR SCY": "500 FR SCY",
             "500 FR SCM": "400 FR SCM",
@@ -2586,7 +2687,7 @@
             "1650 FR SCM": "1500 FR SCM",
             "1650 FR LCM": "1500 FR LCM",
         };
-        return map[event] || event;
+        return map[eventStr] || eventStr;
     }
 
     function timeToInt(stime) {
@@ -3388,6 +3489,9 @@ meet: OTrials : 2024 U.S. Olympic Team Trials
         window.showModal = () => {
             document.getElementById('modal').style.display = 'block';
             return data;
+        }
+        window.hideModal = () => {
+            document.getElementById('modal').style.display = 'none';
         }
     })();
 </script>
