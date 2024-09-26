@@ -1182,16 +1182,18 @@
 
         let [left, right] = calculateBrithday(data.events, meetDateDict, data.swimmer.age, data.swimmer.pkey);
 
-        let firstName = data.swimmer.firstName;
-        if (firstName.charAt(firstName.length - 1) != ' ') {
-            parts = firstName.split(' ');
-            firstName = parts[parts.length - 1] + ' ';
+        console.log(data.swimmer);
+        let alias = data.swimmer.firstName;
+        if (alias.charAt(alias.length - 1) != ' ') {
+            parts = alias.split(' ');
+            parts.shift();
+            alias = parts.join(' ') + ' ';
         }
 
         html.push(addHide25Botton());
 
         let gender = data.events[0][data.events.idx.gender];
-        html.push('<div class="match-size"><span>', firstName, data.swimmer.lastName, '</span><span>', getGenderString(gender), '</span><span>',
+        html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', getGenderString(gender), '</span><span>',
             data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Brithday: ', formatDateRange([left, right]),
             '</span><span>Total Event:', data.events.length, '</span></div>');
 
