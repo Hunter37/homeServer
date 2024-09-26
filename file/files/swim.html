@@ -392,7 +392,7 @@
         <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
     </div>
     <div id="table" class="container"></div>
-    <div id="modal" onclick="hideModal()">
+    <div id="modal" onclick="if(window.event.target==this)hideModal()">
         <div class="mc">
             <canvas id="canvas" onmousemove="onCanvasMouseMove(this)"></canvas>
         </div>
@@ -511,6 +511,9 @@
     }
 
     function formatDelta(delta) {
+        if (delta === null) {
+            return '';
+        }
         delta /= 100;
         return (delta > 0 ? '+' : '') + (delta != null ? delta.toFixed(2) : '');
     }
@@ -1349,9 +1352,8 @@
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
-            let action = `showGraph(${event})`;
-            html.push('<td>', buildClickableDiv(dist, action), '</td><td>', buildClickableDiv(time, action), '</td><td>'
-                , buildClickableDiv(formatDate(date), action), '</td><td>', buildClickableDiv(count, action), '</td>',
+            html.push('<td>', buildClickableDiv(dist, `showGraph(${event})`), '</td><td>',
+                time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone),
@@ -1637,7 +1639,7 @@
                 html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${stroke}</td>`);
             }
 
-            html.push('<td>', dist, '</td>');
+            html.push('<td>', buildClickableDiv(dist, `showGraph(${event})`), '</td>');
             for (let age of uniqueAges) {
                 let bestTimeEvent = findBestTimeEventByAge(events, event, age);
                 if (bestTimeEvent) {
@@ -1720,8 +1722,8 @@
     }
 
     function createMeetTableByCourse(course, events, meetDateDict, meetNameDict) {
-        // time, age, std, lsc, club, date, event, meet, gender, (delta)
-        // 0     1    2    3    4     5     6      7     8       9
+        // time, age, std, lsc, club, date, event, meet, gender
+        // 0     1    2    3    4     5     6      7     8
         let idx = events.idx;
         let html = ['<div class="match-size"><span>', course, ' Event Count: ', events.length,
             '</span></div><table style="border-collapse:collapse"><tbody>'];
@@ -1760,6 +1762,8 @@
                 }
             }
         }
+        // time, age, std, lsc, club, date, event, meet, gender, (delta)
+        // 0     1    2    3    4     5     6      7     8       9
 
         // talbe column info & row info
         let columnInfo = countEventTypeByStroke(eventList);
@@ -1779,7 +1783,9 @@
         html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr>');
         for (let col of columnInfo) {
             for (let i = 1; i < col.length; ++i) {
-                html.push('<td>', col[i], '</td>');
+                let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
+                let action = `showGraph(${evt})`;
+                html.push('<td>', buildClickableDiv(col[i], action), '</td>');
             }
         }
         html.push('</tr>');
@@ -1850,7 +1856,7 @@
         if (std) {
             html.push(`<div class="st">${std}</div><div class="dd ${color || ''}">${delta}</div>`);
         } else {
-            html.push(`<div class="ds ${color || ''}">${delta}</div>`);
+            html.push(`<div class="ds ${color || ''}">${delta === '' ? '&nbsp;' : delta}</div>`);
         }
         if (percent < 100) {
             html.push(`<div class="r" style="left:${percent}%"></div>`);
