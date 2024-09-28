@@ -639,14 +639,18 @@
         while (true) {
             if (_backgroundActions.length > 0) {
                 let [action, value] = _backgroundActions.shift();
-                await action(value);
+                try {
+                    await action(value);
+                } catch (e) {
+                    console.error(e);
+                }
             } else {
                 await new Promise(resolve => setTimeout(resolve, 100));
             }
         }
     }
     for (let i = 0; i < 1; i++) {
-        backgroundRunner();
+        backgroundRunner().catch(console.error);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1134,6 +1138,7 @@
         // build title
         let meetNameDict = new Map(data.meets.map(m => [m[data.meets.idx.meet], m[data.meets.idx.meetName]]));
         let meetDateDict = new Map(data.meets.map(m => [m[data.meets.idx.meet], m[data.meets.idx.date]]));
+        data.meetNameDict = meetNameDict;
 
         html.push(createDetailsPageTitle(data, meetDateDict));
 
@@ -1454,7 +1459,7 @@
 
         let canvas = document.getElementById('canvas');
         canvas.height = height + margin * 2;
-        canvas.width = width + margin * 2;
+        canvas.width = width + margin * 2 + 300;
 
         let ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1497,9 +1502,12 @@
         ctx.font = "14px Verdana";
         let tipRow;
         for (let [index, value] of values.entries()) {
+
+            ctx.fillStyle = colors[index];
+            ctx.fillText(eventStrs[index], 100 * index + 20, 0);
+
             let pre;
-            ctx.beginPath();
-            ctx.strokeStyle = ctx.fillStyle = colors[index];
+            let preTime;
             for (let row of value) {
                 let t = timeToInt(row[idx.time]);
                 let d = new Date(row[idx.date]);
@@ -1507,30 +1515,47 @@
                 let y = height - (t - fastest) / delta * height;
 
                 pre = pre || [x, y];
+
+                ctx.strokeStyle = ctx.fillStyle = colors[index];
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
                 ctx.moveTo(pre[0], pre[1]);
                 ctx.lineTo(x, y);
                 ctx.stroke();
-                pre = [x, y];
 
                 ctx.beginPath();
                 ctx.arc(x, y, 5, 0, 2 * Math.PI);
                 ctx.fill();
-                ctx.closePath();
 
                 if (!tipRow && ctx.isPointInPath(mouseX, mouseY)) {
                     tipRow = row;
                     mouseX = x;
                     mouseY = y;
                 }
-            }
 
-            ctx.fillText(eventStrs[index], 100 * index + 20, 0);
+                if (preTime && preTime < t) {
+                    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+                preTime = min(preTime, t);
+
+                pre = [x, y];
+            }
         }
 
-        ctx.fillStyle = 'blue';
         if (tipRow) {
-            ctx.fillText(tipRow[idx.time], mouseX + 10, mouseY - 7);
-            ctx.fillText(formatDate(tipRow[idx.date]), mouseX + 10, mouseY - 21);
+            ctx.fillStyle = ctx.strokeStyle = 'blue';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(mouseX, mouseY, 5, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.fillText(tipRow[idx.time], mouseX + 10, mouseY - 10);
+            ctx.fillText(formatDate(tipRow[idx.date]), mouseX + 10, mouseY - 10 - 17);
+            ctx.fillText(_eventList[tipRow[idx.event]].split(' ').pop(), mouseX + 80, mouseY - 10 - 17);
+            ctx.fillText(data.meetNameDict.get(tipRow[idx.meet]), mouseX + 10, mouseY - 10 - 2 * 17);
         }
     }
 
