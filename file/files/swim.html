@@ -681,7 +681,7 @@
 
         let hash = window.location.hash.substring(1);
         if (!hash) {
-            updateContent('Please enter swimmer name or club name<div><button onclick="clearCache()">Clear App Cache</div>');
+            updateContent(`Please enter the swimmer's name or the club name in the search box.`);
             return;
         }
 
@@ -694,7 +694,7 @@
         if (func) {
             await func(value);
         } else {
-            updateContent('Wrong action: ' + action);
+            window.location.replace('');
         }
     }
 
@@ -770,9 +770,9 @@
     async function settings(params) {
         let tabView = new TabView('settingsTabView');
 
-        tabView.addTab('General', 'await settingsGeneral()');
-        tabView.addTab('Advanced', 'await settingsAdvanced()');
-        tabView.addTab('About', 'await settingsAbout()');
+        tabView.addTab('General', '<button onclick="clearCache()">Clear App Cache</button>');
+        tabView.addTab('Advanced', '--empty--');
+        tabView.addTab('About', '--about--');
 
         updateContent(tabView.render());
     }
@@ -797,7 +797,7 @@
 
     async function search(name, all) {
         if (!name) {
-            updateContent('Please enter swimmer name or club name');
+            window.location.replace('');
             return;
         }
 
@@ -998,6 +998,10 @@
     // details functions
 
     async function details(pkey) {
+        if (!pkey || pkey === 'undefined') {
+            window.location.replace('');
+            return;
+        }
         let data = await loadDetails(Number(pkey));
         await showDetails(data);
     }
@@ -1036,7 +1040,7 @@
 
     async function loadEventDetails(pkey) {
         let events = await loadEvents(pkey);
-        if (!events) {
+        if (!events || events.length == 0) {
             return;
         }
         // time, age, std, lsc, club, date, event, meet, gender
