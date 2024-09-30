@@ -533,7 +533,7 @@
         let [left, right] = range;
         let html = [];
         html.push(left.getUTCFullYear(), '/', left.getUTCMonth() + 1, '/', left.getUTCDate());
-        if (left != right) {
+        if (left.toJSON() != right.toJSON()) {
             html.push(' - ');
             if (left.getUTCFullYear() != right.getUTCFullYear()) {
                 html.push(right.getUTCFullYear(), '/');
@@ -1311,14 +1311,14 @@
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', await createMeetTable(data));
-        tabView.addTab(buildClickableDiv('Progress Graph', `showGraph(null, '${data.swimmer.pkey}')`), createProgressGraph());
+        tabView.addTab(buildClickableDiv('Progress Graph', `showGraph(null, '${data.swimmer.pkey}')`), createProgressGraph(data.swimmer.pkey));
         html.push(tabView.render());
 
         html.push(addHide25Botton());
         updateContent(html.join(''));
     }
 
-    function createProgressGraph() {
+    function createProgressGraph(pkey) {
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
@@ -1328,7 +1328,7 @@
             let [d, s, c] = _eventList[i].split(' ');
             if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
                 html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
-                    ` onclick="showGraph(null, null, ${i})">${s}<br>${d}</button>`);
+                    ` onclick="showGraph(null, '${pkey}', ${i})">${s}<br>${d}</button>`);
             }
         }
 
@@ -1409,7 +1409,10 @@
             left = max(d, left);
         }
 
-        left = min(left, right);
+        if (left > right) {
+            console.error('Invalid birthday:' + pkey + '  [' + left.toJSON().substring(0, 10) + ' - ' + right.toJSON().substring(0, 10) + ']');
+        }
+        right = max(left, right);
 
         save('bday', pkey, [left, right]);
 
@@ -1531,7 +1534,7 @@
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
-            html.push('<td>', buildClickableDiv(dist, `showGraph(null, '${data.swimmer.pkey}',${event})`), '</td><td>',
+            html.push('<td>', buildClickableDiv(dist, `showGraph(null, '${data.swimmer.pkey}', ${event})`), '</td><td>',
                 time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
                 await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
@@ -1585,17 +1588,11 @@
         TabView.tab('detailsTabView', 3);
 
         canvas = canvas || document.getElementById('canvas');
-        if (!canvas) {
-            alert('Cannot find canvas');
-            return;
-        }
 
-        let data = canvas.data || await loadDetails(pkey);
-        canvas.data = data;
+        let data = canvas.graphData = canvas.graphData || await loadDetails(pkey);
         let idx = data.events.idx;
 
-        event = event || canvas.event || data.events[0][idx.event];
-        canvas.event = event;
+        event = canvas.graphEvent = event || canvas.graphEvent || data.events[0][idx.event];
 
         const height = 500;
         const margin = 50;
@@ -1801,7 +1798,7 @@
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
         if (values) {
-            let rank = caculateRank(values, pkey, timeInt);
+            let rank = calculateRank(values, pkey, timeInt);
             html.push(`<td><button onclick="go('rank', '${rankDataKey}')">${rank}</button></td>`);
         } else {
             let id = rankDataKey + '_' + pkey;
@@ -1830,12 +1827,12 @@
             return;
         }
 
-        let rank = caculateRank(values, pkey, timeInt);
+        let rank = calculateRank(values, pkey, timeInt);
 
         element.innerHTML = `<button onclick="go('rank', '${mapKey}')">${rank}</button>`;
     }
 
-    function caculateRank(values, pkey, timeInt) {
+    function calculateRank(values, pkey, timeInt) {
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
 
@@ -2043,7 +2040,7 @@
         for (let col of columnInfo) {
             for (let i = 1; i < col.length; ++i) {
                 let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
-                let action = `showGraph(null,'${pkey}',${evt})`;
+                let action = `showGraph(null, '${pkey}', ${evt})`;
                 html.push('<td>', buildClickableDiv(col[i], action), '</td>');
             }
         }
