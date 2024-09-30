@@ -387,6 +387,55 @@
     canvas {
         overflow: none;
     }
+
+    /* tab view */
+    .tabview {
+        margin: 0;
+        width: 100%;
+    }
+
+    .tabs {
+        margin: 0;
+        background-color: #DDD;
+        user-select: none;
+    }
+
+    .tab {
+        display: inline-block;
+        padding: 10px;
+        cursor: pointer;
+        margin: 0;
+        border: 1px solid #DDD;
+        border-bottom: 1px solid #000;
+        border-radius: 5px 5px 0 0;
+    }
+
+    .tab:hover {
+        background-color: #EEE;
+    }
+
+    .tabs>.selected {
+        background-color: #FFF;
+        border: 1px solid #000;
+        border-bottom: 1px solid #FFF;
+    }
+
+    .view {
+        margin: 0;
+    }
+
+    /* details page table base */
+    .content {
+        display: inline-block;
+        margin: 0;
+    }
+
+    /* details page tab title */
+    .tab p {
+        margin: 0;
+        min-width: 100px;
+        text-align: center;
+    }
 </style>
 
 <body>
@@ -507,12 +556,12 @@
             return standard.substring(1, standard.length - 1);
         }
 
-        let parts = standard.split(' ');
-        if (parseInt(parts[0]) > 1900) {
-            parts.shift();
-        }
-        standard = parts.join(' ');
         if (short) {
+            let parts = standard.split(' ');
+            if (parseInt(parts[0]) > 1900) {
+                parts.shift();
+            }
+            standard = parts.join(' ');
             if (_meetShortNames[standard]) {
                 standard = _meetShortNames[standard];
             }
@@ -666,6 +715,66 @@
     }
     for (let i = 0; i < 1; i++) {
         backgroundRunner().catch(console.error);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // tab view
+
+    class TabView {
+        constructor(id) {
+            this.id = id;
+            this.tabs = [];
+            this.views = [];
+        }
+
+        addTab(name, view) {
+            this.tabs.push(name);
+            this.views.push(view);
+        }
+
+        render() {
+            let html = [];
+
+            html.push(`<div class="tabview" id="${this.id}">`);
+
+            html.push('<div class="tabs">');
+            for (let i = 0; i < this.tabs.length; ++i) {
+                html.push(`<div class="tab${i == 0 ? ' selected' : ''}" onclick="TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
+            }
+            html.push('</div>');
+
+            for (let i = 0; i < this.views.length; ++i) {
+                html.push(`<div class="view ${i == 0 ? '' : 'hide'}">${this.views[i]}</div>`);
+            }
+
+            html.push('</div>');
+
+            return html.join('');
+        }
+
+        static tab(tabViewId, index) {
+            let tabs = document.querySelectorAll(`#${tabViewId}>.tabs>.tab`);
+            for (let i = 0; i < tabs.length; ++i) {
+                tabs[i].classList.toggle('selected', i == index);
+            }
+            let views = document.querySelectorAll(`#${tabViewId}>.view`);
+            for (let i = 0; i < views.length; ++i) {
+                views[i].classList.toggle('hide', i != index);
+            }
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // settings page
+
+    async function settings(params) {
+        let tabView = new TabView('settingsTabView');
+
+        tabView.addTab('General', 'await settingsGeneral()');
+        tabView.addTab('Advanced', 'await settingsAdvanced()');
+        tabView.addTab('About', 'await settingsAbout()');
+
+        updateContent(tabView.render());
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1186,14 +1295,11 @@
             }
         }
 
-        // build the best time table
-        html.push(await createBestTimeTable(data, fastRowList, rowInfo));
-
-        // build age best time table
-        html.push(createAgeBestTimeTable(data.events, fastRowList, rowInfo));
-
-        // build meet table
-        html.push(createMeetTable(data.events, meetDateDict, meetNameDict));
+        let tabView = new TabView('detailsTabView');
+        tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
+        tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data.events, fastRowList, rowInfo));
+        tabView.addTab('<p>Meets</p>', await createMeetTable(data.events, meetDateDict, meetNameDict));
+        html.push(tabView.render());
 
         updateContent(html.join(''));
     }
@@ -1315,7 +1421,7 @@
     }
 
     function buildPopup(text, popupText) {
-        if (!text || text == popupText) {
+        if (!text) {
             return '';
         }
 
@@ -1365,7 +1471,7 @@
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
         let meetStds = getMeetStandards(data.swimmer.age);
 
-        let html = ['<div><div style="display:inline-block"><h2>Personal Best</h2><table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div class="content"><h2>Personal Best</h2><table style="border-collapse:collapse"><tbody>'];
 
         // create the table header
         let header = createBestTimeTableHeader(data);
@@ -1432,7 +1538,7 @@
             html.push('</tr>');
         }
 
-        html.push('</tbody></table></div></div>');
+        html.push('</tbody></table></div>');
 
         return html.join('');
     }
@@ -1468,8 +1574,8 @@
             let value = data.events.filter(e => e[idx.event] == evt);
             for (let row of value) {
                 let t = timeToInt(row[idx.time]);
-                slowest = max(slowest, t);
-                fastest = min(fastest, t);
+                slowest = Math.max(slowest, t);
+                fastest = Math.min(fastest, t);
                 earliest = min(earliest, new Date(row[idx.date]));
             }
             eventStrs.push(eventStr);
@@ -1606,15 +1712,17 @@
 
             let meetName = data.meetNameDict.get(tipRow[idx.meet]);
             let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
+            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]);
 
             ctx.beginPath();
             ctx.fillStyle = "#777C";
-            ctx.roundRect(mouseX + 5, mouseY - 60, max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width) + 10, 58, 5);
+            ctx.roundRect(mouseX + 5, mouseY - 60,
+                Math.max(ctx.measureText(timeStd).width, Math.max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width)) + 10, 58, 5);
             ctx.fill();
 
             ctx.beginPath();
             ctx.fillStyle = '#FFF';
-            ctx.fillText(tipRow[idx.time], mouseX + 10, mouseY - 10);
+            ctx.fillText(timeStd, mouseX + 10, mouseY - 10);
             ctx.fillText(dateAge, mouseX + 10, mouseY - 10 - 17);
             ctx.fillText(meetName, mouseX + 10, mouseY - 10 - 2 * 17);
             ctx.fill();
@@ -1714,7 +1822,7 @@
         // 0     1    2    3    4     5     6      7     8
 
         let idx = events.idx;
-        let html = ['<div><div style="display:inline-block"><h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
 
         // get all age column
         let ages = new Set(events.map(e => e[idx.age]));
@@ -1748,7 +1856,7 @@
                 if (bestTimeEvent) {
                     let preBestTime = findPreBestTimeByAge(events, event, age);
                     let bestTime = bestTimeEvent[idx.time];
-                    let std = bestTimeEvent[idx.std];
+                    let std = formatStandard(bestTimeEvent[idx.std]);
                     let short = formatStandard(std, true);
                     let date = formatDate(bestTimeEvent[idx.date]);
                     let cls = !preBestTime ? '' : timeToInt(bestTime) < timeToInt(preBestTime) ? 'dp' : 'ad';
@@ -1760,7 +1868,7 @@
             html.push('</tr>');
         }
 
-        html.push('</tbody></table></div></div>');
+        html.push('</tbody></table></div>');
 
         return html.join('');
     }
@@ -1811,7 +1919,7 @@
             courses[course].push(row);
         }
 
-        let html = ['<div><div style="display:inline-block"><h2>Meets</h2>'];
+        let html = ['<div class="content"><h2>Meets</h2>'];
 
         // create the meet tables
         for (let course of _courseOrder) {
@@ -1821,7 +1929,7 @@
             }
         }
 
-        html.push('</div></div>');
+        html.push('</div>');
 
         return html.join('');
     }
@@ -1933,7 +2041,7 @@
                             let delta = cell[idx.delta];
                             let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
                             let time = cell[idx.time];
-                            let std = cell[idx.std];
+                            let std = formatStandard(cell[idx.std]);
                             let short = formatStandard(std, true);
 
                             html.push(buildTimeCell(time, buildPopup(short, std), formatDelta(delta), style));
@@ -2085,7 +2193,7 @@
         return club;
     }
 
-    async function loadSwimmerList(lsc, clubName, ageKey) {
+    async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
         let [from, to] = decodeAgeKey(ageKey);
 
         let bodyObj = {
@@ -2213,7 +2321,7 @@
 
         let clubName = await loadClubName(lsc, club);
 
-        let swimmerList = await loadSwimmerList(lsc, clubName, ageKey);
+        let swimmerList = await loadClubAgeSwimmerList(lsc, clubName, ageKey);
         // pkey, age
         // 0     1
 
