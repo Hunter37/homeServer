@@ -1211,7 +1211,8 @@
 
         let html = [];
 
-        let [left, right] = calculateBrithday(data.events, meetDateDict, data.swimmer.age, data.swimmer.pkey);
+        let [left, right] = calculateBirthday(data.events, meetDateDict, data.swimmer.age, data.swimmer.pkey);
+        data.birthday = [left, right];
 
         console.log(data.swimmer);
         let alias = data.swimmer.firstName;
@@ -1225,7 +1226,7 @@
 
         let gender = data.events[0][data.events.idx.gender];
         html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', convetToGenderString(gender), '</span><span>',
-            data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Brithday: ', formatDateRange([left, right]),
+            data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ', formatDateRange([left, right]),
             '</span><span>Total Event: ', data.events.length, '</span></div>');
 
         return html.join('');
@@ -1246,7 +1247,7 @@
         loadContent();
     }
 
-    function calculateBrithday(events, meetDateDict, age, pkey) {
+    function calculateBirthday(events, meetDateDict, age, pkey) {
         // time, age, std, lsc, club, date, event, meet, gender
         // 0     1    2    3    4     5     6      7     8
 
@@ -1364,7 +1365,7 @@
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
         let meetStds = getMeetStandards(data.swimmer.age);
 
-        let html = ['<table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div><div style="display:inline-block"><h2>Personal Best</h2><table style="border-collapse:collapse"><tbody>'];
 
         // create the table header
         let header = createBestTimeTableHeader(data);
@@ -1431,7 +1432,7 @@
             html.push('</tr>');
         }
 
-        html.push('</tbody></table>');
+        html.push('</tbody></table></div></div>');
 
         return html.join('');
     }
@@ -1528,9 +1529,28 @@
 
         ctx.stroke();
 
+        // draw age dots line and age text
+        let [left, right] = data.birthday;
+        let d = new Date(left);
+        for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
+            let x = (d - earliest) / duration * width;
+            if (x < 1) {
+                continue;
+            }
+            ctx.beginPath();
+            ctx.strokeStyle = ctx.fillStyle = 'lightblue';
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+            ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
+            ctx.fill();
+        }
+
         // draw the cruve and dots, then find the tip row
         const colors = ['#0AF', '#A66', '#0C4'];
         ctx.font = "14px Verdana";
+        ctx.setLineDash([]);
         let tipRow;
         for (let [index, value] of values.entries()) {
 
@@ -1694,7 +1714,7 @@
         // 0     1    2    3    4     5     6      7     8
 
         let idx = events.idx;
-        let html = ['<h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div><div style="display:inline-block"><h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
 
         // get all age column
         let ages = new Set(events.map(e => e[idx.age]));
@@ -1740,7 +1760,7 @@
             html.push('</tr>');
         }
 
-        html.push('</tbody></table>');
+        html.push('</tbody></table></div></div>');
 
         return html.join('');
     }
@@ -1791,7 +1811,7 @@
             courses[course].push(row);
         }
 
-        let html = ['<h2>Meets</h2>'];
+        let html = ['<div><div style="display:inline-block"><h2>Meets</h2>'];
 
         // create the meet tables
         for (let course of _courseOrder) {
@@ -1800,6 +1820,8 @@
                 html.push(createMeetTableByCourse(course, evts, meetDateDict, meetNameDict));
             }
         }
+
+        html.push('</div></div>');
 
         return html.join('');
     }
