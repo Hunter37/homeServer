@@ -14,7 +14,7 @@
     }
 
     .wt {
-        background: #FFF;
+        background: #FFF !important;
     }
 
     div {
@@ -237,6 +237,10 @@
         text-align: center;
     }
 
+    .bold {
+        font-weight: bold;
+    }
+
     td .dp {
         color: #284
     }
@@ -364,13 +368,13 @@
         height: 100%;
         margin: 0;
         overflow: none;
-        background-color: #0004
+        background-color: #0006;
     }
 
     /* Modal Content/Box */
     .mc {
         background-color: #FFF;
-        margin: 10% auto;
+        margin: 5% auto;
         width: 80%;
         overflow: auto;
         border: 1px solid #000;
@@ -387,7 +391,7 @@
 
 <body>
     <div class="row">
-        <input id="input" autofocus style="width:100%; max-width: 600px" class="big" />
+        <input id="input" autofocus style="width:100%; max-width: 300px" class="big" />
         <button onclick="onSearch()" style="width:100px" class="big">SEARCH</button>
         <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
     </div>
@@ -495,18 +499,25 @@
     }
 
     function formatStandard(standard, short) {
+        if (standard == '"Slower than B"') {
+            return '';
+        }
+
         if (standard.startsWith('"')) {
-            standard = '';
-        } else {
-            let parts = standard.split(' ')
-            parts.shift()
-            standard = parts.join(' ');
-            if (short) {
-                if (_meetShortNames[standard]) {
-                    standard = _meetShortNames[standard];
-                }
+            return standard.substring(1, standard.length - 1);
+        }
+
+        let parts = standard.split(' ');
+        if (parseInt(parts[0]) > 1900) {
+            parts.shift();
+        }
+        standard = parts.join(' ');
+        if (short) {
+            if (_meetShortNames[standard]) {
+                standard = _meetShortNames[standard];
             }
         }
+
         return standard
     }
 
@@ -523,8 +534,12 @@
         return age <= 10 ? '10U' : age > 18 ? '19O' : (age - 1) + '-' + age;
     }
 
-    function getGenderString(gender) {
+    function convetToGenderString(gender) {
         return ['', 'Female', 'Male'][gender] || 'Unknown';
+    }
+
+    function convertToGenderCode(genderStr) {
+        return genderStr == 'Male' ? 2 : 1;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -920,6 +935,9 @@
         for (let row of events) {
             row[events.idx.date] = row[events.idx.date].substring(0, 10);
         }
+        let idx = events.idx;
+        events.sort((a, b) => a[idx.date] == b[idx.date] ? timeToInt(b[idx.time]) - timeToInt(a[idx.time]) : a[idx.date] < b[idx.date] ? -1 : 1);
+
 
         let meets = new Set(events.map(e => e[events.idx.meet]));
 
@@ -1206,9 +1224,9 @@
         html.push(addHide25Botton());
 
         let gender = data.events[0][data.events.idx.gender];
-        html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', getGenderString(gender), '</span><span>',
+        html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', convetToGenderString(gender), '</span><span>',
             data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Brithday: ', formatDateRange([left, right]),
-            '</span><span>Total Event:', data.events.length, '</span></div>');
+            '</span><span>Total Event: ', data.events.length, '</span></div>');
 
         return html.join('');
     }
@@ -1303,6 +1321,28 @@
         return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
     }
 
+    function createBestTimeTableHeader(data) {
+        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th><th>', buildPopup('Time', 'Best Time'),
+            '</th ><th>', buildPopup('Date', 'Event Date'), '</th><th>', buildPopup('Count', 'Total Event Count'), '</th><th>',
+            buildPopup(data.swimmer.club, data.swimmer.clubName), '</th><th>', buildPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)),
+            '</th><th>', buildPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th>', buildPopup('US', 'USA Swimming'), '</th>'];
+
+        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+        if (data.swimmer.age < 19) {
+            for (let std of stdName) {
+                html.push('<th>', std, '</th>');
+            }
+        }
+
+        let meetStds = getMeetStandards(data.swimmer.age);
+        for (let std of meetStds) {
+            html.push('<th>', buildPopup(std.short, std.meet), '</th>');
+        }
+
+        html.push('</tr>');
+        return html.join('');
+    }
+
     async function createBestTimeTable(data, fastRowList, rowInfo) {
         // swimmer
         // firstName, lastName, age, clubName, lsc, pkey, club, zone
@@ -1320,27 +1360,15 @@
 
         let idx = data.events.idx;
         let ageKey = getAgeKey(data.swimmer.age);
-        let genderStr = getGenderString(fastRowList[0][idx.gender]);
+        let genderStr = convetToGenderString(fastRowList[0][idx.gender]);
+        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+        let meetStds = getMeetStandards(data.swimmer.age);
 
         let html = ['<table style="border-collapse:collapse"><tbody>'];
 
         // create the table header
-        html.push('<tr><th>Course</th><th>Stroke</th><th>Dist</th><th>Time</th><th>Date</th><th>CT</th><th>',
-            data.swimmer.club, '</th><th>', data.swimmer.lsc, '</th><th>', data.swimmer.zone, '</th><th>USA</th>');
-
-        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-        if (data.swimmer.age < 19) {
-            for (let std of stdName) {
-                html.push('<th>', std, '</th>');
-            }
-        }
-
-        let meetStds = getMeetStandards(data.swimmer.age);
-        for (let std of meetStds) {
-            html.push('<th>', buildPopup(std.short, std.meet), '</th>');
-        }
-
-        html.push('</tr>');
+        let header = createBestTimeTableHeader(data);
+        html.push(header);
 
         // create the best time table body
         for (let i = 0; i < fastRowList.length; ++i) {
@@ -1353,7 +1381,7 @@
             let [dist, stroke, course] = eventStr.split(' ');
 
             if (rowInfo[i].length == 2 && i > 0) {
-                html.push('<tr><td colspan="50" class="wt"></td></tr>');
+                html.push(header);
             }
 
             html.push(`<tr class="d${dist} ${stroke}">`);
@@ -1361,7 +1389,7 @@
                 html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
             }
             if (rowInfo[i].length > 0) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${stroke}</td>`);
+                html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
             // count the event for the swimmer
@@ -1450,10 +1478,11 @@
         earliest.setMonth(earliest.getMonth() - 1);
         earliest.setDate(1);
         latest.setMonth(latest.getMonth() + 3);
-        fastest *= 0.95;
-        slowest *= 1.05;
+        let delta = (slowest - fastest) * 0.1;
+        slowest += delta;
+        fastest = Math.floor((fastest - delta) / 100) * 100;
 
-        let delta = slowest - fastest;
+        delta = slowest - fastest;
         let duration = latest - earliest;
         let width = duration / _1DayInMilliSeconds / 3;
 
@@ -1487,12 +1516,14 @@
 
         // draw the y-scale
         let interval = (Math.floor(delta / 1000) || 1) * 100;
-        for (let t = Math.ceil(fastest / 100) * 100; t <= slowest; t += interval) {
+        for (let t = fastest; t <= slowest; t += interval) {
             let y = height - (t - fastest) / delta * height;
-            ctx.moveTo(0, y);
-            ctx.lineTo(5, y);
+            if (t > fastest) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(5, y);
+            }
             let time = formatTime(t).slice(0, -3);
-            ctx.fillText(time, -10 - 5.7 * time.length, y + 3);
+            ctx.fillText(time, -5 - ctx.measureText(time).width, y + 3);
         }
 
         ctx.stroke();
@@ -1503,11 +1534,12 @@
         let tipRow;
         for (let [index, value] of values.entries()) {
 
-            ctx.fillStyle = colors[index];
-            ctx.fillText(eventStrs[index], 100 * index + 20, 0);
+            ctx.strokeStyle = ctx.fillStyle = colors[index];
+            ctx.fillText(eventStrs[index], 100 * index + 50, -15);
 
             let pre;
             let preTime;
+            let highLight = [];
             for (let row of value) {
                 let t = timeToInt(row[idx.time]);
                 let d = new Date(row[idx.date]);
@@ -1515,9 +1547,6 @@
                 let y = height - (t - fastest) / delta * height;
 
                 pre = pre || [x, y];
-
-                ctx.strokeStyle = ctx.fillStyle = colors[index];
-                ctx.lineWidth = 1;
 
                 ctx.beginPath();
                 ctx.moveTo(pre[0], pre[1]);
@@ -1535,27 +1564,40 @@
                 }
 
                 if (preTime && preTime < t) {
-                    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-                    ctx.beginPath();
-                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
-                    ctx.fill();
+                    highLight.push([x, y]);
                 }
                 preTime = min(preTime, t);
-
                 pre = [x, y];
+            }
+
+            ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+            for (let [x, y] of highLight) {
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fill();
             }
         }
 
         if (tipRow) {
-            ctx.fillStyle = ctx.strokeStyle = 'blue';
-            ctx.lineWidth = 2;
             ctx.beginPath();
+            ctx.strokeStyle = 'blue';
             ctx.arc(mouseX, mouseY, 5, 0, 2 * Math.PI);
             ctx.stroke();
+
+            let meetName = data.meetNameDict.get(tipRow[idx.meet]);
+            let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
+
+            ctx.beginPath();
+            ctx.fillStyle = "#777C";
+            ctx.roundRect(mouseX + 5, mouseY - 60, max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width) + 10, 58, 5);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.fillStyle = '#FFF';
             ctx.fillText(tipRow[idx.time], mouseX + 10, mouseY - 10);
-            ctx.fillText(formatDate(tipRow[idx.date]), mouseX + 10, mouseY - 10 - 17);
-            ctx.fillText(_eventList[tipRow[idx.event]].split(' ').pop(), mouseX + 80, mouseY - 10 - 17);
-            ctx.fillText(data.meetNameDict.get(tipRow[idx.meet]), mouseX + 10, mouseY - 10 - 2 * 17);
+            ctx.fillText(dateAge, mouseX + 10, mouseY - 10 - 17);
+            ctx.fillText(meetName, mouseX + 10, mouseY - 10 - 2 * 17);
+            ctx.fill();
         }
     }
 
@@ -1634,6 +1676,15 @@
         return rank;
     }
 
+    function createAgeBestTimeTableHeader(uniqueAges) {
+        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th>'];
+        for (let age of uniqueAges) {
+            html.push('<th>', age, '</th>');
+        }
+        html.push('</tr>');
+        return html.join('');
+    }
+
     function createAgeBestTimeTable(events, fastRowList, rowInfo) {
         // events
         // time, age, std, lsc, club, date, event, meet, gender
@@ -1651,11 +1702,8 @@
         uniqueAges.sort((a, b) => b - a);
 
         // create the table header
-        html.push('<tr><th>Course</th><th>Stroke</th><th>Dist</th>');
-        for (let age of uniqueAges) {
-            html.push('<th>', age, '</th>');
-        }
-        html.push('</tr>');
+        let header = createAgeBestTimeTableHeader(uniqueAges);
+        html.push(header);
 
         for (let i = 0; i < fastRowList.length; ++i) {
             let row = fastRowList[i];
@@ -1663,7 +1711,7 @@
             let [dist, stroke, course] = _eventList[event].split(' ');
 
             if (rowInfo[i].length == 2 && i > 0) {
-                html.push('<tr><td colspan="50" class="wt"></td></tr>');
+                html.push(header);
             }
 
             html.push(`<tr class="d${dist} ${stroke}">`);
@@ -1671,7 +1719,7 @@
                 html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
             }
             if (rowInfo[i].length > 0) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${stroke}</td>`);
+                html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
             html.push('<td>', buildClickableDiv(dist, `showGraph(${event})`), '</td>');
@@ -1980,7 +2028,7 @@
             return values;
         }
 
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         if (club) {
             values = await loadRankDataByClub(key);
@@ -2137,7 +2185,7 @@
     }
 
     async function loadRankDataByClub(key) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let year = getSessionYear();
 
@@ -2211,7 +2259,7 @@
                     dim: "[UsasSwimTime.EventCompetitionCategoryKey]",
                     datatype: "numeric",
                     filter: {
-                        equals: gender == "Male" ? 2 : 1
+                        equals: convertToGenderCode(genderStr)
                     },
                     panel: "scope"
                 },
@@ -2276,7 +2324,7 @@
     }
 
     async function LoadRankDataAll(mapKey) {
-        let [gender, ageKey, eventKey, zone, lsc, club] = decodeRankMapKey(mapKey);
+        let [genderStr, ageKey, eventKey, zone, lsc, club] = decodeRankMapKey(mapKey);
 
         let year = getSessionYear();
 
@@ -2353,7 +2401,7 @@
                     dim: "[EventCompetitionCategory.EventCompetitionCategoryKey]",
                     datatype: "numeric",
                     filter: {
-                        equals: gender == "Male" ? 2 : 1
+                        equals: convertToGenderCode(genderStr)
                     },
                     panel: "scope"
                 },
@@ -2519,7 +2567,46 @@
 
         let meetDate = localStorage.getItem('meetDate') || '';
         let inputType = oldBrowser ? 'text' : 'date';
-        html.push(`<div class="row"><div>Meet date:</div><input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"></div>`);
+        html.push('<div class="row"><div>Meet date:</div>',
+            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"><div>Meet cut:</div>`);
+
+        // prepare the standard options
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [from, to] = decodeAgeKey(ageKey);
+        let options = [];
+        let set = new Set();
+        for (let age = from; age <= to; ++age) {
+            let meets = getMeetStandards(age);
+            for (let [i, meet] of meets.entries()) {
+                let std = meet[genderStr].get(_eventList[event]);
+                if (std && !set.has(meet)) {
+                    set.add(meet);
+                    let opt = [meet.short, meet.age[0], meet.age[1], std[0]];
+                    let index = options.length;
+                    for (let o of options) {
+                        if (o[0].includes(meet.short)) {
+                            index = i + 1;
+                            break;
+                        }
+                    }
+                    options.splice(index, 0, opt);
+                }
+            }
+        }
+
+        // generate the standard selection
+        for (let [i, cls] of ['gn', 'bl', 'rd'].entries()) {
+            html.push(`<select class="${cls}" onchange="onStandardChange(${i}, this.value, '${key}')"><option></option>`);
+            let standard = JSON.parse(localStorage.getItem('meetStds' + i) || '""');
+            for (let option of options) {
+                let [short, from, to, std] = option;
+                let value = `${short}|${from}|${to}`;
+                let selected = value == standard ? ' selected' : '';
+                html.push(`<option value="${value}"${selected}>${short} (${from == to ? from : from + '-' + to}) = ${std}</option>`);
+            }
+            html.push('</select>');
+        }
+        html.push('</div>');
 
         html.push('<div id="rank-table">', await showRankTable(values, key), '</div>');
 
@@ -2527,14 +2614,23 @@
     }
 
     async function onMeetDateChange(value, key) {
+        localStorage.setItem('meetDate', value);
+
         let table = document.getElementById('rank-table');
         let values = await loadRankData(key);
-        localStorage.setItem('meetDate', value);
+        table.innerHTML = await showRankTable(values, key);
+    }
+
+    async function onStandardChange(index, value, key) {
+        localStorage.setItem('meetStds' + index, JSON.stringify(value));
+
+        let table = document.getElementById('rank-table');
+        let values = await loadRankData(key);
         table.innerHTML = await showRankTable(values, key);
     }
 
     function showEventButtons(key) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
@@ -2548,7 +2644,7 @@
             let [d, s, c] = _eventList[i].split(' ');
             if (c == course && d != '_' && (d != '25' || !hide25)) {
                 html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
-                    ` onclick="go('rank', '${getRankDataKey(gender, i, ageKey, zone, lsc, club)}')">${s}<br>${d}</button>`);
+                    ` onclick="go('rank', '${getRankDataKey(genderStr, i, ageKey, zone, lsc, club)}')">${s}<br>${d}</button>`);
             }
         }
 
@@ -2557,7 +2653,7 @@
     }
 
     function showRankTableTitle(values, key) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
@@ -2574,15 +2670,27 @@
         } else {
             html.push('USA');
         }
-        html.push('</h2><h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', gender, '</h3>');
+        html.push('</h2><h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', genderStr, '</h3>');
 
         return html.join('');
     }
 
     async function showRankTable(values, key) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
         let meetDate = localStorage.getItem('meetDate');
+        let standards = [];
+        for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
+            let [short, f, t] = JSON.parse(localStorage.getItem('meetStds' + i) || '"||"').split('|');
+            let meet = getMeetStandards(to).filter(m => m.short == short && m.age[0] == f && m.age[1] == t);
+            if (meet && meet.length > 0) {
+                let std = meet[0][genderStr].get(_eventList[event]);
+                if (std) {
+                    standards.push([std, clr]);
+                }
+            }
+        }
+        standards.sort((a, b) => a[0][1] - b[0][1]);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
         // 0        1     2     3     4          5         6    7         8      9     10
@@ -2596,7 +2704,7 @@
 
         html.push('<table style="border-collapse:collapse"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
         let index = 0;
-        let stdKeyBase = `${gender} ${ageKey} ${_eventList[event]}`;
+        let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
         for (let row of values) {
 
             let range = await load('bday', row[idx.pkey], _10YearsInSec);
@@ -2620,8 +2728,15 @@
                 maxStd = std;
                 maxStdInt = stdInt;
             }
+            let color = '';
+            for (let [std, clr] of standards) {
+                if (timeInt <= std[1]) {
+                    color = ` class="${clr}"`;
+                    break;
+                }
+            }
 
-            html.push('<tr><td>', ++index, `</td><td class="left"><button onclick="go('details', ${row[idx.pkey]})">`,
+            html.push(`<tr${color}><td>`, ++index, `</td><td class="left"><button onclick="go('details', ${row[idx.pkey]})">`,
                 row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
                 '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', formatDateRange(range), '</td><td class="left">',
                 row[idx.clubName], '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
@@ -2631,7 +2746,7 @@
     }
 
     function getAgeGroupSelections(key, button) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [];
         for (let g of ['Female', 'Male']) {
@@ -2641,7 +2756,7 @@
             for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
                 let pageKey = getRankDataKey(g, event, ag, zone, lsc, club);
                 if (!button) {
-                    let selected = ag == ageKey && g == gender ? ' selected' : '';
+                    let selected = ag == ageKey && g == genderStr ? ' selected' : '';
                     html.push(`<option value="${pageKey}"${selected}>${ag} ${g}</option>`);
                 } else {
                     html.push(`<button onclick="go('rank', '${pageKey}')">${ag}<br/>${g}</button>`);
@@ -2655,14 +2770,14 @@
     }
 
     function getCourseSelections(key, button) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let html = [];
         let [dist, style, course] = _eventList[event].split(' ');
         for (let cs of _courseOrder) {
             let newEvent = fixDistance([dist, style, cs].join(' '));
             let newEventCode = _eventIndexMap.get(newEvent);
-            let pageKey = getRankDataKey(gender, newEventCode, ageKey, zone, lsc, club);
+            let pageKey = getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, club);
             if (newEventCode) {
                 if (!button) {
                     html.push(`<option value="${pageKey}"${course == cs ? ' selected' : ''}>${cs}</option>`);
@@ -2676,15 +2791,15 @@
     }
 
     async function loadClubSelections(key) {
-        let [gender, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
-        let html = [`<option class="selected" value="${getRankDataKey(gender, event, ageKey)}">USA</option>`];
+        let html = [`<option class="selected" value="${getRankDataKey(genderStr, event, ageKey)}">USA</option>`];
 
         html.push(`<optgroup label="Zone">`)
         for (let zoneCode of ['Central', 'Eastern', 'Southern', 'Western']) {
             let selected = !lsc && zoneCode == zone ? ' selected' : '';
             let cls = zone == zoneCode ? ' class="selected"' : '';
-            html.push(`<option ${cls}value="${getRankDataKey(gender, event, ageKey, zoneCode)}"${selected}>${zoneCode}</option>`);
+            html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zoneCode)}"${selected}>${zoneCode}</option>`);
         }
         html.push('</optgroup>');
 
@@ -2694,7 +2809,7 @@
                 if (zoneCode == zone) {
                     let selected = !club && lscCode == lsc ? ' selected' : '';
                     let cls = lsc == lscCode ? ' class="selected"' : '';
-                    html.push(`<option ${cls}value="${getRankDataKey(gender, event, ageKey, zone, lscCode)}"${selected}>${lscName} (${lscCode})</option>`);
+                    html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zone, lscCode)}"${selected}>${lscName} (${lscCode})</option>`);
                 }
             }
             html.push('</optgroup>');
@@ -2707,7 +2822,7 @@
             for (let [clubName, clubCode] of clubDict) {
                 let selected = clubCode == club ? ' selected' : '';
                 let cls = club == clubCode ? ' class="selected"' : '';
-                html.push(`<option ${cls}value="${getRankDataKey(gender, event, ageKey, zone, lsc, clubCode)}"${selected}>${clubName} (${clubCode})</option>`);
+                html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubCode)}"${selected}>${clubName} (${clubCode})</option>`);
             }
             html.push('</optgroup>');
         }
