@@ -1335,7 +1335,7 @@
 
         html.push('</div><h2 id="graph-title"></h2></div></div>');
 
-        html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" class="hide"></canvas>`);
+        html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" onwheel="wheelGraph(this, event)" class="hide"></canvas>`);
         return html.join('');
     }
 
@@ -1586,8 +1586,22 @@
     }
 
     function UpdateGraphTitle(dist, stroke) {
-        const map = {500: "400/500", 1000: "800/1000", 1650: "1500/1650"};
+        const map = { 500: "400/500", 1000: "800/1000", 1650: "1500/1650" };
         document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap[stroke]}`;
+    }
+
+    async function wheelGraph(canvas, event) {
+        if (!event.ctrlKey) {
+            return;
+        }
+        event.preventDefault();
+
+        let factor = canvas.zoomFactor || 1;
+        factor += event.deltaY > 0 ? -0.1 : 0.1;
+        factor = Math.max(0.3, Math.min(7, factor));
+        canvas.zoomFactor = factor;
+
+        await showGraph(canvas)
     }
 
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
@@ -1641,7 +1655,7 @@
 
         delta = slowest - fastest;
         let duration = latest - earliest;
-        let width = duration / _1DayInMilliSeconds / 3;
+        let width = (duration / _1DayInMilliSeconds / 3) * (canvas.zoomFactor || 1);
 
         canvas.height = height + margin * 2;
         canvas.width = width + margin * 2 + 300;
@@ -1649,7 +1663,7 @@
         let ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.translate(margin, margin);
-        ctx.font = "12px Verdana";
+        ctx.font = "14px Verdana";
 
         // draw the axis
         ctx.strokeStyle = 'black';
@@ -1704,7 +1718,7 @@
 
         // draw the cruve and dots, then find the tip row
         const colors = ['#0AF', '#A66', '#0C4'];
-        ctx.font = "14px Verdana";
+        ctx.font = "16px Verdana";
         ctx.setLineDash([]);
         let tipRow;
         let topTextIndex = 0;
@@ -1712,7 +1726,7 @@
 
             ctx.strokeStyle = ctx.fillStyle = colors[index];
             if (value.length > 0) {
-                ctx.fillText(eventStrs[index], 100 * topTextIndex++ + 50, -15);
+                ctx.fillText(eventStrs[index], 130 * topTextIndex++ + 50, -15);
             }
 
             let pre;
@@ -1768,15 +1782,15 @@
 
             ctx.beginPath();
             ctx.fillStyle = "#777C";
-            ctx.roundRect(mouseX + 5, mouseY - 60,
-                Math.max(ctx.measureText(timeStd).width, Math.max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width)) + 10, 58, 5);
+            ctx.roundRect(mouseX + 5, mouseY - 70,
+                Math.max(ctx.measureText(timeStd).width, Math.max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width)) + 10, 66, 5);
             ctx.fill();
 
             ctx.beginPath();
             ctx.fillStyle = '#FFF';
             ctx.fillText(timeStd, mouseX + 10, mouseY - 10);
-            ctx.fillText(dateAge, mouseX + 10, mouseY - 10 - 17);
-            ctx.fillText(meetName, mouseX + 10, mouseY - 10 - 2 * 17);
+            ctx.fillText(dateAge, mouseX + 10, mouseY - 10 - 20);
+            ctx.fillText(meetName, mouseX + 10, mouseY - 10 - 2 * 20);
             ctx.fill();
         }
     }
