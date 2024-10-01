@@ -14,6 +14,7 @@ import (
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/swim":                mainPageHandler,
+	"/swim1":               main1PageHandler,
 	"/swim/settings":       settingsPageHandler,
 	"/swim/search":         searchHandler,
 	"/swim/birthday":       birthdayHandler,
@@ -37,6 +38,15 @@ func SwimHandler(writer http.ResponseWriter, req *http.Request) {
 // mainPageHandler handle the main html page
 func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
 	body, err := storage.File.Read("swim/html/swim.html")
+	utils.LogError(err)
+
+	writer.Header().Set("Content-Type", "text/html")
+	utils.GzipWrite(writer, body, http.StatusOK)
+}
+
+// mainPageHandler handle the main html page
+func main1PageHandler(writer http.ResponseWriter, req *http.Request) {
+	body, err := storage.File.Read("swim/html/swim1.html")
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")

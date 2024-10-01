@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Swim Info</title>
+</head>
+<style>
+    h1, h2, h3, .center {
+        text-align: center;
+    }
+
+    div {
+        margin: 10px;
+        font: 14px Verdana;
+    }
+
+    td, th {
+        border: 1px solid black;
+        padding: 4px;
+    }
+
+    td {
+        white-space: nowrap;
+        text-align: right;
+    }
+
+    td > a, td > button {
+        padding: 0 5px;
+        display: inline-block;
+        width: 100%;
+        text-decoration: underline;
+        background: #0000;
+        cursor: pointer;
+        box-sizing: border-box;
+    }
+
+    td * {
+        text-align: right;
+    }
+
+    button {
+        border: 0;
+        font: 14px Verdana;
+        color: inherit;
+    }
+
+    div.hide {
+        display: none;
+    }
+
+    .big, select.gn, select.bl, select.rd {
+        font-size: 16px;
+    }
+
+    .left, .left * {
+        text-align: left;
+    }
+
+    .row {
+        white-space: nowrap;
+    }
+
+    .row > * {
+        margin: auto 2px;
+        display: inline-block;
+    }
+
+    .container {
+        display: inline-block;
+    }
+
+    .match-size {
+        display: flex;
+    }
+
+    .match-size > div {
+        flex-grow: 1;
+        width: 0;
+    }
+
+    .match-size span {
+        display: inline-block;
+        padding: 5px 10px;
+    }
+
+    .match-size button {
+        padding: 3px 5px;
+        margin: 5px 7px;
+    }
+
+    tr:nth-child(odd) {
+        background-color: #0000;
+    }
+
+    tr:nth-child(even) {
+        background-color: #0002;
+    }
+
+    tr.d25 {
+        background-color: inherit;
+    }
+
+    .hd.free {
+        background-color: #FDD;
+    }
+
+    .d50.free {
+        background-color: #FF000030;
+    }
+
+    .d100.free {
+        background-color: #FF000028;
+    }
+
+    .d200.free {
+        background-color: #FF000020;
+    }
+
+    .d400.free, .d500.free {
+        background-color: #FF000018;
+    }
+
+    .d800.free, .d1000.free {
+        background-color: #FF000010;
+    }
+
+    .d1500.free, .d1650.free {
+        background-color: #FF000008;
+    }
+
+    .hd.back {
+        background-color: #CEF;
+    }
+
+    .d50.back {
+        background-color: #0AF4;
+    }
+
+    .d100.back {
+        background-color: #0AF3;
+    }
+
+    .d200.back {
+        background-color: #0AF2;
+    }
+
+    .hd.breast {
+        background-color: #DFD;
+    }
+
+    .d50.breast {
+        background-color: #0F74;
+    }
+
+    .d100.breast {
+        background-color: #0F73;
+    }
+
+    .d200.breast {
+        background-color: #0F72;
+    }
+
+    .hd.fly {
+        background-color: #FFD;
+    }
+
+    .d50.fly {
+        background-color: #FF03;
+    }
+
+    .d100.fly {
+        background-color: #FF02;
+    }
+
+    .d200.fly {
+        background-color: #FF01;
+    }
+
+    .hd.im {
+        background-color: #BFF;
+    }
+
+    .d100.im {
+        background-color: #0FF6;
+    }
+
+    .d200.im {
+        background-color: #0FF4;
+    }
+
+    .d400.im {
+        background-color: #0FF2;
+    }
+
+    .age {
+        background-color: #DDD;
+        font-weight: bold;
+        text-align: center;
+    }
+
+    .ct {
+        position: relative;
+        padding: 2px 4px;
+    }
+
+    .ct > .std, .ct > .dd {
+        user-select: none;
+        position: absolute;
+        z-index: -1;
+        bottom: 0;
+        left: 0;
+        margin: 1px 2px;
+        color: #555;
+        font-size: x-small;
+    }
+
+    .ct > .dd {
+        right: 0;
+    }
+
+    .ct > .dp {
+        color: #284
+    }
+
+    .ct > .ad {
+        color: #A00
+    }
+
+    .ct > div {
+        margin: 0 0 10px 0;
+        display: inline-block;
+    }
+
+    .ct > .r {
+        margin: 0;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        background-color: #0004;
+        z-index: -1;
+    }
+
+    .gn > td, select.gn {
+        background-color: #0F72;
+    }
+
+    .bl > td, select.bl {
+        background-color: #07F2;
+    }
+
+    .rd > td, select.rd {
+        background-color: #F002;
+    }
+
+</style>
+<body>
+<div class="row">
+    <input id="input" autofocus style="width:100%; max-width: 800px" class="big"/>
+    <button onclick="search()" style="width:120px" class="big">search</button>
+</div>
+<div id="filter" class="hide row">
+    <div>Meet date:</div>
+    <input id="date" type="date" class="big" onchange="onSelectionChange()"/>
+    <div>Meet cut:</div>
+    <select id="standard0" class="gn" onchange="onSelectionChange()"></select>
+    <select id="standard1" class="bl" onchange="onSelectionChange()"></select>
+    <select id="standard2" class="rd" onchange="onSelectionChange()"></select>
+    <button onclick="loadBirthday()" class="big">Find out 10 more</button>
+</div>
+<div id="table" class="container"></div>
+</body>
+<script>
+    Date.prototype.toDateInputValue = (function () {
+        let local = new Date(this);
+        local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
+        return local.toJSON().slice(0, 10);
+    });
+
+    const inputElem = document.getElementById('input');
+    let birthdayMap = new Map;
+    let birthdayDisplayMap = new Map;
+
+    // document.getElementById('date').value = new Date().toDateInputValue();
+
+    inputElem.addEventListener('keypress', (event) => {
+        if (event.key == 'Enter') {
+            search();
+        }
+    });
+
+    function onSelectionChange() {
+        showTable(getHistory());
+    }
+
+    async function loadBirthday() {
+        for (let i = 0; i < 10; ++i) {
+            let button = document.getElementsByClassName('birthday')[0];
+            if (button) {
+                button.click();
+            }
+        }
+    }
+
+    async function birthday(element, link) {
+        let parent = element.parentElement;
+        parent.innerHTML = 'Loading...';
+        let response = await fetch('swim/birthday?link=' + encodeURIComponent(link))
+        if (!response.ok) {
+            parent.innerHTML = response.url;
+        } else {
+            let birthday = await response.json();
+            parent.innerHTML = birthday.Display;
+            birthdayMap.set(link, birthday.Right);
+            birthdayDisplayMap.set(link, birthday.Display);
+        }
+    }
+
+    async function search(_, value) {
+        setButtonStatus();
+        updateContent('Loading....');
+
+        if (!value) {
+            value = inputElem.value;
+        }
+
+        let input = encodeURIComponent(value);
+        let response = await fetch('swim/search?input=' + input);
+        if (!response.ok) {
+            updateContent(response.url);
+        } else {
+            pushHistory(input, await response.json());
+        }
+    }
+
+    function getTimeStandard(selectId) {
+        let timeStandard = 0;
+        let standardElem = document.getElementById(selectId);
+        if (standardElem.value) {
+            let idx = standardElem.value.indexOf(')');
+            timeStandard = parseInt(standardElem.value.substring(idx + 1).replace(':', '').replace('.', ''))
+            return [timeStandard, standardElem.className]
+        }
+        return null;
+    }
+
+    function createTable(table) {
+        if (!table) {
+            return '';
+        }
+
+        let filterDate = null;
+        let dateElem = document.getElementById('date');
+        if (dateElem.value != new Date().toDateInputValue()) {
+            let year = parseInt(dateElem.value) - 1 - table.Age;
+            filterDate = year + dateElem.value.substring(4);
+        }
+
+        let timeStandards = [];
+        for (let i = 0; i < 3; ++i) {
+            let time = getTimeStandard('standard' + i);
+            if (time) {
+                timeStandards.push(time);
+            }
+        }
+        timeStandards.sort((a, b) => a[0] < b[0] ? -1 : 1);
+
+        let html = [];
+
+        if (table.Additions) {
+            html.push('<div class="match-size"><div>');
+            for (const element of table.Additions) {
+                if (element.Link) {
+                    if (element.Action && element.Action != 'href') {
+                        html.push('<button class="', element.Action, '" onclick="', element.Action, '(this, \'', element.Link, '\')">', element.Text, '</button>');
+                    } else {
+                        html.push('<span><a href="', element.Link, '" target="_blank">', element.Text, '</a></span>');
+                    }
+                } else {
+                    html.push('<span>', element.Text, '</span>');
+                }
+                if (element.Log) {
+                    console.log(element.Log);
+                }
+            }
+            html.push('</div></div>');
+        }
+
+        if (table.Title) {
+            html.push('<h2>');
+            html.push(table.Title);
+            html.push('</h2>');
+        }
+
+        html.push('<table style="border-collapse:collapse"><tbody>');
+        if (table.Header) {
+            html.push('<tr>');
+            if (table.ShowOrder) {
+                html.push('<th></th>');
+            }
+            for (const h of table.Header) {
+                if (h.startsWith('<')) {
+                    html.push(h);
+                } else {
+                    html.push('<th>', h, '</th>');
+                }
+            }
+            html.push('</tr>');
+        }
+
+        if (!table.Value) {
+            table.Value = [];
+            for (let i = 0; i < table.Header.length; ++i) {
+                table.Value.push(i);
+            }
+        }
+
+        if (table.Items) {
+            let index = 0
+            for (const row of table.Items) {
+
+                for (let i = 0; i < table.Value.length; ++i) {
+                    if (table.Link && table.Link[i] > -1) {
+                        let link = row[table.Link[i]];
+                        if (link && link.startsWith('{') && table.Action && table.Action[i] == 'birthday') {
+                            let object = JSON.parse(link);
+                            birthdayMap.set(object.Link, object.Right);
+                            birthdayDisplayMap.set(object.Link, object.Display);
+                            row[table.Link[i]] = object.Link;
+                        }
+                    }
+                }
+
+                let date = birthdayMap.get(row[table.FilterColumn]);
+                if (!!date && filterDate != 'NaN' && date <= filterDate) {
+                    continue;
+                }
+
+                let trCls = '';
+                if (row[table.TrClass]) {
+                    trCls = row[table.TrClass].toLowerCase();
+                }
+                if (timeStandards && row[table.StandardColumn]) {
+                    let time = row[table.StandardColumn];
+                    for (let ts of timeStandards) {
+                        if (time <= ts[0]) {
+                            trCls += ts[1];
+                            break;
+                        }
+                    }
+                }
+                html.push('<tr' + (trCls ? ' class="' + trCls + '"' : '') + '>');
+
+                if (table.ShowOrder) {
+                    html.push('<td>', ++index, '</td>');
+                }
+                for (let i = 0; i < table.Value.length; ++i) {
+                    let value = row[table.Value[i]] || '';
+                    let tdElem = (table.LeftAlign && table.LeftAlign[i]) ? '<td class="left">' : '<td>';
+                    if (typeof value == 'string' && value.startsWith('>')) {
+                    } else if (typeof value == 'string' && value.startsWith('<')) {
+                        html.push(value);
+                    } else if (table.Link && table.Link[i] > -1 && row[table.Link[i]]) {
+                        let link = row[table.Link[i]];
+                        if (table.Action && table.Action[i] != 'href') {
+                            if (table.Action[i] == 'birthday') {
+                                if (birthdayDisplayMap.get(link)) {
+                                    html.push(tdElem, birthdayDisplayMap.get(link), '</td>');
+                                } else {
+                                    html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                                }
+                            } else {
+                                html.push(tdElem, '<button class="', table.Action[i], '" onclick="', table.Action[i], '(this, \'', row[table.Link[i]], '\')">', value, '</button></td>');
+                            }
+                        } else {
+                            html.push(tdElem, '<a href="', link, '" target="_blank">', value, '</a></td>');
+                        }
+                    } else {
+                        html.push(tdElem, value, '</td>');
+                    }
+                }
+                html.push('</tr>');
+            }
+        }
+
+        html.push('</tbody></table>');
+
+        html.push(createTable(table.Next));
+
+        return html.join('');
+    }
+
+    function setButtonStatus(table) {
+        let filterElem = document.getElementById('filter');
+
+        if (table && table.FilterColumn > 0) {
+            filterElem.classList.remove('hide');
+        } else {
+            filterElem.classList.add('hide');
+        }
+
+        for (let i = 0; i < 3; ++i) {
+            setSelect(table, 'standard' + i);
+        }
+
+        return table;
+    }
+
+    function setSelect(table, selectId) {
+        let standardElem = document.getElementById(selectId)
+        if (table && table.Standards) {
+            let selected = standardElem.value;
+            standardElem.innerHTML = '<option value=""></option>';
+            let std = table.Standards;
+            for (let i = 0; i < std.length;) {
+                let meet = std[i].Meet;
+                standardElem.innerHTML += '<optgroup label="' + meet + '">';
+                for (; i < std.length && meet == std[i].Meet; ++i) {
+                    let val = meet + ' (' + std[i].Age + ') ' + std[i].Time
+                    standardElem.innerHTML += '<option value="' + val + '">' + val + '</option>';
+                    if (selected) {
+                        let idx = selected.indexOf(')');
+                        if (idx > 0 && selected.substring(0, idx) == val.substring(0, idx)) {
+                            selected = val;
+                        }
+                    }
+                }
+                standardElem.innerHTML += '</optgroup>'
+            }
+            standardElem.value = selected;
+        }
+    }
+
+    // integrate with browser navigation buttons
+    let jsonMap = new Map
+
+    function pushHistory(hash, data) {
+        hash = '#' + hash;
+        jsonMap.set(hash, data);
+        if (window.location.hash == hash) {
+            loadContent();
+        } else {
+            window.location.hash = hash;
+        }
+    }
+
+    function getHistory() {
+        return jsonMap.get(window.location.hash);
+    }
+
+    window.addEventListener('hashchange', loadContent);
+    window.addEventListener('load', loadContent);
+
+    async function loadContent() {
+        let data = getHistory();
+        if (!data) {
+            let value = decodeURIComponent(window.location.hash.substring(1));
+            if (value.length > 0) {
+                await search(null, value);
+                data = getHistory();
+            }
+        }
+        if (data) {
+            showTable(data);
+        } else {
+            updateContent('Input name or URL');
+        }
+    }
+
+    function updateContent(html) {
+        document.getElementById('table').innerHTML = html;
+    }
+
+    function showTable(data) {
+        updateContent(createTable(setButtonStatus(data)));
+    }
+
+</script>
+</html>
