@@ -1323,7 +1323,7 @@
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
-        html.push('<div><div class="content"><div class="match-size">');
+        html.push('<div class="content"><div class="match-size">');
 
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
@@ -1333,7 +1333,7 @@
             }
         }
 
-        html.push('</div><h2 id="graph-title"></h2></div></div>');
+        html.push('</div><h2 id="graph-title"></h2></div>');
 
         html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" class="hide"></canvas>`);
         return html.join('');
