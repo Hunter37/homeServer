@@ -56,8 +56,8 @@
         cursor: pointer;
     }
 
-    div.hide {
-        display: none;
+    .hide {
+        display: none !important;
     }
 
     .big,
@@ -102,7 +102,7 @@
 
     .match-size button {
         padding: 3px 5px;
-        margin: 5px 7px;
+        margin: 5px 4px;
     }
 
     tr:nth-child(odd) {
@@ -402,7 +402,7 @@
 
     .tab {
         display: inline-block;
-        padding: 10px;
+        padding: 0;
         cursor: pointer;
         margin: 0;
         border: 1px solid #DDD;
@@ -433,6 +433,7 @@
     /* details page tab title */
     .tab>* {
         margin: 0;
+        padding: 10px;
         min-width: 110px;
         text-align: center;
     }
@@ -1322,7 +1323,7 @@
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
-        html.push('<div class="match-size">');
+        html.push('<div class="content"><div class="match-size">');
 
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
@@ -1332,9 +1333,9 @@
             }
         }
 
-        html.push('</div>');
+        html.push('</div><h2 id="graph-title"></h2></div>');
 
-        html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)"></canvas>`);
+        html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" class="hide"></canvas>`);
         return html.join('');
     }
 
@@ -1584,6 +1585,11 @@
         await showGraph(canvas, null, null, e.clientX - offset.left, e.clientY - offset.top);
     }
 
+    function UpdateGraphTitle(dist, stroke) {
+        const map = {500: "400/500", 1000: "800/1000", 1650: "1500/1650"};
+        document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap[stroke]}`;
+    }
+
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
         TabView.tab('detailsTabView', 3);
 
@@ -1605,6 +1611,9 @@
         let latest = new Date();
 
         let [dist, stroke, course] = _eventList[event].split(' ');
+        UpdateGraphTitle(dist, stroke);
+        canvas.classList.remove('hide');
+
         for (let c of _courseOrder) {
             let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
             let evt = _eventIndexMap.get(eventStr);
@@ -2392,11 +2401,6 @@
                     dim: "[UsasSwimTime.SwimTimeFormatted]",
                     datatype: "text"
                 },
-                // {
-                //     title: 'eventName',
-                //     dim: "[SwimEvent.EventCode]",
-                //     datatype: "text",
-                // },
                 {
                     title: 'clubName',
                     dim: "[OrgUnit.Level4Name]",
@@ -2413,20 +2417,21 @@
                     datatype: "text"
                 },
                 {
-                    title: 'event',
-                    dim: "[UsasSwimTime.SwimEventKey]",
-                    datatype: "numeric",
-                    filter: {
-                        equals: Number(event)
-                    }
-                },
-                {
                     title: 'pkey',
                     dim: "[UsasSwimTime.PersonKey]",
                     datatype: "numeric",
                     filter: {
                         members: swimmerList.map(row => row[swimmerList.idx.pkey])
                     }
+                },
+                {
+                    title: 'event',
+                    dim: "[UsasSwimTime.SwimEventKey]",
+                    datatype: "numeric",
+                    filter: {
+                        equals: Number(event)
+                    },
+                    panel: "scope"
                 },
                 {
                     dim: "[UsasSwimTime.EventCompetitionCategoryKey]",
@@ -2528,11 +2533,6 @@
                     dim: "[UsasSwimTime.SwimTimeFormatted]",
                     datatype: "text"
                 },
-                // {
-                //     title: 'eventName',
-                //     dim: "[SwimEvent.EventCode]",
-                //     datatype: "text",
-                // },
                 {
                     title: 'clubName',
                     dim: "[OrgUnit.Level4Name]",
@@ -2549,17 +2549,18 @@
                     datatype: "text"
                 },
                 {
+                    title: 'pkey',
+                    dim: "[UsasSwimTime.PersonKey]",
+                    datatype: "numeric"
+                },
+                {
                     title: 'event',
                     dim: "[UsasSwimTime.SwimEventKey]",
                     datatype: "numeric",
                     filter: {
                         equals: Number(eventKey)
-                    }
-                },
-                {
-                    title: 'pkey',
-                    dim: "[UsasSwimTime.PersonKey]",
-                    datatype: "numeric"
+                    },
+                    panel: "scope"
                 },
                 {
                     dim: "[UsasSwimTime.AgeAtMeetKey]",
