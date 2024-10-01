@@ -13,14 +13,13 @@ import (
 )
 
 var router = map[string]func(http.ResponseWriter, *http.Request){
-	"/swim":                 mainPageHandler,
-	"/swim1":                main1PageHandler,
-	"/swim1/settings":       settingsPageHandler,
-	"/swim1/search":         searchHandler,
-	"/swim1/birthday":       birthdayHandler,
-	"/swim1/updateSettings": settingsHandler,
-	"/swim1/mergeSwimmer":   mergeSwimmerHandler,
-	"/swim1/swimmer":        swimmerHandler,
+	"/swim":                mainPageHandler,
+	"/swim/settings":       settingsPageHandler,
+	"/swim/search":         searchHandler,
+	"/swim/birthday":       birthdayHandler,
+	"/swim/updateSettings": settingsHandler,
+	"/swim/mergeSwimmer":   mergeSwimmerHandler,
+	"/swim/swimmer":        swimmerHandler,
 }
 
 // SwimHandler the swim root handler
@@ -38,15 +37,6 @@ func SwimHandler(writer http.ResponseWriter, req *http.Request) {
 // mainPageHandler handle the main html page
 func mainPageHandler(writer http.ResponseWriter, req *http.Request) {
 	body, err := storage.File.Read("swim/html/swim.html")
-	utils.LogError(err)
-
-	writer.Header().Set("Content-Type", "text/html")
-	utils.GzipWrite(writer, body, http.StatusOK)
-}
-
-// mainPageHandler handle the main html page
-func main1PageHandler(writer http.ResponseWriter, req *http.Request) {
-	body, err := storage.File.Read("swim/html/swim1.html")
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")

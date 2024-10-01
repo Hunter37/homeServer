@@ -114,10 +114,15 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	utils.LogHttpCaller(req, false)
-	writer.Header().Set("Connection", "close")
-	writer.Header().Set("Location", "/swim")
-	writer.WriteHeader(http.StatusTemporaryRedirect)
+	// utils.LogHttpCaller(req, false)
+	// writer.Header().Set("Connection", "close")
+	// writer.Header().Set("Location", "/swim")
+	// writer.WriteHeader(http.StatusTemporaryRedirect)
+	body, err := storage.File.Read("file/files/swim.html")
+	utils.LogError(err)
+
+	writer.Header().Set("Content-Type", "text/html")
+	utils.GzipWrite(writer, body, http.StatusOK)
 }
 
 func healthHandler(writer http.ResponseWriter, req *http.Request) {
