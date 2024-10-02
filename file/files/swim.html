@@ -527,23 +527,6 @@
         return a > b ? a : b;
     }
 
-    function formatDateRange(range) {
-        if (!range) {
-            return '';
-        }
-
-        let [left, right] = range;
-        let html = [];
-        html.push(left.getUTCFullYear(), '/', left.getUTCMonth() + 1, '/', left.getUTCDate());
-        if (left.toJSON() != right.toJSON()) {
-            html.push(' - ');
-            if (left.getUTCFullYear() != right.getUTCFullYear()) {
-                html.push(right.getUTCFullYear(), '/');
-            }
-            html.push(right.getUTCMonth() + 1, '/', right.getUTCDate());
-        }
-        return html.join('');
-    }
 
     function formatDate(date) {
         return date.substring(5, 7) + '/' + date.substring(8, 10) + '/' + date.substring(2, 4);
@@ -618,14 +601,21 @@
 
             return item.data;
         }
-    }
 
-    function save(group, key, value) {
-        LocalCache.set(group + "/" + key, value);
-    }
+        static async func(key, func, timeoutInSec) {
+            let data = await LocalCache.get(key, timeoutInSec);
+            if (data) {
+                return data;
+            }
 
-    async function load(group, key, timeoutInSec) {
-        return LocalCache.get(group + "/" + key, timeoutInSec);
+            data = await func();
+            if (!data) {
+                return;
+            }
+
+            LocalCache.set(key, data);
+            return data;
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -667,17 +657,17 @@
             bodyObj = {
                 metadata: [
                     {
+                        title: 'club',
+                        dim: "[OrgUnit.Level4Code]",
+                        datatype: "text",
+                    },
+                    {
                         title: 'clubName',
                         dim: "[OrgUnit.Level4Name]",
                         datatype: "text",
                         filter: {
                             members: names
                         }
-                    },
-                    {
-                        title: 'club',
-                        dim: "[OrgUnit.Level4Code]",
-                        datatype: "text",
                     },
                     {
                         dim: "[OrgUnit.Level3Code]",
@@ -694,27 +684,11 @@
             return await fetchSwimValues(bodyObj, 'event');
         }
 
-        static async #loadCached(lsc) {
-            let key = 'club/' + lsc;
-            let data = await LocalCache.get(key, _1WeekInSec);
-            if (data) {
-                return data;
-            }
-
-            data = await ClubDictinary.#load(lsc);
-            if (!data) {
-                return;
-            }
-
-            LocalCache.set(key, data);
-            return data;
-        }
-
         async loadClubMap(lsc) {
             let map = this.#dict.get(lsc);
             if (!map) {
 
-                let data = await ClubDictinary.#loadCached(lsc);
+                let data = await LocalCache.func('clubs/' + lsc, async () => await ClubDictinary.#load(lsc), _1WeekInSec);
                 if (data) {
                     map = new Map();
                     let idx = data.idx;
@@ -753,6 +727,198 @@
     }
 
     let _clubDictinary = new ClubDictinary();
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // meet dictionary
+
+    class MeetDictionary {
+        #dict;
+        constructor() {
+            this.#dict = new Map();
+            this.#dict.idx = { date: 0, name: 1 };
+        }
+
+        static async #load(meets) {
+            let bodyObj = {
+                metadata: [
+                    {
+                        title: 'meet',
+                        dim: "[UsasSwimTime.MeetKey]",
+                        datatype: "numeric",
+                        filter: {
+                            members: [...meets]
+                        }
+                    },
+                    {
+                        title: 'date',
+                        dim: "[SeasonCalendar.CalendarDate (Calendar)]",
+                        datatype: "datetime",
+                        level: "days",
+                        sort: "asc"
+                    },
+                    {
+                        title: 'meetName',
+                        dim: "[Meet.MeetName]",
+                        datatype: "text"
+                    }
+
+                ],
+                count: meets.size * 5
+            };
+
+            let data = await fetchSwimValues(bodyObj, 'event');
+            if (!data) {
+                return;
+            }
+            let idx = data.idx;
+
+            // only keep the first meet date as meet start date
+            let result = [];
+            for (let row of data) {
+                let meet = row[idx.meet];
+                if (meets.has(meet)) {
+                    meets.delete(meet);
+
+                    row[idx.date] = row[idx.date].substring(0, 10);
+                    result.push(row);
+                }
+            }
+            result.idx = idx;
+
+            return result;
+        }
+
+        static async #loadCached(meets) {
+            let result = [];
+            for (let meet of meets) {
+                let key = 'meet/' + meet;
+                let data = await LocalCache.get(key, _10YearsInSec);
+                if (data) {
+                    let [date, meetName] = data;
+                    result.push([meet, date, meetName]);
+                    meets.delete(meet);
+                }
+            }
+
+            if (meets.size == 0) {
+                return result;
+            }
+
+            let data = await MeetDictionary.#load(meets);
+            if (data) {
+                let idx = data.idx;
+                for (let row of data) {
+                    let meet = row[idx.meet];
+                    let date = row[idx.date];
+                    let meetName = row[idx.meetName];
+                    result.push([meet, date, meetName]);
+                    LocalCache.set('meet/' + meet, [date, meetName]);
+                }
+            }
+
+            return result;
+        }
+
+        async loadMeets(meets) {
+            let meetsToLoad = new Set();
+            for (let meet of meets) {
+                if (!this.#dict.has(meet)) {
+                    meetsToLoad.add(meet);
+                }
+            }
+
+            let data = await MeetDictionary.#loadCached(meetsToLoad);
+            if (data) {
+                for (let [meet, date, meetName] of data) {
+                    this.#dict.set(meet, [date, meetName]);
+                }
+            }
+
+            return this.#dict;
+        }
+    }
+
+    _meetDictinary = new MeetDictionary();
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // birthday dictionary
+
+    class BirthdayDictionary {
+        #dict;
+        constructor() {
+            this.#dict = new Map();
+        }
+
+        async load(pkey) {
+            let data = this.#dict.get(pkey);
+            if (data) {
+                return data;
+            }
+
+            data = await LocalCache.get('bday/' + pkey, _10YearsInSec);
+            if (data) {
+                this.#dict.set(pkey, data);
+                return data;
+            }
+        }
+
+        calculate(pkey, events, meetDict, age) {
+            // time, age, std, lsc, club, date, event, meet, gender
+            // 0     1    2    3    4     5     6      7     8
+            let now = new Date();
+            let nowYear = now.getUTCFullYear();
+            let nowMonth = now.getUTCMonth();
+            let nowDate = now.getUTCDate();
+            let left = new Date(Date.UTC(1900, 0, 1));
+            let right = new Date(Date.UTC(nowYear, nowMonth, nowDate));
+            if (age) {
+                right.setUTCFullYear(nowYear - age, nowMonth, nowDate);
+                left.setUTCFullYear(nowYear - age - 1, nowMonth, nowDate + 1);
+            }
+
+            for (let row of events) {
+                let meet = row[events.idx.meet];
+                let meetDate = meetDict.get(meet)[meetDict.idx.date];
+                let meetAge = row[events.idx.age];
+                let d = new Date(meetDate);
+                d.setUTCFullYear(d.getUTCFullYear() - meetAge, d.getUTCMonth(), d.getUTCDate());
+                right = min(d, right);
+                d = new Date(meetDate);
+                d.setUTCFullYear(d.getUTCFullYear() - meetAge - 1, d.getUTCMonth(), d.getUTCDate() + 1);
+                left = max(d, left);
+            }
+
+            if (left > right) {
+                console.error('Invalid birthday:' + pkey + '  [' + left.toJSON().substring(0, 10) + ' - ' + right.toJSON().substring(0, 10) + ']');
+            }
+            right = max(left, right);
+
+            let range = [left, right];
+            LocalCache.set('bday/' + pkey, range);
+            this.#dict.set(pkey, range);
+
+            return range;
+        }
+
+        static format(range) {
+            if (!range) {
+                return '';
+            }
+
+            let [left, right] = range;
+            let html = [];
+            html.push(left.getUTCFullYear(), '/', left.getUTCMonth() + 1, '/', left.getUTCDate());
+            if (left.toJSON() != right.toJSON()) {
+                html.push(' - ');
+                if (left.getUTCFullYear() != right.getUTCFullYear()) {
+                    html.push(right.getUTCFullYear(), '/');
+                }
+                html.push(right.getUTCMonth() + 1, '/', right.getUTCDate());
+            }
+            return html.join('');
+        }
+    }
+    _birthdayDictionary = new BirthdayDictionary();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // usa swimming data fetch utility functions
@@ -909,13 +1075,24 @@
     async function clearCache() {
         let key = document.getElementById('cache-key').value;
         if (key) {
-            let list  = await new Promise(resolve => ldb.list(resolve));
-            for (let k of list) {
-                if (k.startsWith(key)) {
-                    await new Promise(resolve => ldb.delete(k, resolve));
+            let list = await new Promise(resolve => ldb.list(resolve));
+
+            if (key.startsWith('!')) {
+                key = key.substring(1);
+                for (let k of list) {
+                    if (!k.startsWith(key)) {
+                        await new Promise(resolve => ldb.delete(k, resolve));
+                    }
                 }
+                alert('Cache key not started with ' + key + ' is cleared.');
+            } else {
+                for (let k of list) {
+                    if (k.startsWith(key)) {
+                        await new Promise(resolve => ldb.delete(k, resolve));
+                    }
+                }
+                alert('Cache key started with ' + key + ' is cleared.');
             }
-            alert('Cache key started with ' + key + ' is cleared.');
         }
         let list = await new Promise(resolve => ldb.list(resolve));
         let text = '';
@@ -950,7 +1127,8 @@
             return;
         }
 
-        let values = await loadSearch(name, all);
+        let key = 'search/' + name + (all ? '<ALL>' : '');
+        let values = await LocalCache.func(key, async () => await loadSearch(name, all));
 
         showSearch(values);
     }
@@ -960,21 +1138,15 @@
     }
 
     async function loadSearch(name, all) {
-        let key = name + (all ? '<ALL>' : '');
-        let values = await load('search', key);
-        if (values) {
-            return values;
-        }
-
-        values = await loadSwimmerSearch(name, all);
-        if (values.length == 0) {
+        let values = await loadSwimmerSearch(name, all);
+        if (!values || values.length == 0) {
             values = await loadClubSearch(name, all);
         }
-        values = values || [];
 
-        values.sort((a, b) => a[values.idx.age] - b[values.idx.age]);
+        if (values) {
+            values.sort((a, b) => a[values.idx.age] - b[values.idx.age]);
+        }
 
-        save('search', key, values);
         return values;
     }
 
@@ -1050,7 +1222,6 @@
     }
 
     async function loadSwimmerSearch(value, all) {
-
         let names = splitNameBySpaces(value);
         let calls = [];
         for (let [firstName, lastName] of names) {
@@ -1151,27 +1322,31 @@
             window.location.replace('');
             return;
         }
-        let data = await loadDetails(Number(pkey));
+        let data = await loadDetailsCached(Number(pkey));
         await showDetails(data);
     }
 
-    async function loadDetails(pkey) {
-        let data = await load('details', pkey);
+    async function loadDetailsCached(pkey) {
+        let data = await LocalCache.func('swimmer/' + pkey, async () => await loadDetails(Number(pkey)));
         if (data) {
-            return postLoadDetails(data);
+            return await postLoadDetails(data);
         }
+    }
 
+    async function loadDetails(pkey) {
         let swimmerCall = loadSwimerInfo(pkey);
         let detailsCall = loadEventDetails(pkey);
 
-        let [swimmerInfo, details] = await Promise.all([swimmerCall, detailsCall]);
+        let [swimmerInfo, events] = await Promise.all([swimmerCall, detailsCall]);
         if (!swimmerInfo || !details) {
             updateContent('Cannot get data for ' + pkey);
             return;
         }
 
-        data = details;
-        data.swimmer = swimmerInfo;
+        data = {
+            events: events,
+            swimmer: swimmerInfo
+        };
 
         // swimmer
         // firstName, lastName, age, clubName, lsc, pkey, club, zone
@@ -1179,21 +1354,16 @@
         // events
         // time, age, std, lsc, club, date, event, meet, gender
         // 0     1    2    3    4     5     6      7     8
-        // meets
-        // meetName, startDate, meetKey
-        // 0         1          2
 
-        save('details', pkey, data);
-        return postLoadDetails(data);
+        return data;
     }
 
-    function postLoadDetails(data) {
-        let meetNameDict = new Map(data.meets.map(m => [m[data.meets.idx.meet], m[data.meets.idx.meetName]]));
-        let meetDateDict = new Map(data.meets.map(m => [m[data.meets.idx.meet], m[data.meets.idx.date]]));
-        data.meetNameDict = meetNameDict;
-        data.meetDateDict = meetDateDict;
+    async function postLoadDetails(data) {
+        let idx = data.events.idx;
+        let meets = new Set(data.events.map(e => e[idx.meet]));
+        data.meetDict = await _meetDictinary.loadMeets(meets);
 
-        let [left, right] = calculateBirthday(data.events, data.meetDateDict, data.swimmer.age, data.swimmer.pkey);
+        let [left, right] = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
         data.swimmer.birthday = [left, right];
 
         return data;
@@ -1201,72 +1371,23 @@
 
     async function loadEventDetails(pkey) {
         let events = await loadEvents(pkey);
-        if (!events || events.length == 0) {
+        if (!events) {
             return;
         }
+
+        let idx = events.idx;
         // time, age, std, lsc, club, date, event, meet, gender
         // 0     1    2    3    4     5     6      7     8
         for (let row of events) {
-            row[events.idx.date] = row[events.idx.date].substring(0, 10);
+            row[idx.date] = row[idx.date].substring(0, 10);
         }
-        let idx = events.idx;
+
         events.sort((a, b) => a[idx.date] == b[idx.date] ? timeToInt(b[idx.time]) - timeToInt(a[idx.time]) : a[idx.date] < b[idx.date] ? -1 : 1);
 
+        let meets = new Set(events.map(e => e[idx.meet]));
+        await _meetDictinary.loadMeets(meets);
 
-        let meets = new Set(events.map(e => e[events.idx.meet]));
-
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'meet',
-                    dim: "[UsasSwimTime.MeetKey]",
-                    datatype: "numeric",
-                    filter: {
-                        members: [...meets]
-                    }
-                },
-                {
-                    title: 'meetName',
-                    dim: "[Meet.MeetName]",
-                    datatype: "text"
-                },
-                {
-                    title: 'date',
-                    dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                    datatype: "datetime",
-                    level: "days",
-                    sort: "asc"
-                }
-            ],
-            count: meets.size * 5
-        };
-
-        let meetsData = await fetchSwimValues(bodyObj, 'event');
-        if (!meetsData) {
-            return;
-        }
-        // meetKey, meetName, startDate
-        // 0        1         2
-
-        // only keep the first meet date as meet start date
-        let result = [];
-        meets.clear();
-        for (let row of meetsData) {
-            if (!meets.has(row[meetsData.idx.meet])) {
-                meets.add(row[meetsData.idx.meet]);
-                result.push(row);
-            }
-        }
-        result.idx = meetsData.idx;
-
-        for (let row of result) {
-            row[result.idx.date] = row[result.idx.date].substring(0, 10);
-        }
-
-        return {
-            events: events,
-            meets: result
-        };
+        return events;
     }
 
     async function loadEvents(pkey) {
@@ -1293,8 +1414,8 @@
                     datatype: "text"
                 },
                 {
-                    title: "clubName",
-                    dim: "[OrgUnit.Level4Name]",
+                    title: "club",
+                    dim: "[OrgUnit.Level4Code]",
                     datatype: "text"
                 },
                 {
@@ -1511,7 +1632,7 @@
 
         let gender = data.events[0][data.events.idx.gender];
         html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', convetToGenderString(gender), '</span><span>',
-            data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ', formatDateRange(data.swimmer.birthday),
+            data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ', BirthdayDictionary.format(data.swimmer.birthday),
             '</span><span>Total Event: ', data.events.length, '</span></div>');
 
         return html.join('');
@@ -1530,43 +1651,6 @@
             localStorage.setItem('hide25', '1');
         }
         loadContent();
-    }
-
-    function calculateBirthday(events, meetDateDict, age, pkey) {
-        // time, age, std, lsc, club, date, event, meet, gender
-        // 0     1    2    3    4     5     6      7     8
-
-        let now = new Date();
-        let nowYear = now.getUTCFullYear();
-        let nowMonth = now.getUTCMonth();
-        let nowDate = now.getUTCDate();
-        let left = new Date(Date.UTC(1900, 0, 1));
-        let right = new Date(Date.UTC(nowYear, nowMonth, nowDate));
-        if (age) {
-            right.setUTCFullYear(nowYear - age, nowMonth, nowDate);
-            left.setUTCFullYear(nowYear - age - 1, nowMonth, nowDate + 1);
-        }
-
-        for (let row of events) {
-            let meet = row[events.idx.meet];
-            let meetDate = meetDateDict.get(meet);
-            let meetAge = row[events.idx.age];
-            let d = new Date(meetDate);
-            d.setUTCFullYear(d.getUTCFullYear() - meetAge, d.getUTCMonth(), d.getUTCDate());
-            right = min(d, right);
-            d = new Date(meetDate);
-            d.setUTCFullYear(d.getUTCFullYear() - meetAge - 1, d.getUTCMonth(), d.getUTCDate() + 1);
-            left = max(d, left);
-        }
-
-        if (left > right) {
-            console.error('Invalid birthday:' + pkey + '  [' + left.toJSON().substring(0, 10) + ' - ' + right.toJSON().substring(0, 10) + ']');
-        }
-        right = max(left, right);
-
-        save('bday', pkey, [left, right]);
-
-        return [left, right];
     }
 
     function getFastRowByEvent(events) {
@@ -1758,7 +1842,7 @@
 
         canvas = canvas || document.getElementById('canvas');
 
-        let data = canvas.graphData = canvas.graphData || await loadDetails(pkey);
+        let data = canvas.graphData = canvas.graphData || await loadDetailsCached(pkey);
         let idx = data.events.idx;
 
         event = canvas.graphEvent = event || canvas.graphEvent || data.events[0][idx.event];
@@ -2109,7 +2193,7 @@
         return bestTime;
     }
 
-    function createMeetTable(data) {
+    async function createMeetTable(data) {
         // time, age, std, lsc, club, date, event, meet, gender
         // 0     1    2    3    4     5     6      7     8
 
@@ -2131,7 +2215,7 @@
         for (let course of _courseOrder) {
             let evts = courses[course];
             if (evts) {
-                html.push(createMeetTableByCourse(course, evts, data.swimmer.pkey, data.meetDateDict, data.meetNameDict));
+                html.push(await createMeetTableByCourse(course, evts, data.swimmer.pkey, data.meetDict));
             }
         }
 
@@ -2140,7 +2224,7 @@
         return html.join('');
     }
 
-    function createMeetTableByCourse(course, events, pkey, meetDateDict, meetNameDict) {
+    async function createMeetTableByCourse(course, events, pkey, meetDict) {
         // time, age, std, lsc, club, date, event, meet, gender
         // 0     1    2    3    4     5     6      7     8
         let idx = events.idx;
@@ -2186,7 +2270,7 @@
 
         // talbe column info & row info
         let columnInfo = countEventTypeByStroke(eventList);
-        let rowInfo = countMeetByAge(eventList, meetDateDict);
+        let rowInfo = countMeetByAge(eventList, meetDict);
 
         // calculate the total count
         let rowCount = 0;
@@ -2232,7 +2316,7 @@
                 }
 
                 let meetKey = rows[i];
-                html.push('<td>', formatDate(meetDateDict.get(meetKey)), '</td>');
+                html.push('<td>', formatDate(meetDict.get(meetKey)[meetDict.idx.date]), '</td>');
 
                 let clubName;
                 for (let cols of columnInfo) {
@@ -2251,13 +2335,13 @@
                             let short = formatStandard(std, true);
 
                             html.push(buildTimeCell(time, buildPopup(short, std), formatDelta(delta), style));
-                            clubName = cell[idx.clubName];
+                            clubName = await _clubDictinary.loadClubName(cell[idx.lsc], cell[idx.club]);
                         }
                         html.push('</td>');
                     }
                 }
 
-                html.push('<td class="left">', meetNameDict.get(meetKey), '</td><td class="left">', clubName, '</td></tr>');
+                html.push('<td class="left">', meetDict.get(meetKey)[meetDict.idx.name], '</td><td class="left">', clubName, '</td></tr>');
             }
         }
 
@@ -2283,7 +2367,7 @@
         return html.join('');
     }
 
-    function countMeetByAge(eventList, meetDateDict) {
+    function countMeetByAge(eventList, meetDict) {
         // time, age, std, lsc, club, date, event, meet, gender, (delta)
         // 0     1    2    3    4     5     6      7     8       9
 
@@ -2307,7 +2391,7 @@
 
         for (let age of ageList) {
             let meetArray = [...ages.get(age)];
-            meetArray.sort((a, b) => meetDateDict.get(a) > meetDateDict.get(b) ? -1 : 1);
+            meetArray.sort((a, b) => meetDict.get(a)[meetDict.idx.date] > meetDict.get(b)[meetDict.idx.date] ? -1 : 1);
             resultArray.push([age, ...meetArray]);
         }
         return resultArray;
@@ -2347,7 +2431,7 @@
     // rank functions
 
     async function rank(key) {
-        let values = await loadRankData(key);
+        let values = await LocalCache.func('rank/' + key, async () => await loadRankData(key));
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
 
@@ -2355,15 +2439,10 @@
     }
 
     async function peekRankData(key) {
-        return await load('rank', key);
+        return await LocalCache.get('rank/' + key);
     }
 
     async function loadRankData(key) {
-        let values = await peekRankData(key);
-        if (values) {
-            return values;
-        }
-
         let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         if (club) {
@@ -2379,10 +2458,8 @@
             // 0        1     2     3     4          5     6        7     8         9     10
         }
 
-        save('rank', key, values);
         return values;
     }
-
 
     async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
         let [from, to] = decodeAgeKey(ageKey);
@@ -2433,7 +2510,9 @@
 
         let clubName = await _clubDictinary.loadClubName(lsc, club);
 
-        let swimmerList = await loadClubAgeSwimmerList(lsc, clubName, ageKey);
+        let cacheKey = 'club/' + lsc + '_' + clubName + '_' + ageKey;
+        let swimmerList = await LocalCache.func(cacheKey, async () => await loadClubAgeSwimmerList(lsc, clubName, ageKey));
+
         // pkey, age
         // 0     1
 
@@ -2462,8 +2541,8 @@
                     datatype: "text"
                 },
                 {
-                    title: 'clubName',
-                    dim: "[OrgUnit.Level4Name]",
+                    title: 'club',
+                    dim: "[OrgUnit.Level4Code]",
                     datatype: "text",
                 },
                 {
@@ -2941,7 +3020,7 @@
         let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
         for (let row of values) {
 
-            let range = await load('bday', row[idx.pkey], _10YearsInSec);
+            let range = await _birthdayDictionary.load(row[idx.pkey]);
             if (range && meetDate) {
                 let bday = new Date(range[1]);
                 bday.setUTCFullYear(bday.getUTCFullYear() + to + 1);
@@ -2970,10 +3049,12 @@
                 }
             }
 
+            let clubName = row[idx.clubName] || await _clubDictinary.loadClubName(row[idx.lsc], row[idx.club]);
+
             html.push(`<tr${color}><td>`, ++index, `</td><td class="left"><button onclick="go('details', ${row[idx.pkey]})">`,
                 row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
-                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', formatDateRange(range), '</td><td class="left">',
-                row[idx.clubName], '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
+                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range), '</td><td class="left">',
+                clubName, '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
         }
         html.push('</tbody></table>');
         return html.join('');
@@ -3053,7 +3134,7 @@
             let clubDict = await _clubDictinary.loadClubMap(lsc);
 
             html.push(`<optgroup label="${getLSCName(lsc)} (${lsc})">`)
-            for (let [clubName, clubCode] of clubDict) {
+            for (let [clubCode, clubName] of clubDict) {
                 let selected = clubCode == club ? ' selected' : '';
                 let cls = club == clubCode ? ' class="selected"' : '';
                 html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubCode)}"${selected}>${clubName} (${clubCode})</option>`);
