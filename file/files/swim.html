@@ -2022,7 +2022,7 @@
             ctx.arc(mouseX, mouseY, 5, 0, 2 * Math.PI);
             ctx.stroke();
 
-            let meetName = data.meetNameDict.get(tipRow[idx.meet]);
+            let meetName = data.meetDict.get(tipRow[idx.meet])[data.meetDict.idx.name];
             let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
             let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]);
 
