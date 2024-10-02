@@ -386,6 +386,7 @@
 
     canvas {
         overflow: none;
+        display: block;
     }
 
     /* tab view */
@@ -593,34 +594,165 @@
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // storage functions
+    // local caches
+
+    class LocalCache {
+        static set(key, value) {
+            ldb.set(key, { time: new Date(), data: value });
+        }
+
+        static async get(key, timeoutInSec) {
+            // todo: remove this, just for testing
+            //return null;
+
+            let item = await new Promise(resolve => ldb.get(key, r => resolve(r)));
+
+            if (!item) {
+                return;
+            }
+
+            timeoutInSec = timeoutInSec || _1DayInSec;
+            if (new Date() - new Date(item.time) > timeoutInSec * 1000) {
+                return;
+            }
+
+            return item.data;
+        }
+    }
 
     function save(group, key, value) {
-        ldb.set(group + "/" + key, { time: new Date(), data: value });
+        LocalCache.set(group + "/" + key, value);
     }
 
     async function load(group, key, timeoutInSec) {
-
-        // todo: remove this, just for testing
-        //return null;
-
-        async function ldbGetAsync(k) {
-            return new Promise(resolve => ldb.get(k, r => resolve(r)));
-        }
-
-        let item = await ldbGetAsync(group + "/" + key);
-
-        if (!item) {
-            return;
-        }
-
-        timeoutInSec = timeoutInSec || _1DayInSec;
-        if (new Date() - new Date(item.time) > timeoutInSec * 1000) {
-            return;
-        }
-
-        return item.data;
+        return LocalCache.get(group + "/" + key, timeoutInSec);
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // club dictionary
+
+    class ClubDictinary {
+        #dict;
+        constructor() {
+            this.#dict = new Map();
+        }
+
+        static async #load(lsc) {
+            let bodyObj = {
+                metadata: [
+                    {
+                        title: 'clubName',
+                        dim: "[Persons.ClubName]",
+                        datatype: "text"
+                    },
+                    {
+                        dim: "[Persons.LscCode]",
+                        datatype: "text",
+                        filter: {
+                            equals: lsc
+                        },
+                        panel: "scope"
+                    }
+                ],
+                count: 5000
+            };
+
+            let values = await fetchSwimValues(bodyObj);
+            if (!values) {
+                return;
+            }
+
+            let names = values.map(v => v[values.idx.clubName]);
+
+            bodyObj = {
+                metadata: [
+                    {
+                        title: 'clubName',
+                        dim: "[OrgUnit.Level4Name]",
+                        datatype: "text",
+                        filter: {
+                            members: names
+                        }
+                    },
+                    {
+                        title: 'club',
+                        dim: "[OrgUnit.Level4Code]",
+                        datatype: "text",
+                    },
+                    {
+                        dim: "[OrgUnit.Level3Code]",
+                        datatype: "text",
+                        filter: {
+                            equals: lsc,
+                        },
+                        panel: "scope"
+                    }
+                ],
+                count: names.length
+            };
+
+            return await fetchSwimValues(bodyObj, 'event');
+        }
+
+        static async #loadCached(lsc) {
+            let key = 'club/' + lsc;
+            let data = await LocalCache.get(key, _1WeekInSec);
+            if (data) {
+                return data;
+            }
+
+            data = await ClubDictinary.#load(lsc);
+            if (!data) {
+                return;
+            }
+
+            LocalCache.set(key, data);
+            return data;
+        }
+
+        async loadClubMap(lsc) {
+            let map = this.#dict.get(lsc);
+            if (!map) {
+
+                let data = await ClubDictinary.#loadCached(lsc);
+                if (data) {
+                    map = new Map();
+                    let idx = data.idx;
+                    for (let row of data) {
+                        map.set(row[idx.club], row[idx.clubName]);
+                    }
+
+                    this.#dict.set(lsc, map);
+                }
+            }
+
+            return map;
+        }
+
+        async loadClubName(lsc, club) {
+            let map = await this.loadClubMap(lsc);
+            if (!map) {
+                return;
+            }
+
+            return map.get(club);
+        }
+
+        async loadClubCode(lsc, clubName) {
+            let map = await this.loadClubMap(lsc);
+            if (!map) {
+                return;
+            }
+
+            for (let [code, name] of map) {
+                if (name == clubName) {
+                    return code;
+                }
+            }
+        }
+    }
+
+    let _clubDictinary = new ClubDictinary();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // usa swimming data fetch utility functions
@@ -671,10 +803,6 @@
     window.addEventListener('hashchange', loadContent);
     window.addEventListener('load', loadContent);
 
-    function clearCache() {
-        ldb.clear();
-        //window.location.reload();
-    }
 
     async function loadContent() {
         _backgroundActions.length = 0;
@@ -771,11 +899,31 @@
     async function settings(params) {
         let tabView = new TabView('settingsTabView');
 
-        tabView.addTab('General', '<button onclick="clearCache()">Clear App Cache</button>');
+        tabView.addTab('General', '<input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><div id="cache-info"></div>');
         tabView.addTab('Advanced', '--empty--');
         tabView.addTab('About', '--about--');
 
         updateContent(tabView.render());
+    }
+
+    async function clearCache() {
+        let key = document.getElementById('cache-key').value;
+        if (key) {
+            let list  = await new Promise(resolve => ldb.list(resolve));
+            for (let k of list) {
+                if (k.startsWith(key)) {
+                    await new Promise(resolve => ldb.delete(k, resolve));
+                }
+            }
+            alert('Cache key started with ' + key + ' is cleared.');
+        }
+        let list = await new Promise(resolve => ldb.list(resolve));
+        let text = '';
+        for (let k of list) {
+            text += k + '\n';
+        }
+        document.getElementById('cache-info').innerText = text;
+        //window.location.reload();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1089,7 +1237,8 @@
                     level: "days",
                     sort: "asc"
                 }
-            ]
+            ],
+            count: meets.size * 5
         };
 
         let meetsData = await fetchSwimValues(bodyObj, 'event');
@@ -1242,7 +1391,7 @@
             pkey: row[values.idx.pkey]
         };
 
-        let club = await loadClubCode(swimmer.lsc, swimmer.clubName);
+        let club = await _clubDictinary.loadClubCode(swimmer.lsc, swimmer.clubName);
         if (!club) {
             return;
         }
@@ -1323,7 +1472,7 @@
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
-        html.push('<div><div class="content"><div class="match-size">');
+        html.push('<div class="content"><div class="match-size">');
 
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
@@ -1333,7 +1482,7 @@
             }
         }
 
-        html.push('</div><h2 id="graph-title"></h2></div></div>');
+        html.push('</div><h2 id="graph-title"></h2></div>');
 
         html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" onwheel="wheelGraph(this, event)" class="hide"></canvas>`);
         return html.join('');
@@ -1803,15 +1952,6 @@
         return minStr + secStr;
     }
 
-    async function loadClubCode(lsc, clubName) {
-        let clubMap = await loadClubDict(lsc);
-        if (!clubMap) {
-            return clubName;
-        }
-
-        return clubMap.get(clubName) || clubName;
-    }
-
     async function buildTD(pkey, timeInt, genderStr, event, ageKey, zone, lsc, club) {
         let html = [];
 
@@ -2243,21 +2383,6 @@
         return values;
     }
 
-    async function loadClubName(lsc, club) {
-        let clubMap = await loadClubDict(lsc);
-        if (!clubMap) {
-            return;
-        }
-
-        for (let [clubName, clubCode] of clubMap) {
-            if (club == clubCode) {
-                club = clubName;
-                break;
-            }
-        }
-
-        return club;
-    }
 
     async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
         let [from, to] = decodeAgeKey(ageKey);
@@ -2301,91 +2426,12 @@
         return await fetchSwimValues(bodyObj);
     }
 
-    let _tempAllClubDict = new Map();
-    async function loadClubDict(lsc) {
-        let dict = _tempAllClubDict.get(lsc);
-        if (dict) {
-            return dict;
-        }
-
-        let cacheKey = 'club';
-        let dictData = await load(cacheKey, lsc, _1WeekInSec);
-        if (dictData) {
-            dict = new Map(dictData);
-            _tempAllClubDict.set(lsc, dict);
-            return dict;
-        }
-
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'clubName',
-                    dim: "[Persons.ClubName]",
-                    datatype: "text"
-                },
-                {
-                    dim: "[Persons.LscCode]",
-                    datatype: "text",
-                    filter: {
-                        equals: lsc
-                    },
-                    panel: "scope"
-                }
-            ],
-            count: 5000
-        };
-
-        let values = await fetchSwimValues(bodyObj);
-        if (!values) {
-            return;
-        }
-
-        values = values.map(row => row[values.idx.clubName]);
-
-        bodyObj = {
-            metadata: [
-                {
-                    title: 'clubName',
-                    dim: "[OrgUnit.Level4Name]",
-                    datatype: "text",
-                    filter: {
-                        members: values
-                    }
-                },
-                {
-                    title: 'club',
-                    dim: "[OrgUnit.Level4Code]",
-                    datatype: "text",
-                },
-                {
-                    dim: "[OrgUnit.Level3Code]",
-                    datatype: "text",
-                    filter: {
-                        equals: lsc,
-                    },
-                    panel: "scope"
-                }
-            ],
-            count: values.length
-        }
-
-        values = await fetchSwimValues(bodyObj, 'event');
-        if (!values) {
-            return;
-        }
-
-        save(cacheKey, lsc, values);
-        let clubDict = new Map(values);
-        _tempAllClubDict.set(lsc, clubDict);
-        return clubDict;
-    }
-
     async function loadRankDataByClub(key) {
         let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         let year = getSessionYear();
 
-        let clubName = await loadClubName(lsc, club);
+        let clubName = await _clubDictinary.loadClubName(lsc, club);
 
         let swimmerList = await loadClubAgeSwimmerList(lsc, clubName, ageKey);
         // pkey, age
@@ -3004,7 +3050,7 @@
         }
 
         if (lsc) {
-            let clubDict = await loadClubDict(lsc);
+            let clubDict = await _clubDictinary.loadClubMap(lsc);
 
             html.push(`<optgroup label="${getLSCName(lsc)} (${lsc})">`)
             for (let [clubName, clubCode] of clubDict) {
