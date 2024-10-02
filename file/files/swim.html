@@ -425,13 +425,13 @@
         margin: 0;
     }
 
-    /* details page table base */
+    /* swimmer page table base */
     .content {
         display: inline-block;
         margin: 0;
     }
 
-    /* details page tab title */
+    /* swimmer page tab title */
     .tab>* {
         margin: 0;
         padding: 10px;
@@ -890,10 +890,13 @@
                 left = max(d, left);
             }
 
+            left = left.toJSON().substring(0, 10);
+            right = right.toJSON().substring(0, 10);
+
             if (left > right) {
-                console.error('Invalid birthday:' + pkey + '  [' + left.toJSON().substring(0, 10) + ' - ' + right.toJSON().substring(0, 10) + ']');
+                console.error('Invalid birthday:' + pkey + '  [' + left + ' - ' + right + ']');
+                right = left;
             }
-            right = max(left, right);
 
             let range = [left, right];
             LocalCache.set('bday/' + pkey, range);
@@ -907,15 +910,19 @@
                 return '';
             }
 
-            let [left, right] = range;
             let html = [];
-            html.push(left.getUTCFullYear(), '/', left.getUTCMonth() + 1, '/', left.getUTCDate());
-            if (left.toJSON() != right.toJSON()) {
+
+            let [left, right] = range;
+            left = left.replace(/-0/g, '-').replace(/-/g, '/');
+            right = right.replace(/-0/g, '-').replace(/-/g, '/');
+
+            html.push(left);
+            if (left != right) {
                 html.push(' - ');
-                if (left.getUTCFullYear() != right.getUTCFullYear()) {
-                    html.push(right.getUTCFullYear(), '/');
+                if (left.substring(0, 4) == right.substring(0, 4)) {
+                    right = right.substring(5);
                 }
-                html.push(right.getUTCMonth() + 1, '/', right.getUTCDate());
+                html.push(right);
             }
             return html.join('');
         }
@@ -1067,18 +1074,17 @@
     async function settings(params) {
         let tabView = new TabView('settingsTabView');
 
-        tabView.addTab('General', '<input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><div id="cache-info"></div>');
-        tabView.addTab('Advanced', '--empty--');
-        tabView.addTab('About', '--about--');
+        tabView.addTab('<p>General</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
+        tabView.addTab('<p>Advanced</p>', '--empty--');
+        tabView.addTab('<p>About</p>', '--about--');
 
         updateContent(tabView.render());
     }
 
-    async function clearCache() {
-        let key = document.getElementById('cache-key').value;
-        if (key) {
+    async function clearCache(elem) {
+        if (!elem) {
+            let key = document.getElementById('cache-key').value;
             let list = await new Promise(resolve => ldb.list(resolve));
-
             if (key.startsWith('!')) {
                 key = key.substring(1);
                 for (let k of list) {
@@ -1096,6 +1102,7 @@
                 alert('Cache key started with ' + key + ' is cleared.');
             }
         }
+
         let list = await new Promise(resolve => ldb.list(resolve));
         let text = '';
         for (let k of list) {
@@ -1162,7 +1169,7 @@
 
         if (values.length == 1) {
             // replace will remove the current entry from the browser history
-            window.location.replace('#details/' + encodeURIComponent(values[0][values.idx.pkey]));
+            window.location.replace('#swimmer/' + encodeURIComponent(values[0][values.idx.pkey]));
             return;
         }
 
@@ -1172,7 +1179,7 @@
         html.push('<table style="border-collapse:collapse"><tbody>');
         let index = 0;
         for (let [name, age, club, lsc, pkey] of values) {
-            html.push('<tr><td>', ++index, '</td><td class="left"><button class="search" onclick="go(\'details\',', pkey, ')">',
+            html.push('<tr><td>', ++index, `</td><td class="left"><button class="search" onclick="go('swimmer', ${pkey})">`,
                 name, '</button></td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
@@ -1319,9 +1326,9 @@
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // details functions
+    // swimmer functions
 
-    async function details(pkey) {
+    async function swimmer(pkey) {
         if (!pkey || pkey === 'undefined') {
             window.location.replace('');
             return;
@@ -1333,18 +1340,13 @@
     async function loadDetails(pkey) {
         let data = await LocalCache.func('swimmer/' + pkey, async () => {
             let swimmerCall = loadSwimerInfo(pkey);
-            let detailsCall = loadEventDetails(pkey);
+            let eventsCall = loadEvents(pkey);
 
-            let [swimmerInfo, events] = await Promise.all([swimmerCall, detailsCall]);
-            if (!swimmerInfo || !details) {
+            let [swimmerInfo, events] = await Promise.all([swimmerCall, eventsCall]);
+            if (!swimmerInfo || !events) {
                 updateContent('Cannot get data for ' + pkey);
                 return;
             }
-
-            data = {
-                events: events,
-                swimmer: swimmerInfo
-            };
 
             // swimmer
             // firstName, lastName, age, clubName, lsc, pkey, club, zone
@@ -1353,7 +1355,10 @@
             // time, age, std, lsc, club, date, event, meet, gender
             // 0     1    2    3    4     5     6      7     8
 
-            return data;
+            return {
+                events: events,
+                swimmer: swimmerInfo
+            };
         });
 
         if (data) {
@@ -1366,13 +1371,12 @@
         let meets = new Set(data.events.map(e => e[idx.meet]));
         data.meetDict = await _meetDictinary.loadMeets(meets);
 
-        let [left, right] = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
-        data.swimmer.birthday = [left, right];
+        data.swimmer.birthday = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
 
         return data;
     }
 
-    async function loadEventDetails(pkey) {
+    async function loadEvents(pkey) {
         let events = await loadEvents(pkey);
         if (!events) {
             return;
@@ -1536,24 +1540,27 @@
         // 0     1         2
 
         if (!data) {
-            updateContent('No details found');
+            updateContent('No swimmer found');
             return;
-        }
-
-        //setModalData(data);
-        let idx = data.events.idx;
-
-        let hide25 = localStorage.getItem('hide25');
-        if (hide25) {
-            //data.events = data.events.filter(e => !_eventList[e[idx.event]].startsWith('25'));
-            data.events = data.events.filter(e => e[idx.event] < 80);
-            data.events.idx = idx;
         }
 
         let html = [];
 
         // build title
         html.push(createDetailsPageTitle(data));
+        if (data.events.length == 0) {
+            html.push('<div>No events found</div>');
+            updateContent(html.join(''));
+            return;
+        }
+
+        let idx = data.events.idx;
+        let hide25 = localStorage.getItem('hide25');
+        if (hide25) {
+            //data.events = data.events.filter(e => !_eventList[e[idx.event]].startsWith('25'));
+            data.events = data.events.filter(e => e[idx.event] < 80);
+            data.events.idx = idx;
+        }
 
         let fastRowList = getFastRowByEvent(data.events);
         // time, age, std, lsc, club, date, event, meet, gender
@@ -1581,7 +1588,7 @@
             }
         }
 
-        let tabView = new TabView('detailsTabView');
+        let tabView = new TabView('swimmerTabView');
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', await createMeetTable(data));
@@ -1589,6 +1596,7 @@
         html.push(tabView.render());
 
         html.push(addHide25Botton());
+
         updateContent(html.join(''));
     }
 
@@ -1633,7 +1641,7 @@
             alias = parts.join(' ') + ' ';
         }
 
-        let gender = data.events[0][data.events.idx.gender];
+        let gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
         html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', convetToGenderString(gender), '</span><span>',
             data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ', BirthdayDictionary.format(data.swimmer.birthday),
             '</span><span>Total Event: ', data.events.length, '</span></div>');
@@ -1841,7 +1849,7 @@
     }
 
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
-        TabView.tab('detailsTabView', 3);
+        TabView.tab('swimmerTabView', 3);
 
         canvas = canvas || document.getElementById('canvas');
 
@@ -1936,6 +1944,8 @@
 
         // draw age dots line and age text
         let [left, right] = data.swimmer.birthday;
+        left = new Date(left);
+        right = new Date(right);
         let d = new Date(left);
         for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
             let x = (d - earliest) / duration * width;
@@ -3059,7 +3069,7 @@
 
             let clubName = row[idx.clubName] || await _clubDictinary.loadClubName(row[idx.lsc], row[idx.club]);
 
-            html.push(`<tr${color}><td>`, ++index, `</td><td class="left"><button onclick="go('details', ${row[idx.pkey]})">`,
+            html.push(`<tr${color}><td>`, ++index, `</td><td class="left"><button onclick="go('swimmer', ${row[idx.pkey]})">`,
                 row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
                 '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range), '</td><td class="left">',
                 clubName, '</td><td class="left">', row[idx.lsc], '</td><td class="left">', row[idx.meetName], '</td></tr>');
