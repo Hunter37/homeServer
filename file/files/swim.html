@@ -449,10 +449,18 @@
         border: #000 1px solid;
         text-align: center;
         border-radius: 20%;
+        user-select: none;
     }
 
     .r90 {
         transform: rotate(90deg);
+    }
+
+    .tip {
+        display: inline-block;
+        position: relative;
+        font: 12px Verdana;
+        font-style: oblique;
     }
 </style>
 
@@ -1840,7 +1848,7 @@
             html.push('<button class="size" onclick="resizeX(1)">⇦⇨</button><button class="size" onclick="resizeX(-1)">⇨⇦</button>',
                 '<button class="size r90" onclick="resizeY(1)">⇦⇨</button><button class="size r90" onclick="resizeY(-1)">⇨⇦</button>');
         }
-        html.push('<div>(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div></div>');
+        html.push('<div class="tip">(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div></div>');
 
         return html.join('');
     }
@@ -2989,7 +2997,7 @@
         // generate the standard selection
         for (let [i, cls] of ['gn', 'bl', 'rd'].entries()) {
             html.push(`<select class="${cls}" onchange="onStandardChange(${i}, this.value, '${key}')"><option></option>`);
-            let standard = JSON.parse(localStorage.getItem('meetStds' + i) || '""');
+            let standard = localStorage.getItem('meetStds' + i) || '';
             for (let option of options) {
                 let [short, from, to, std] = option;
                 let value = `${short}|${from}|${to}`;
@@ -3016,7 +3024,7 @@
     }
 
     async function onStandardChange(index, value, key) {
-        localStorage.setItem('meetStds' + index, JSON.stringify(value));
+        localStorage.setItem('meetStds' + index, value);
 
         let table = document.getElementById('rank-table');
         let values = await loadRank(key);
@@ -3075,7 +3083,7 @@
         let meetDate = localStorage.getItem('meetDate');
         let standards = [];
         for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
-            let [short, f, t] = JSON.parse(localStorage.getItem('meetStds' + i) || '"||"').split('|');
+            let [short, f, t] = (localStorage.getItem('meetStds' + i) || '||').split('|');
             let meet = getMeetStandards(to).filter(m => m.short == short && m.age[0] == f && m.age[1] == t);
             if (meet && meet.length > 0) {
                 let std = meet[0][genderStr].get(_eventList[event]);
