@@ -1396,6 +1396,14 @@
         data.meetDict = await _meetDictinary.loadMeets(meets);
 
         data.swimmer.birthday = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
+        data.swimmer.alias = getAlias(data.swimmer.firstName, data.swimmer.lastName);
+
+        if (data.events.length > 0) {
+            data.events.idx.alias = data.events[0].length;
+            for (let row of data.events) {
+                row.push(data.swimmer.alias);
+            }
+        }
 
         return data;
     }
@@ -1616,12 +1624,27 @@
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', await createMeetTable(data));
-        tabView.addTab(buildClickableDiv('Progress Graph', `showGraph(null, '${data.swimmer.pkey}')`), createProgressGraph(data.swimmer.pkey));
+        tabView.addTab(buildClickableDiv('Progress Graph', `showGraph(null, '${data.swimmer.pkey}')`), createProgressGraph(data.swimmer.pkey, data.events));
         html.push(tabView.render());
 
         html.push(addHide25Botton());
 
         updateContent(html.join(''));
+    }
+
+    function getAlias(firstName, lastName) {
+        let alias = firstName;
+        if (alias.charAt(alias.length - 1) != ' ') {
+            parts = alias.split(' ');
+            parts.shift();
+            alias = parts.join(' ') + ' ';
+        }
+
+        if (firstName.toLowerCase().endsWith(lastName.toLowerCase())) {
+            alias = alias.substring(0, alias.length - lastName.length);
+        }
+
+        return alias;
     }
 
     function createDetailsPageTitle(data) {
@@ -1638,17 +1661,11 @@
         let html = [];
 
         console.log(data.swimmer);
-        let alias = data.swimmer.firstName;
-        if (alias.charAt(alias.length - 1) != ' ') {
-            parts = alias.split(' ');
-            parts.shift();
-            alias = parts.join(' ') + ' ';
-        }
 
         let gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
-        html.push('<div class="match-size"><span>', alias, data.swimmer.lastName, '</span><span>', convetToGenderString(gender), '</span><span>',
-            data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ', BirthdayDictionary.format(data.swimmer.birthday),
-            '</span><span>Total Event: ', data.events.length, '</span></div>');
+        html.push('<div class="match-size"><span>', data.swimmer.alias, data.swimmer.lastName, '</span><span>',
+            convetToGenderString(gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
+            BirthdayDictionary.format(data.swimmer.birthday), '</span><span>Total Event: ', data.events.length, '</span></div>');
 
         return html.join('');
     }
@@ -1785,10 +1802,10 @@
 
             html.push('<td>', buildClickableDiv(dist, `showGraph(null, '${data.swimmer.pkey}', ${event})`), '</td><td>',
                 time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
-                await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
-                await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
-                await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone),
-                await buildTD(data.swimmer.pkey, timeInt, genderStr, event, ageKey));
+                await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
+                await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
+                await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone),
+                await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey));
 
             let stds = [];
 
@@ -1824,12 +1841,11 @@
         return html.join('');
     }
 
-    function createProgressGraph(pkey) {
+    function createProgressGraph(pkey, events) {
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
         html.push('<div class="content"><div class="match-size">');
-
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
             if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
@@ -1837,18 +1853,23 @@
                     ` onclick="showGraph(null, '${pkey}', ${i})">${s}<br>${d}</button>`);
             }
         }
-
         html.push('</div><h2 id="graph-title"></h2></div>');
+
+        html.push('<div><input type="checkbox" id="show-scy" onchange="showGraph()" checked><label for="show-scy">SCY</label>',
+            '<input type="checkbox" id="show-scm" onchange="showGraph()" checked><label for="show-scm">SCM</label>',
+            '<input type="checkbox" id="show-lcm" onchange="showGraph()" checked><label for="show-lcm">LCM</label><span id="swimmer-list"></span></div>');
 
         html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
 
         html.push('<div>');
-
         if (isTouchDevice()) {
             html.push('<button class="size" onclick="resizeX(1)">⇦⇨</button><button class="size" onclick="resizeX(-1)">⇨⇦</button>',
                 '<button class="size r90" onclick="resizeY(1)">⇦⇨</button><button class="size r90" onclick="resizeY(-1)">⇨⇦</button>');
         }
-        html.push('<div class="tip">(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div></div>');
+        html.push('<div class="tip">(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div>',
+            '</div>');
+
+        html.push('<div>Compare progress with other swimmers:<input id="addInput" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">search</button><button onclick="addSearch(null, true)">all</button><div id="adding-list"></div></div>');
 
         return html.join('');
     }
@@ -1917,11 +1938,13 @@
         await showGraph(canvas);
     }
 
+    //                  l-blue,  brown,  l-green p-blue  l-red   siyan   l-purple pink   l-yellow orange
+    const graphColors = ['#0AF', '#D85', '#0C4', '#88C', '#EBA', '#8CD', '#c9E', '#F9C', '#DD7', '#FC5'];
+
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
         TabView.tab('swimmerTabView', 3);
 
         canvas = canvas || document.getElementById('canvas');
-
         let data = canvas.graphData = canvas.graphData || await loadDetails(pkey);
         let idx = data.events.idx;
 
@@ -1936,32 +1959,41 @@
         let fastest = Infinity;
         let earliest = new Date();
         let latest = new Date();
+        latest.setMonth(latest.getMonth() + 3);
 
         let [dist, stroke, course] = _eventList[event].split(' ');
         UpdateGraphTitle(dist, stroke);
         canvas.classList.remove('hide');
 
-        for (let c of _courseOrder) {
-            let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
-            let evt = _eventIndexMap.get(eventStr);
-            let value = data.events.filter(e => e[idx.event] == evt);
-            for (let row of value) {
-                let t = timeToInt(row[idx.time]);
-                slowest = Math.max(slowest, t);
-                fastest = Math.min(fastest, t);
-                //earliest = min(earliest, new Date(row[idx.date]));
-            }
-            eventStrs.push(eventStr);
-            values.push(value);
-        }
+        let list = canvas.swimmers = canvas.swimmers || [];
+        list = [data, ...list];
 
-        for (let row of data.events) {
-            earliest = min(earliest, new Date(row[idx.date]));
+        // calculate the slowest, fastest, earliest, latest, todo: extract to a function
+        for (let swimmer of list) {
+            for (let c of _courseOrder) {
+                if (!document.getElementById(`show-${c.toLowerCase()}`).checked) {
+                    continue;
+                }
+                let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
+                let evt = _eventIndexMap.get(eventStr);
+                let value = swimmer.events.filter(e => e[idx.event] == evt);
+                for (let row of value) {
+                    let t = timeToInt(row[idx.time]);
+                    slowest = Math.max(slowest, t);
+                    fastest = Math.min(fastest, t);
+                    //earliest = min(earliest, new Date(row[idx.date]));
+                }
+                eventStrs.push(eventStr);
+                values.push(value);
+            }
+
+            for (let row of swimmer.events) {
+                earliest = min(earliest, new Date(row[idx.date]));
+            }
         }
 
         earliest.setMonth(earliest.getMonth() - 1);
         earliest.setDate(1);
-        latest.setMonth(latest.getMonth() + 3);
         let delta = (slowest - fastest) * 0.1;
         slowest += delta;
         fastest = Math.floor((fastest - delta) / 100) * 100;
@@ -2013,36 +2045,40 @@
 
         ctx.stroke();
 
-        // draw age dots line and age text
-        let [left, right] = data.swimmer.birthday;
-        left = new Date(left);
-        right = new Date(right);
-        let d = new Date(left);
-        for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
-            let x = (d - earliest) / duration * width;
-            if (x < 1) {
-                continue;
+        if (list.length == 1) {
+            // draw age dots line and age text
+            let [left, right] = list[0].swimmer.birthday;
+            left = new Date(left);
+            right = new Date(right);
+            let d = new Date(left);
+            for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
+                let x = (d - earliest) / duration * width;
+                if (x < 1) {
+                    continue;
+                }
+                ctx.beginPath();
+                ctx.strokeStyle = ctx.fillStyle = 'lightblue';
+                ctx.setLineDash([5, 5]);
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+                ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
+                ctx.fill();
             }
-            ctx.beginPath();
-            ctx.strokeStyle = ctx.fillStyle = 'lightblue';
-            ctx.setLineDash([5, 5]);
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-            ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
-            ctx.fill();
         }
 
         // draw the cruve and dots, then find the tip row
-        const colors = ['#0AF', '#A66', '#0C4'];
         ctx.font = "16px Verdana";
         ctx.setLineDash([]);
         let tipRow;
         let topTextIndex = 0;
         for (let [index, value] of values.entries()) {
 
-            ctx.strokeStyle = ctx.fillStyle = colors[index];
+            ctx.strokeStyle = ctx.fillStyle = graphColors[index];
             if (value.length > 0) {
+                if (list.length > 1) {
+                    ctx.fillText(value[0][idx.alias], 130 * topTextIndex + 50, -35);
+                }
                 ctx.fillText(eventStrs[index], 130 * topTextIndex++ + 50, -15);
             }
 
@@ -2095,7 +2131,7 @@
 
             let meetName = data.meetDict.get(tipRow[idx.meet])[data.meetDict.idx.name];
             let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
-            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]);
+            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]) + '  (' + tipRow[idx.alias] + ')';
 
             ctx.beginPath();
             ctx.fillStyle = "#777C";
@@ -2112,6 +2148,67 @@
         }
     }
 
+    async function addKeypress(input, e) {
+        if (e.key === 'Enter') {
+            await addSearch(input.value);
+        }
+    }
+
+    async function addSearch(value, all) {
+        value = value || document.getElementById('addInput').value;
+        let html = [];
+        if (value) {
+            let list = await loadSearch(value, all);
+            let idx = list.idx;
+            html.push('<table style="cursor:zoom-in;border-collapse:collapse;" class="left"><tbody>');
+            for (let row of list) {
+                html.push(`<tr onclick="addSwimmer('${row[idx.pkey]}')"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
+            }
+            html.push('</tbody></table>');
+        }
+        html.push('<p class="tip">Click on the row to add the swimmer.</p>');
+
+        document.getElementById('adding-list').innerHTML = html.join('');
+    }
+
+    async function addSwimmer(pkey) {
+        document.getElementById('adding-list').innerHTML = '';
+        let canvas = document.getElementById('canvas');
+        let swimmers = canvas.swimmers = canvas.swimmers || [];
+        for (let swimmer of swimmers) {
+            if (swimmer.swimmer.pkey == pkey) {
+                return;
+            }
+        }
+
+        let swimmer = await loadDetails(pkey);
+        swimmers.push(swimmer);
+        await updateSwimmerList(swimmers);
+    }
+
+    function removeSwimmer(pkey) {
+        let canvas = document.getElementById('canvas');
+        let swimmers = canvas.swimmers = canvas.swimmers || [];
+        for (let i = 0; i < swimmers.length; ++i) {
+            if (swimmers[i].swimmer.pkey == pkey) {
+                swimmers.splice(i, 1);
+                break;
+            }
+        }
+
+        updateSwimmerList(swimmers);
+    }
+
+    async function updateSwimmerList(swimmers) {
+        let html = [];
+        for (let swimmer of swimmers) {
+            html.push(`<button style="cursor:zoom-out" onclick="removeSwimmer('${swimmer.swimmer.pkey}')">${swimmer.swimmer.alias} ${swimmer.swimmer.lastName}</button>`);
+        }
+
+        document.getElementById('swimmer-list').innerHTML = html.join('');
+        await showGraph();
+    }
+
     function formatTime(time) {
         let min = Math.floor(time / 6000);
         let sec = time % 6000;
@@ -2120,7 +2217,7 @@
         return minStr + secStr;
     }
 
-    async function buildTD(pkey, timeInt, genderStr, event, ageKey, zone, lsc, club) {
+    async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, zone, lsc, club) {
         let html = [];
 
         let rankDataKey = getRankDataKey(genderStr, event, ageKey, zone, lsc, club);
