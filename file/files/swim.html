@@ -438,6 +438,22 @@
         min-width: 110px;
         text-align: center;
     }
+
+    .size {
+        font-size: large;
+        font-weight: bold;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        margin: 0 5px;
+        border: #000 1px solid;
+        text-align: center;
+        border-radius: 20%;
+    }
+
+    .r90 {
+        transform: rotate(90deg);
+    }
 </style>
 
 <body>
@@ -1600,29 +1616,6 @@
         updateContent(html.join(''));
     }
 
-    function createProgressGraph(pkey) {
-        let html = [];
-        let hide25 = localStorage.getItem('hide25');
-
-        html.push('<div class="content"><div class="match-size">');
-
-        for (let i = 1; i < _eventList.length; ++i) {
-            let [d, s, c] = _eventList[i].split(' ');
-            if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
-                html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
-                    ` onclick="showGraph(null, '${pkey}', ${i})">${s}<br>${d}</button>`);
-            }
-        }
-
-        html.push('</div><h2 id="graph-title"></h2></div>');
-
-        html.push(`<canvas id="canvas" onmousemove="onCanvasMouseMove(this)" onwheel="wheelGraph(this, event)" class="hide"></canvas>`);
-
-        html.push('<p>Press Ctrl + mouse scroll inside the graph to resize the time axis, or just mouse scroll to resize the date axis.</p>');
-
-        return html.join('');
-    }
-
     function createDetailsPageTitle(data) {
         // swimmer
         // firstName, lastName, age, clubName, lsc, pkey, club, zone
@@ -1823,8 +1816,43 @@
         return html.join('');
     }
 
-    async function onCanvasMouseMove(canvas) {
-        let e = window.event;
+    function createProgressGraph(pkey) {
+        let html = [];
+        let hide25 = localStorage.getItem('hide25');
+
+        html.push('<div class="content"><div class="match-size">');
+
+        for (let i = 1; i < _eventList.length; ++i) {
+            let [d, s, c] = _eventList[i].split(' ');
+            if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
+                html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
+                    ` onclick="showGraph(null, '${pkey}', ${i})">${s}<br>${d}</button>`);
+            }
+        }
+
+        html.push('</div><h2 id="graph-title"></h2></div>');
+
+        html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
+
+        html.push('<div>');
+
+        if (isTouchDevice()) {
+            html.push('<button class="size" onclick="resizeX(1)">⇦⇨</button><button class="size" onclick="resizeX(-1)">⇨⇦</button>',
+                '<button class="size r90" onclick="resizeY(1)">⇦⇨</button><button class="size r90" onclick="resizeY(-1)">⇨⇦</button>');
+        }
+        html.push('<div>(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div></div>');
+
+        return html.join('');
+    }
+
+    function isTouchDevice() {
+        return (('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0) ||
+            (navigator.msMaxTouchPoints > 0));
+    }
+
+    async function onCanvasMouseMove(canvas, e) {
+        e = e || window.event;
         e.preventDefault();
         e.stopPropagation();
 
@@ -1837,25 +1865,48 @@
         document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap[stroke]}`;
     }
 
-    async function wheelGraph(canvas, event) {
+    async function wheelGraph(canvas, e) {
+        e = e || window.event;
 
-        event.preventDefault();
-
-        if (event.ctrlKey) {
+        if (e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
             let factor = canvas.yZoomFactor || parseFloat(localStorage.getItem('yZoomFactor')) || 1;
-            factor += event.deltaY > 0 ? -0.1 : 0.1;
+            factor += e.deltaY > 0 ? -0.1 : 0.1;
             factor = Math.max(0.3, Math.min(7, factor));
             canvas.yZoomFactor = factor;
             localStorage.setItem('yZoomFactor', factor);
-        } else {
+            await showGraph(canvas);
+        } else if (e.ctrlKey) {
+            e.preventDefault();
+            e.stopPropagation();
             let factor = canvas.xZoomFactor || parseFloat(localStorage.getItem('xZoomFactor')) || 1;
-            factor += event.deltaY > 0 ? -0.1 : 0.1;
+            factor += e.deltaY > 0 ? -0.1 : 0.1;
             factor = Math.max(0.3, Math.min(3, factor));
             canvas.xZoomFactor = factor;
             localStorage.setItem('xZoomFactor', factor);
+            await showGraph(canvas);
         }
+    }
 
-        await showGraph(canvas)
+    async function resizeX(delta) {
+        let canvas = document.getElementById('canvas');
+        let factor = canvas.xZoomFactor || parseFloat(localStorage.getItem('xZoomFactor')) || 1;
+        factor += delta / 10;
+        factor = Math.max(0.3, Math.min(3, factor));
+        canvas.xZoomFactor = factor;
+        localStorage.setItem('xZoomFactor', factor);
+        await showGraph(canvas);
+    }
+
+    async function resizeY(delta) {
+        let canvas = document.getElementById('canvas');
+        let factor = canvas.yZoomFactor || parseFloat(localStorage.getItem('yZoomFactor')) || 1;
+        factor += delta / 10;
+        factor = Math.max(0.3, Math.min(7, factor));
+        canvas.yZoomFactor = factor;
+        localStorage.setItem('yZoomFactor', factor);
+        await showGraph(canvas);
     }
 
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
@@ -1910,7 +1961,7 @@
         delta = slowest - fastest;
         let duration = latest - earliest;
         let width = (duration / _1DayInMilliSeconds / 3) * xZoomFactor;
-        let height = 600 * yZoomFactor;
+        let height = 500 * yZoomFactor;
         const margin = 50;
 
         canvas.height = height + margin * 2;
