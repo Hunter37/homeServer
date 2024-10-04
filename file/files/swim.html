@@ -445,15 +445,23 @@
         width: 40px;
         height: 40px;
         padding: 0;
-        margin: 0 5px;
+        margin: 5px;
         border: #000 1px solid;
         text-align: center;
         border-radius: 20%;
         user-select: none;
     }
 
-    .r90 {
-        transform: rotate(90deg);
+    .panel {
+        display: inline-block;
+        width: 100px;
+        position: absolute;
+        top: -230px;
+    }
+
+    .panel div {
+        padding: 0;
+        margin: auto;
     }
 
     .tip {
@@ -461,6 +469,7 @@
         position: relative;
         font: 12px Verdana;
         font-style: oblique;
+        margin: 0;
     }
 
     .add-search>* {
@@ -473,6 +482,11 @@
 
     #swimmer-list {
         margin: 20px;
+    }
+
+    #swimmer-list>button {
+        padding: 0;
+        font-size: 12px;
     }
 </style>
 
@@ -1411,9 +1425,9 @@
         data.swimmer.alias = getAlias(data.swimmer.firstName, data.swimmer.lastName);
 
         if (data.events.length > 0) {
-            data.events.idx.alias = data.events[0].length;
+            data.events.idx.name = data.events[0].length;
             for (let row of data.events) {
-                row.push(data.swimmer.alias);
+                row.push(data.swimmer.alias + ' ' + data.swimmer.lastName);
             }
         }
 
@@ -1874,10 +1888,11 @@
 
         html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
 
-        html.push('<div>');
+        html.push('<div style="position:relative;margin:0 50px">');
         if (isTouchDevice()) {
-            html.push('<button class="size" onclick="resizeX(1)">⇦⇨</button><button class="size" onclick="resizeX(-1)">⇨⇦</button>',
-                '<button class="size r90" onclick="resizeY(1)">⇦⇨</button><button class="size r90" onclick="resizeY(-1)">⇨⇦</button>');
+            html.push('<div class="panel"><div style="margin:0 25px"><button class="size" onclick="resizeY(-1)">⇧</button></div>',
+                '<div><button class="size" onclick="resizeX(-1)">⇦</button><button class="size" onclick="resizeX(1)">⇨</button></div>',
+                '<div style="margin:0 25px"><button class="size" onclick="resizeY(1)">⇩</button></div></div>');
         }
         html.push('<div class="tip">(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div>',
             '</div>');
@@ -1958,7 +1973,11 @@
         TabView.tab('swimmerTabView', 3);
 
         canvas = canvas || document.getElementById('canvas');
-        let list = canvas.swimmers = canvas.swimmers || [await loadDetails(pkey)];
+        pkey = canvas.swimmerPkey = pkey || canvas.swimmerPkey;
+        let list = canvas.swimmers = canvas.swimmers || [];
+        if (list.length == 0) {
+            list.push(await loadDetails(pkey));
+        }
         let data = list[0];
         let idx = data.events.idx;
 
@@ -1981,6 +2000,9 @@
 
         // calculate the slowest, fastest, earliest, latest, todo: extract to a function
         for (let swimmer of list) {
+            if (swimmer.hide) {
+                continue;
+            }
             for (let c of _courseOrder) {
                 if (!document.getElementById(`show-${c.toLowerCase()}`).checked) {
                     continue;
@@ -2082,16 +2104,19 @@
         ctx.font = "16px Verdana";
         ctx.setLineDash([]);
         let tipRow;
-        let topTextIndex = 0;
+        let topTextOffset = 20;
         for (let [index, value] of values.entries()) {
 
             ctx.strokeStyle = ctx.fillStyle = graphColors[index];
             if (value.length > 0) {
                 // show the swimmer name and event name
+                ctx.fillText(eventStrs[index], topTextOffset, -10);
+                let offset = ctx.measureText(eventStrs[index]).width;
                 if (list.length > 1) {
-                    ctx.fillText(value[0][idx.alias], 130 * topTextIndex + 50, -30);
+                    ctx.fillText(value[0][idx.name], topTextOffset, -30);
+                    offset = Math.max(offset, ctx.measureText(value[0][idx.name]).width);
                 }
-                ctx.fillText(eventStrs[index], 130 * topTextIndex++ + 50, -10);
+                topTextOffset += offset + 30;
             }
 
             let pre;
@@ -2172,7 +2197,7 @@
         if (value) {
             let list = await loadSearch(value, all);
             let idx = list.idx;
-            html.push('<table style="cursor:zoom-in;border-collapse:collapse;" class="left"><tbody>');
+            html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left"><tbody>');
             for (let row of list) {
                 html.push(`<tr onclick="addSwimmer('${row[idx.pkey]}')"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
             }
@@ -2212,15 +2237,27 @@
         updateSwimmerList(swimmers);
     }
 
+    async function checkSwimmer(elem, pkey) {
+        let canvas = document.getElementById('canvas');
+        let swimmers = canvas.swimmers;
+        for (let s of swimmers) {
+            if (s.swimmer.pkey == pkey) {
+                s.hide = !elem.checked;
+                break;
+            }
+        }
+
+        await showGraph(canvas);
+    }
+
     async function updateSwimmerList(swimmers) {
         let html = [];
-        for (let [i, swimmer] of swimmers.entries()) {
-            if (i == 0) {
-                continue;
-            }
-
+        for (let swimmer of swimmers) {
             id = 's_' + swimmer.swimmer.pkey;
-            html.push(`<input type="checkbox" checked id="${id}" onchange="removeSwimmer(this, '${swimmer.swimmer.pkey}')"><label for="${id}">${swimmer.swimmer.alias} ${swimmer.swimmer.lastName}</label>`);
+            let checked = swimmer.hide ? '' : ' checked';
+            html.push(`<input type="checkbox"${checked} id="${id}" onchange="checkSwimmer(this, '${swimmer.swimmer.pkey}')">`,
+                `<label for="${id}">${swimmer.swimmer.alias} ${swimmer.swimmer.lastName}</label>`,
+                `<button onclick="removeSwimmer(this, '${swimmer.swimmer.pkey}')">❌</button>`);
         }
 
         document.getElementById('swimmer-list').innerHTML = html.join('');
