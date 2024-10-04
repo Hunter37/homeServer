@@ -2168,7 +2168,7 @@
 
             let meetName = data.meetDict.get(tipRow[idx.meet])[data.meetDict.idx.name];
             let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
-            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]) + '  (' + tipRow[idx.alias] + ')';
+            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]) + (list.length > 1 ? '  (' + tipRow[idx.name] + ')' : '');
 
             ctx.beginPath();
             ctx.fillStyle = "#777C";
