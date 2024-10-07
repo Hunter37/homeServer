@@ -292,17 +292,17 @@
     }
 
     .gn>td,
-    select.gn {
+    .gn {
         background-color: #0F72;
     }
 
     .bl>td,
-    select.bl {
+    .bl {
         background-color: #07F2;
     }
 
     .rd>td,
-    select.rd {
+    .rd {
         background-color: #F002;
     }
 
@@ -439,6 +439,7 @@
         text-align: center;
     }
 
+    /* graph size panel */
     .size {
         font-size: large;
         font-weight: bold;
@@ -450,19 +451,13 @@
         text-align: center;
         border-radius: 20%;
         user-select: none;
-    }
-
-    .panel {
-        display: inline-block;
-        width: 100px;
         position: absolute;
-        top: -230px;
     }
 
-    .panel div {
-        padding: 0;
-        margin: auto;
+    .size-panel {
+        position: relative;
     }
+    /* ---- */
 
     .tip {
         display: inline-block;
@@ -487,6 +482,102 @@
     #swimmer-list>button {
         padding: 0;
         font-size: 12px;
+    }
+
+    /* div fill table cell */
+    .fill {
+        border-collapse: collapse;
+        height: 1px;
+        box-sizing: border-box;
+    }
+
+    .fill tr {
+        height: 100%;
+    }
+
+    .fill td {
+        height: 100%;
+        padding: 0;
+    }
+
+    .fill td>* {
+        height: 100%;
+        margin: 0;
+    }
+
+    /* dropdown */
+    .drop-layout>tbody>tr>td {
+        border: 0;
+    }
+
+    .dropdown * {
+        text-align: left;
+    }
+
+    .dropdown {
+        box-shadow: 0px 8px 16px 0px #0007;
+        overflow: auto;
+        position: absolute;
+        z-index: 1;
+        display: inline-block;
+        position: absolute;
+        right: 0;
+        height: auto;
+        max-height: 500px;
+        margin: 0;
+        background-color: #FFF;
+        border: 1px solid #000;
+    }
+
+    /* dropdown select */
+    .dropdown>div {
+        margin: 0;
+    }
+
+    .dropdown .group {
+        margin: 0;
+        padding: 2px;
+        border: 1px solid lightcyan;
+        background-color: lightskyblue;
+    }
+
+    .dropdown .group>div {
+        background-color: #fff;
+    }
+
+    .dropdown .group .group-txt {
+        margin: 0;
+        padding: 5px;
+        cursor: default;
+        background-color: lightskyblue;
+    }
+
+    .dropdown .option {
+        margin: 0;
+        padding: 5px;
+        cursor: pointer;
+    }
+
+    .dropdown .option.selected {
+        background-color: #CCC;
+    }
+
+    .dropdown .option:hover {
+        color: #FFF;
+        background-color: #26D;
+    }
+
+    .select-text {
+        padding: 5px;
+        cursor: pointer;
+        border: 1px solid;
+        min-width: 100px;
+    }
+
+    /* row container and vertical center align items/ text */
+    .center-row {
+        display: flex;
+        align-items: center;
     }
 </style>
 
@@ -1125,7 +1216,7 @@
         let tabView = new TabView('settingsTabView');
 
         tabView.addTab('<p>General</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
-        tabView.addTab('<p>Advanced</p>', '--empty--');
+        tabView.addTab('<p>Advanced</p>', buildAdvancedSettings());
         tabView.addTab('<p>About</p>', '--about--');
 
         updateContent(tabView.render());
@@ -1160,6 +1251,189 @@
         }
         document.getElementById('cache-info').innerText = text;
         //window.location.reload();
+    }
+
+
+    function buildAdvancedSettings() {
+
+
+        let dropDown = new Dropdown('testid',
+            '<div style="background-color:blue;">hello</div>',
+            '<div style="background-color:red;">world</div>');
+
+        let select = new Select('my-select', [['', null], ['one', 1], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8]], 4, (value) => {
+            console.log(value);
+        });
+
+        return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + '</div>';
+    }
+
+    class Dropdown {
+        #id;
+        #triggerElem;
+        #content;
+        static #dropdowns = new Map();
+        static get(id) {
+            return Dropdown.#dropdowns.get(id);
+        }
+
+        constructor(id, triggerElem, content) {
+            this.#id = id;
+            this.#triggerElem = triggerElem;
+            this.#content = content;
+            this.onopen = null;
+
+            Dropdown.#dropdowns.set(id, this);
+        }
+
+        render() {
+            return `<span style="display:inline-block"><table id="${this.#id}" class="fill drop-layout"><tbody><tr><td onclick="Dropdown.get('${this.#id}').open()">${this.#triggerElem}</td></tr>`
+                + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.#content}</div></div></td></tr></tbody></table></span>`;
+        }
+
+        open() {
+            document.querySelector(`#${this.#id} .dropdown`).classList.toggle('hide');
+            let wrapper = (e) => {
+                if (!e.target.closest(`#${this.#id}`)) {
+                    this.close();
+                    window.removeEventListener('click', wrapper);
+                }
+            }
+            window.addEventListener('click', wrapper);
+            //e.stopPropagation();
+            this.onopen && this.onopen();
+        }
+
+        close() {
+            document.querySelector(`#${this.#id} .dropdown`).classList.add('hide');
+        }
+    }
+
+    class Select {
+        #id;
+        #values;
+        #selected;
+        #onchange;
+        #dropdown;
+        static #selects = new Map();
+        static get(id) {
+            return Select.#selects.get(id);
+        }
+
+        constructor(id, values, selected, onchange) {
+            this.#id = id;
+            this.#values = values;
+            this.#selected = selected;
+            this.#onchange = onchange;
+            this.style = '';
+            this.class = '';
+            this.valueEqualtoSelection = (a, b) => a === b;
+
+            Select.#selects.set(id, this);
+        }
+
+        select(value) {
+            // clean list selection
+            let root = document.getElementById(this.#id);
+
+            for (let [i, [txt, val]] of this.#values.entries()) {
+                let elem = root.querySelector('.o' + i);
+                elem.classList.remove('selected');
+            }
+
+            // change selection & highlight selected item
+            this.#selected = value;
+            let text = '';
+            for (let [i, [txt, val]] of this.#values.entries()) {
+                if (val === undefined) {
+                    continue;
+                }
+                // we can have more than one selected highlight item
+                if (this.valueEqualtoSelection(value, val)) {
+                    root.querySelector('.o' + i).classList.add('selected');
+                }
+                // but only one real selected value and text
+                if (val === value) {
+                    text = txt;
+                }
+            }
+
+            // set the text
+            document.getElementById(this.#id + '-text').innerText = text;
+            this.#dropdown.close();
+            this.#onchange(value);
+        }
+
+        onclickItem(index) {
+            this.select(this.#values[index][1]);
+        }
+
+        #renderCustom() {
+            let cls = this.class ? ` ${this.class}` : '';
+            let style = this.style ? ` style="${this.style}"` : '';
+            let text = '';
+            for (let value of this.#values) {
+                if (value.length == 1) {
+                    value.push(undefined);
+                }
+                if (value[1] === this.#selected) {
+                    text = value[0];
+                }
+            }
+            let elem = `<div class='select-text${cls}'><span id="${this.#id}-text"${style}>${text}</span><span style="margin:0 5px;user-select: none">▽</span></div>`;
+
+            let options = [`<div id="${this.#id}">`];
+            let ending = '';
+            for (let [i, [txt, val]] of this.#values.entries()) {
+                if (val === undefined) {
+                    options.push(ending);
+                    options.push(`<div class="group"><div onclick="event.stopPropagation()" class="o${i} group-txt">${txt}</div>`);
+                    ending = '</div>';
+                } else {
+                    let selected = this.valueEqualtoSelection(this.#selected, val) ? ' selected' : '';
+                    options.push(`<div onclick="Select.get('${this.#id}').onclickItem(${i})" class="o${i} option${selected}${cls}">${txt || '&nbsp;'}</div>`);
+                }
+            }
+            options.push(ending, '</div>');
+
+            this.#dropdown = new Dropdown(this.#id, elem, options.join(''));
+            this.#dropdown.onopen = () => {
+                let root = document.getElementById(this.#id);
+                let index = this.#values.findIndex(v => v[1] === this.#selected);
+                let elem = root.querySelector('.o' + index);
+                elem.scrollIntoView(false);
+            }
+            return this.#dropdown.render();
+        }
+
+        render(custom) {
+            if (custom) {
+                return this.#renderCustom();
+            }
+
+            let html = [];
+            let cls = this.class ? ` class="${this.class}"` : '';
+            let ending = '';
+            html.push(`<select${cls} onchange="Select.get('${this.#id}').onselect(this.value)">`);
+            for (let [txt, val] of this.#values) {
+                if (val === undefined) {
+                    html.push(ending);
+                    html.push(`<optgroup label="${txt}">`);
+                    ending = '</optgroup>';
+                } else {
+                    let selectedCls = this.valueEqualtoSelection(this.#selected, val) ? ' class="selected"' : '';
+                    let selected = val === this.#selected ? ' selected' : '';
+                    html.push(`<option value="${val}"${selectedCls}${selected}>${txt}</option>`);
+                }
+            }
+
+            html.push(`${ending}</select>`);
+            return html.join('');
+        }
+
+        onselect(value) {
+            this.#onchange(value);
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1888,11 +2162,12 @@
 
         html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
 
-        html.push('<div style="position:relative;margin:0 50px">');
+        html.push('<div style="position:relative;margin:0 50px"class="size-panel">');
         if (isTouchDevice()) {
-            html.push('<div class="panel"><div style="margin:0 25px"><button class="size" onclick="resizeY(-1)">⇧</button></div>',
-                '<div><button class="size" onclick="resizeX(-1)">⇦</button><button class="size" onclick="resizeX(1)">⇨</button></div>',
-                '<div style="margin:0 25px"><button class="size" onclick="resizeY(1)">⇩</button></div></div>');
+            html.push('<button class="size" style="left:35px;top:-220px" onclick="resizeY(-1)">⇧</button>',
+                '<button class="size" style="left:10px;top:-170px" onclick="resizeX(-1)">⇦</button>',
+                '<button class="size" style="left:60px;top:-170px" onclick="resizeX(1)">⇨</button>',
+                '<button class="size" style="left:35px;top:-120px" onclick="resizeY(1)">⇩</button>');
         }
         html.push('<div class="tip">(Ctrl + mouse scroll to resize the date axis.)<br>(Shift + mouse scroll to resize the time axis.)</div>',
             '</div>');
@@ -3112,10 +3387,23 @@
             html.push(`</select> &nbsp; Club: <select class="big" onchange="go('rank', this.value)">`);
             html.push(await loadClubSelections(key));
             html.push('</select></div>');
+
+            html.push('<div>Age Group: ');
+            html.push(createAgeGenderSelect(key));
+            html.push(' &nbsp; Course: ');
+            html.push(createCourseSelect(key));
+            html.push(' &nbsp; Club: ');
+            html.push(await buildClubSelect(key));
+            html.push('</div>');
+
+            html.push('<div class="center-row">Age Group: ', createAgeGenderSelect(key, true),
+                ' &nbsp; Course: ', createCourseSelect(key, true),
+                ' &nbsp; Club: ', await buildClubSelect(key, true), '</div>');
+
         }
 
         html.push(showEventButtons(key));
-        html.push(showRankTableTitle(values, key));
+        html.push(await showRankTableTitle(values, key));
 
         let meetDate = localStorage.getItem('meetDate') || '';
         let inputType = oldBrowser ? 'text' : 'date';
@@ -3160,11 +3448,73 @@
         }
         html.push('</div>');
 
+
+        html.push('<div class="center-row">Meet date: ',
+            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
+            'Meet cut: ', buildStandardSelects(key), '</div>');
+
+        html.push('<div class="center-row">Meet date: ',
+            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
+            'Meet cut: ', buildStandardSelects(key, true), '</div>');
+
         html.push('<div id="rank-table">', await showRankTable(values, key), '</div>');
 
         html.push(addHide25Botton());
 
         updateContent(html.join(''));
+    }
+
+    function buildStandardSelects(key, custom) {
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+
+        // prepare the standard options
+        let [from, to] = decodeAgeKey(ageKey);
+        let options = [];
+        let set = new Set();
+        for (let age = from; age <= to; ++age) {
+            let meets = getMeetStandards(age);
+            for (let [i, meet] of meets.entries()) {
+                let std = meet[genderStr].get(_eventList[event]);
+                if (std && !set.has(meet)) {
+                    set.add(meet);
+                    let opt = [meet.short, meet.age[0], meet.age[1], std[0]];
+                    let index = options.length;
+                    for (let o of options) {
+                        if (o[0].includes(meet.short)) {
+                            index = i + 1;
+                            break;
+                        }
+                    }
+                    options.splice(index, 0, opt);
+                }
+            }
+        }
+
+        let html = [];
+        // generate the standard selection
+        for (let [i, cls] of ['gn', 'bl', 'rd'].entries()) {
+            let values = [['', '']];
+            for (let option of options) {
+                let [short, from, to, std] = option;
+                let text = `${short} (${from == to ? from : from + '-' + to}) = ${std}`;
+                let value = `${short}|${from}|${to}`;
+                values.push([text, value]);
+            }
+
+            // load the standard from local storage
+            let standard = localStorage.getItem('meetStds' + i) || '';
+
+            let select = new Select('standard' + i, values, standard, async (value) => {
+                localStorage.setItem('meetStds' + i, value);
+                let table = document.getElementById('rank-table');
+                let values = await loadRank(key);
+                table.innerHTML = await showRankTable(values, key);
+            });
+            select.class = cls;
+            html.push(select.render(custom));
+        }
+
+        return html.join('');
     }
 
     async function onMeetDateChange(value, key) {
@@ -3206,7 +3556,7 @@
         return html.join('');
     }
 
-    function showRankTableTitle(values, key) {
+    async function showRankTableTitle(values, key) {
         let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
         // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
@@ -3216,7 +3566,7 @@
 
         html.push('<h2>');
         if (club) {
-            html.push(values.length > 0 ? values[0][idx.clubName] : club);
+            html.push(await _clubDictinary.loadClubName(lsc, club));
         } else if (lsc) {
             html.push(getLSCName(lsc));
         } else if (zone) {
@@ -3301,6 +3651,21 @@
         return html.join('');
     }
 
+    function createAgeGenderSelect(key, custom) {
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let values = [];
+        for (let g of ['Female', 'Male']) {
+            values.push([g]);
+            for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
+                let value = getRankDataKey(g, event, ag, zone, lsc, club);
+                values.push([ag + ' ' + g, value]);
+            }
+        }
+        let select = new Select('age-gender-select', values, key, (v) => go('rank', v));
+        select.class = 'big';
+        return select.render(custom);
+    }
+
     function getAgeGroupSelections(key, button) {
         let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
@@ -3325,6 +3690,21 @@
         return html.join('');
     }
 
+    function createCourseSelect(key, custom) {
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let values = [];
+        let [dist, style, course] = _eventList[event].split(' ');
+        for (let newCourse of _courseOrder) {
+            let newEvent = fixDistance([dist, style, newCourse].join(' '));
+            let newEventCode = _eventIndexMap.get(newEvent);
+            values.push([newCourse, getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, club)]);
+        }
+
+        let select = new Select('course-select', values, key, (v) => go('rank', v));
+        select.class = 'big';
+        return select.render(custom);
+    }
+
     function getCourseSelections(key, button) {
         let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
@@ -3344,6 +3724,46 @@
             }
         }
         return html.join('');
+    }
+
+    async function buildClubSelect(key, custom) {
+        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
+        let values = [];
+
+        values.push(['USA', getRankDataKey(genderStr, event, ageKey)]);
+
+        values.push(['Zone']);
+        for (let zoneCode of ['Central', 'Eastern', 'Southern', 'Western']) {
+            values.push([zoneCode, getRankDataKey(genderStr, event, ageKey, zoneCode)])
+        }
+
+        if (zone) {
+            values.push([zone + ' Zone']);
+            for (let [lscCode, [lscName, zoneCode]] of lscMap) {
+                if (zoneCode == zone) {
+                    values.push([lscName + ' (' + lscCode + ')', getRankDataKey(genderStr, event, ageKey, zone, lscCode)]);
+                }
+            }
+        }
+
+        if (lsc) {
+            let clubDict = await _clubDictinary.loadClubMap(lsc);
+
+            values.push([getLSCName(lsc) + ' (' + lsc + ')']);
+            for (let [clubCode, clubName] of clubDict) {
+                values.push([clubName + ' (' + clubCode + ')', getRankDataKey(genderStr, event, ageKey, zone, lsc, clubCode)]);
+            }
+        }
+
+        let select = new Select('club-select', values, key, (v) => go('rank', v));
+        select.class = 'big';
+        select.valueEqualtoSelection = (val, ops) => {
+            let [genderStrVal, ageKeyVal, eventVal, zoneVal, lscVal, clubVal] = decodeRankMapKey(val);
+            let [genderStrOps, ageKeyOps, eventOps, zoneOps, lscOps, clubOps] = decodeRankMapKey(ops);
+            return clubOps ? clubVal == clubOps : lscOps ? lscVal == lscOps : zoneOps ? zoneVal == zoneOps : !zoneOps;
+        };
+
+        return select.render(custom);
     }
 
     async function loadClubSelections(key) {
