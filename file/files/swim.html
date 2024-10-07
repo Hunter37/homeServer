@@ -457,6 +457,7 @@
     .size-panel {
         position: relative;
     }
+
     /* ---- */
 
     .tip {
@@ -526,7 +527,8 @@
         max-height: 500px;
         margin: 0;
         background-color: #FFF;
-        border: 1px solid #000;
+        border: 1px solid #777;
+        border-radius: 7px;
     }
 
     /* dropdown select */
@@ -572,6 +574,11 @@
         cursor: pointer;
         border: 1px solid;
         min-width: 100px;
+    }
+
+    .select-text .arrow {
+        margin: 0 0 0 10px;
+        user-select: none;
     }
 
     /* row container and vertical center align items/ text */
@@ -1287,12 +1294,20 @@
         }
 
         render() {
-            return `<span style="display:inline-block"><table id="${this.#id}" class="fill drop-layout"><tbody><tr><td onclick="Dropdown.get('${this.#id}').open()">${this.#triggerElem}</td></tr>`
+            return `<span style="display:inline-block"><table id="${this.#id}" class="fill drop-layout"><tbody><tr><td onclick="Dropdown.get('${this.#id}').click()">${this.#triggerElem}</td></tr>`
                 + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.#content}</div></div></td></tr></tbody></table></span>`;
         }
 
+        click() {
+            if (document.querySelector(`#${this.#id} .dropdown`).classList.contains('hide')) {
+                this.open();
+            } else {
+                this.close();
+            }
+        }
+
         open() {
-            document.querySelector(`#${this.#id} .dropdown`).classList.toggle('hide');
+            document.querySelector(`#${this.#id} .dropdown`).classList.remove('hide');
             let wrapper = (e) => {
                 if (!e.target.closest(`#${this.#id}`)) {
                     this.close();
@@ -1300,7 +1315,6 @@
                 }
             }
             window.addEventListener('click', wrapper);
-            //e.stopPropagation();
             this.onopen && this.onopen();
         }
 
@@ -1380,7 +1394,7 @@
                     text = value[0];
                 }
             }
-            let elem = `<div class='select-text${cls}'><span id="${this.#id}-text"${style}>${text}</span><span style="margin:0 5px;user-select: none">▽</span></div>`;
+            let elem = `<div class='select-text${cls}'><span id="${this.#id}-text"${style}>${text}</span><span class="arrow">▽</span></div>`;
 
             let options = [`<div id="${this.#id}">`];
             let ending = '';
@@ -3371,91 +3385,20 @@
         let html = [];
 
         let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
+        //oldBrowser = true;
 
-        if (oldBrowser) {
-            html.push('<div class="match-size">');
-            html.push(getAgeGroupSelections(key, true));
-            html.push('</div><div class="match-size">');
-            html.push(getCourseSelections(key, true));
-            html.push('</div>');
-        } else {
-            html.push('<div>Age Group: ');
-            html.push(`<select class="big" onchange="go('rank', this.value)">`);
-            html.push(getAgeGroupSelections(key));
-            html.push(`</select> &nbsp; Course: <select class="big" onchange="go('rank', this.value)">`);
-            html.push(getCourseSelections(key));
-            html.push(`</select> &nbsp; Club: <select class="big" onchange="go('rank', this.value)">`);
-            html.push(await loadClubSelections(key));
-            html.push('</select></div>');
-
-            html.push('<div>Age Group: ');
-            html.push(createAgeGenderSelect(key));
-            html.push(' &nbsp; Course: ');
-            html.push(createCourseSelect(key));
-            html.push(' &nbsp; Club: ');
-            html.push(await buildClubSelect(key));
-            html.push('</div>');
-
-            html.push('<div class="center-row">Age Group: ', createAgeGenderSelect(key, true),
-                ' &nbsp; Course: ', createCourseSelect(key, true),
-                ' &nbsp; Club: ', await buildClubSelect(key, true), '</div>');
-
-        }
+        html.push('<div class="center-row"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, oldBrowser),
+            '<p style="margin:0 5px 0 20px">Course:</p>', createCourseSelect(key, oldBrowser),
+            '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, oldBrowser), '</div>');
 
         html.push(showEventButtons(key));
         html.push(await showRankTableTitle(values, key));
 
         let meetDate = localStorage.getItem('meetDate') || '';
-        let inputType = oldBrowser ? 'text' : 'date';
-        html.push('<div class="row"><div>Meet date:</div>',
-            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')"><div>Meet cut:</div>`);
 
-        // prepare the standard options
-        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
-        let [from, to] = decodeAgeKey(ageKey);
-        let options = [];
-        let set = new Set();
-        for (let age = from; age <= to; ++age) {
-            let meets = getMeetStandards(age);
-            for (let [i, meet] of meets.entries()) {
-                let std = meet[genderStr].get(_eventList[event]);
-                if (std && !set.has(meet)) {
-                    set.add(meet);
-                    let opt = [meet.short, meet.age[0], meet.age[1], std[0]];
-                    let index = options.length;
-                    for (let o of options) {
-                        if (o[0].includes(meet.short)) {
-                            index = i + 1;
-                            break;
-                        }
-                    }
-                    options.splice(index, 0, opt);
-                }
-            }
-        }
-
-        // generate the standard selection
-        for (let [i, cls] of ['gn', 'bl', 'rd'].entries()) {
-            html.push(`<select class="${cls}" onchange="onStandardChange(${i}, this.value, '${key}')"><option></option>`);
-            let standard = localStorage.getItem('meetStds' + i) || '';
-            for (let option of options) {
-                let [short, from, to, std] = option;
-                let value = `${short}|${from}|${to}`;
-                let selected = value == standard ? ' selected' : '';
-                html.push(`<option value="${value}"${selected}>${short} (${from == to ? from : from + '-' + to}) = ${std}</option>`);
-            }
-            html.push('</select>');
-        }
-        html.push('</div>');
-
-
-        html.push('<div class="center-row">Meet date: ',
-            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
-            'Meet cut: ', buildStandardSelects(key), '</div>');
-
-        html.push('<div class="center-row">Meet date: ',
-            `<input type="${inputType}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
-            'Meet cut: ', buildStandardSelects(key, true), '</div>');
+        html.push('<div class="center-row"><p style="margin:0 5px 0 0">Meet date:</p>',
+            `<input type="${oldBrowser ? 'text' : 'date'}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
+            '<p style="margin:0 5px 0 20px">Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
 
         html.push('<div id="rank-table">', await showRankTable(values, key), '</div>');
 
@@ -3662,32 +3605,8 @@
             }
         }
         let select = new Select('age-gender-select', values, key, (v) => go('rank', v));
-        select.class = 'big';
+        select.class = custom ? '' : 'big';
         return select.render(custom);
-    }
-
-    function getAgeGroupSelections(key, button) {
-        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
-
-        let html = [];
-        for (let g of ['Female', 'Male']) {
-            if (!button) {
-                html.push(`<optgroup label="${g}">`)
-            }
-            for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
-                let pageKey = getRankDataKey(g, event, ag, zone, lsc, club);
-                if (!button) {
-                    let selected = ag == ageKey && g == genderStr ? ' selected' : '';
-                    html.push(`<option value="${pageKey}"${selected}>${ag} ${g}</option>`);
-                } else {
-                    html.push(`<button onclick="go('rank', '${pageKey}')">${ag}<br/>${g}</button>`);
-                }
-            }
-            if (!button) {
-                html.push('</optgroup>')
-            }
-        }
-        return html.join('');
     }
 
     function createCourseSelect(key, custom) {
@@ -3701,29 +3620,8 @@
         }
 
         let select = new Select('course-select', values, key, (v) => go('rank', v));
-        select.class = 'big';
+        select.class = custom ? '' : 'big';
         return select.render(custom);
-    }
-
-    function getCourseSelections(key, button) {
-        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
-
-        let html = [];
-        let [dist, style, course] = _eventList[event].split(' ');
-        for (let cs of _courseOrder) {
-            let newEvent = fixDistance([dist, style, cs].join(' '));
-            let newEventCode = _eventIndexMap.get(newEvent);
-            let pageKey = getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, club);
-            if (newEventCode) {
-                if (!button) {
-                    html.push(`<option value="${pageKey}"${course == cs ? ' selected' : ''}>${cs}</option>`);
-                }
-                else {
-                    html.push(`<button onclick="go('rank', '${pageKey}')">${cs}</option>`);
-                }
-            }
-        }
-        return html.join('');
     }
 
     async function buildClubSelect(key, custom) {
@@ -3756,7 +3654,7 @@
         }
 
         let select = new Select('club-select', values, key, (v) => go('rank', v));
-        select.class = 'big';
+        select.class = custom ? '' : 'big';
         select.valueEqualtoSelection = (val, ops) => {
             let [genderStrVal, ageKeyVal, eventVal, zoneVal, lscVal, clubVal] = decodeRankMapKey(val);
             let [genderStrOps, ageKeyOps, eventOps, zoneOps, lscOps, clubOps] = decodeRankMapKey(ops);
@@ -3766,45 +3664,6 @@
         return select.render(custom);
     }
 
-    async function loadClubSelections(key) {
-        let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
-
-        let html = [`<option class="selected" value="${getRankDataKey(genderStr, event, ageKey)}">USA</option>`];
-
-        html.push(`<optgroup label="Zone">`)
-        for (let zoneCode of ['Central', 'Eastern', 'Southern', 'Western']) {
-            let selected = !lsc && zoneCode == zone ? ' selected' : '';
-            let cls = zone == zoneCode ? ' class="selected"' : '';
-            html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zoneCode)}"${selected}>${zoneCode}</option>`);
-        }
-        html.push('</optgroup>');
-
-        if (zone) {
-            html.push(`<optgroup label="${zone} Zone">`)
-            for (let [lscCode, [lscName, zoneCode]] of lscMap) {
-                if (zoneCode == zone) {
-                    let selected = !club && lscCode == lsc ? ' selected' : '';
-                    let cls = lsc == lscCode ? ' class="selected"' : '';
-                    html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zone, lscCode)}"${selected}>${lscName} (${lscCode})</option>`);
-                }
-            }
-            html.push('</optgroup>');
-        }
-
-        if (lsc) {
-            let clubDict = await _clubDictinary.loadClubMap(lsc);
-
-            html.push(`<optgroup label="${getLSCName(lsc)} (${lsc})">`)
-            for (let [clubCode, clubName] of clubDict) {
-                let selected = clubCode == club ? ' selected' : '';
-                let cls = club == clubCode ? ' class="selected"' : '';
-                html.push(`<option ${cls}value="${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubCode)}"${selected}>${clubName} (${clubCode})</option>`);
-            }
-            html.push('</optgroup>');
-        }
-
-        return html.join('');
-    }
 </script>
 <script>
     function fixDistance(eventStr) {
