@@ -588,7 +588,7 @@
     <div class="row">
         <input id="input" autofocus style="width:100%; max-width: 300px" class="big" />
         <button onclick="onSearch()" style="width:100px" class="big">SEARCH</button>
-        <button onclick="onSearchAll()" style="width:100px" class="big">ALL</button>
+        <button onclick="onSearchAll()" style="width:100px" class="big">19&OVER</button>
     </div>
     <div id="table" class="container"></div>
     <!-- <div id="modal" onclick="if(window.event.target==this)hideModal()">
@@ -1505,12 +1505,51 @@
                 values = await loadClubSearch(name, all);
             }
 
+            if (!values || values.length <= 1) {
+                return values;
+            }
+
+            values = await filterSwimmers(values);
             if (values) {
                 values.sort((a, b) => a[values.idx.age] - b[values.idx.age]);
             }
-
             return values;
         });
+    }
+
+    async function filterSwimmers(values) {
+        let pkeys = new Set(values.map(v => v[values.idx.pkey]));
+
+        let bodyObj = {
+            metadata: [
+                {
+                    title: 'pkey',
+                    dim: "[UsasSwimTime.PersonKey]",
+                    datatype: "numeric",
+                    filter: {
+                        members: [...pkeys]
+                    }
+                }
+            ],
+            count: pkeys.size
+        }
+
+        let list = await fetchSwimValues(bodyObj, 'event');
+        if (!list) {
+            return;
+        }
+
+        pkeys = new Set(list.map(v => v[list.idx.pkey]));
+        let result = [];
+        let idx = values.idx;
+        result.idx = idx;
+        for (let row of values) {
+            if (pkeys.has(row[idx.pkey])) {
+                result.push(row);
+            }
+        }
+
+        return result;
     }
 
     function showSearch(values) {
@@ -1578,6 +1617,10 @@
         if (!all) {
             bodyObj.metadata[1].filter = {
                 to: 18
+            }
+        } else {
+            bodyObj.metadata[1].filter = {
+                from: 19
             }
         }
 
@@ -1671,6 +1714,10 @@
         if (!all) {
             bodyObj.metadata[1].filter = {
                 to: 18
+            }
+        } else {
+            bodyObj.metadata[1].filter = {
+                from: 19
             }
         }
 
@@ -2192,7 +2239,7 @@
         html.push('<div class="tip">Ctrl⌘ + mouse scroll to resize the date axis.<br>Shift⇧ + mouse scroll to resize the time axis.</div>',
             '</div>');
 
-        html.push('<div class="add-search">Compare progress with other swimmers:<input id="addInput" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">search</button><button onclick="addSearch(null, true)">all</button><div id="adding-list"></div></div>');
+        html.push('<div class="add-search">Compare progress with other swimmers:<input id="addInput" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">search</button><button onclick="addSearch(null, true)">19&Over</button><div id="adding-list"></div></div>');
 
         return html.join('');
     }
