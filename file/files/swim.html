@@ -3202,9 +3202,20 @@
             }
 
             let idx = values.idx;
+
+            // remove sortkey from values and idx
             for (let row of values) {
+                // shorten the date
                 row[idx.date] = row[idx.date].substring(0, 10);
+
+                row.splice(idx.sortkey, 1);
             }
+            for (let key in idx) {
+                if (idx[key] > idx.sortkey) {
+                    idx[key] -= 1;
+                }
+            }
+            delete idx.sortkey;
 
             return values;
         });
@@ -3286,12 +3297,6 @@
         let bodyObj = {
             metadata: [
                 {
-                    title: 'sortkey',
-                    dim: "[UsasSwimTime.SortKey]",
-                    datatype: "text",
-                    sort: "asc"
-                },
-                {
                     title: 'name',
                     dim: "[Person.FullName]",
                     datatype: "text"
@@ -3329,6 +3334,12 @@
                     filter: {
                         members: swimmerList.map(row => row[swimmerList.idx.pkey])
                     }
+                },
+                {
+                    title: 'sortkey',
+                    dim: "[UsasSwimTime.SortKey]",
+                    datatype: "text",
+                    sort: "asc"
                 },
                 {
                     title: 'event',
@@ -3418,12 +3429,6 @@
         let bodyObj = {
             metadata: [
                 {
-                    title: 'sortkey',
-                    dim: "[UsasSwimTime.SortKey]",
-                    datatype: "text",
-                    sort: "asc"
-                },
-                {
                     title: 'name',
                     dim: "[UsasSwimTime.FullName]",
                     datatype: "text"
@@ -3458,6 +3463,12 @@
                     title: 'pkey',
                     dim: "[UsasSwimTime.PersonKey]",
                     datatype: "numeric"
+                },
+                {
+                    title: 'sortkey',
+                    dim: "[UsasSwimTime.SortKey]",
+                    datatype: "text",
+                    sort: "asc"
                 },
                 {
                     title: 'event',
