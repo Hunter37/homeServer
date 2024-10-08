@@ -525,10 +525,21 @@
     .checkbox-wrapper {
         display: flex;
         align-items: center;
+        margin: 0 0 0 20px;
+        border-radius: 72px
+    }
+
+    .checkbox-wrapper:hover,
+    .xbutton:hover {
+        background: #0002;
     }
 
     .checkbox-wrapper>* {
         cursor: pointer;
+    }
+
+    .checkbox-wrapper label {
+        margin: 0 2px 0 5px;
     }
 
     .checkbox-wrapper input {
@@ -590,11 +601,14 @@
         background-color: #25A;
     }
 
-    /* -------------- */
-
-    .check-list input {
-        margin: 0 3px 0 20px;
+    /* x-button */
+    .xbutton {
+        font-size: larger !important;
+        background: #0000;
+        border-radius: 36px;
     }
+
+    /* -------------- */
 
     #swimmer-list {
         margin: 0 50px;
@@ -2370,7 +2384,8 @@
                 '<button class="size" style="left:65px;top:-160px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
                 '<button class="size" style="left:40px;top:-110px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button>');
         }
-        html.push('<div class="tip">Ctrl⌘ + mouse scroll to resize the date axis.<br>Shift⇧ + mouse scroll to resize the time axis.</div>',
+        html.push('<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
+            '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>',
             '</div>');
 
         return html.join('');
@@ -2410,13 +2425,18 @@
             e.preventDefault();
             e.stopPropagation();
 
-            resizeY(e.deltaY > 0 ? -1 : 1, canvas);
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                await resizeX(e.deltaX > 0 ? -1 : 1, canvas);
+            } else {
+                resizeY(e.deltaY > 0 ? -1 : 1, canvas);
+            }
 
         } else if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
             e.stopPropagation();
 
-            resizeX(e.deltaY > 0 ? -1 : 1, canvas);
+            await resizeX(e.deltaY > 0 ? -1 : 1, canvas);
+
         }
     }
 
@@ -2742,7 +2762,7 @@
             let id = 's_' + swimmer.swimmer.pkey;
             let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
             html.push(createCheckbox(id, name, !swimmer.hide, `checkSwimmer(this, '${swimmer.swimmer.pkey}')`),
-                `<button style="font-size:larger;background:#0000" onclick="removeSwimmer(this, '${swimmer.swimmer.pkey}')">❌</button>`);
+                `<button class="xbutton" onclick="removeSwimmer(this, '${swimmer.swimmer.pkey}')">❌</button>`);
         }
 
         document.getElementById('swimmer-list').innerHTML = html.join('');
