@@ -411,10 +411,6 @@
         border-radius: 5px 5px 0 0;
     }
 
-    .tab:hover {
-        background-color: #EEE;
-    }
-
     .tabs>.selected {
         background-color: #FFF;
         border: 1px solid #000;
@@ -439,7 +435,7 @@
         text-align: center;
     }
 
-    /* graph size panel */
+    /* graph re-size panel */
     .size {
         font-size: x-large;
         width: 40px;
@@ -449,6 +445,7 @@
         user-select: none;
         position: absolute;
         background: #AAA7;
+        padding: 0 5px;
     }
 
     .size-panel {
@@ -501,7 +498,7 @@
     .add-search button {
         border: 1px solid;
         margin: 0 0 0 3px;
-        padding: 2px 5px;
+        padding: 3px 5px;
     }
 
     #adding-list {
@@ -512,9 +509,85 @@
         padding: 5px;
     }
 
+    .tabs>.selected:hover,
+    .tab:hover,
+    .match-size button:hover,
+    button.big:hover,
+    .add-search button:hover,
+    .dropdown .option:hover,
+    .size:hover,
     #adding-list tr:hover {
-        background-color: #26D;
+        background-color: #57E;
         color: #FFF;
+    }
+
+    /* checkbox style */
+    .checkbox-wrapper {
+        display: flex;
+        align-items: center;
+    }
+
+    .checkbox-wrapper>* {
+        cursor: pointer;
+    }
+
+    .checkbox-wrapper input {
+        appearance: none;
+        background-color: #CCC;
+        border-radius: 72px;
+        border-style: none;
+        flex-shrink: 0;
+        height: 20px;
+        margin: 0;
+        position: relative;
+        width: 30px;
+    }
+
+    .checkbox-wrapper input::before {
+        bottom: -6px;
+        content: "";
+        left: -6px;
+        position: absolute;
+        right: -6px;
+        top: -6px;
+    }
+
+    .checkbox-wrapper input,
+    .checkbox-wrapper input::after {
+        transition: all 100ms ease-out;
+    }
+
+    .checkbox-wrapper input::after {
+        background-color: #fff;
+        border-radius: 50%;
+        content: "";
+        height: 14px;
+        left: 3px;
+        position: absolute;
+        top: 3px;
+        width: 14px;
+    }
+
+    .checkbox-wrapper input:hover {
+        background-color: #999;
+        transition-duration: 0s;
+    }
+
+    .checkbox-wrapper input:checked {
+        background-color: #26D;
+    }
+
+    .checkbox-wrapper input:checked::after {
+        background-color: #FFF;
+        left: 13px;
+    }
+
+    .checkbox-wrapper :focus:not(.focus-visible) {
+        outline: 0;
+    }
+
+    .checkbox-wrapper input:checked:hover {
+        background-color: #25A;
     }
 
     /* -------------- */
@@ -524,7 +597,7 @@
     }
 
     #swimmer-list {
-        margin: 20px;
+        margin: 0 50px;
     }
 
     #swimmer-list>button {
@@ -607,11 +680,6 @@
 
     .dropdown .option.selected {
         background-color: #CCC;
-    }
-
-    .dropdown .option:hover {
-        color: #FFF;
-        background-color: #26D;
     }
 
     .select-text {
@@ -1234,30 +1302,33 @@
     // tab view
 
     class TabView {
+        #id;
+        #tabs;
+        #views;
         constructor(id) {
-            this.id = id;
-            this.tabs = [];
-            this.views = [];
+            this.#id = id;
+            this.#tabs = [];
+            this.#views = [];
         }
 
         addTab(name, view) {
-            this.tabs.push(name);
-            this.views.push(view);
+            this.#tabs.push(name);
+            this.#views.push(view);
         }
 
         render() {
             let html = [];
 
-            html.push(`<div class="tabview" id="${this.id}">`);
+            html.push(`<div class="tabview" id="${this.#id}">`);
 
             html.push('<div class="tabs">');
-            for (let i = 0; i < this.tabs.length; ++i) {
-                html.push(`<div class="tab${i == 0 ? ' selected' : ''}" onclick="TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
+            for (let i = 0; i < this.#tabs.length; ++i) {
+                html.push(`<div class="tab${i == 0 ? ' selected' : ''}" onclick="TabView.tab('${this.#id}', ${i})">${this.#tabs[i]}</div>`);
             }
             html.push('</div>');
 
-            for (let i = 0; i < this.views.length; ++i) {
-                html.push(`<div class="view ${i == 0 ? '' : 'hide'}">${this.views[i]}</div>`);
+            for (let i = 0; i < this.#views.length; ++i) {
+                html.push(`<div class="view ${i == 0 ? '' : 'hide'}">${this.#views[i]}</div>`);
             }
 
             html.push('</div>');
@@ -1265,12 +1336,12 @@
             return html.join('');
         }
 
-        static tab(tabViewId, index) {
-            let tabs = document.querySelectorAll(`#${tabViewId}>.tabs>.tab`);
+        static tab(id, index) {
+            let tabs = document.querySelectorAll(`#${id}>.tabs>.tab`);
             for (let i = 0; i < tabs.length; ++i) {
                 tabs[i].classList.toggle('selected', i == index);
             }
-            let views = document.querySelectorAll(`#${tabViewId}>.view`);
+            let views = document.querySelectorAll(`#${id}>.view`);
             for (let i = 0; i < views.length; ++i) {
                 views[i].classList.toggle('hide', i != index);
             }
@@ -2285,23 +2356,31 @@
 
         html.push('</div>');
 
-        html.push('<div class="check-list"><input type="checkbox" id="show-scy" onchange="showGraph()" checked><label for="show-scy">SCY</label>',
-            '<input type="checkbox" id="show-scm" onchange="showGraph()" checked><label for="show-scm">SCM</label>',
-            '<input type="checkbox" id="show-lcm" onchange="showGraph()" checked><label for="show-lcm">LCM</label><span id="swimmer-list"></span></div>');
+        html.push('<div class="check-list">', createCheckbox('show-scy', 'SCY', true, 'showGraph()'),
+            createCheckbox('show-scm', 'SCM', true, 'showGraph()'),
+            createCheckbox('show-lcm', 'LCM', true, 'showGraph()'),
+            '<span style="display:inline-block"><span id="swimmer-list" class="center-row"></span></span></div>');
 
         html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
 
         html.push('<div style="position:relative;margin:0 50px"class="size-panel">');
         if (isTouchDevice()) {
             html.push('<button class="size" style="left:40px;top:-210px" onclick="resizeY(-1)">⇧</button>',
-                '<button class="size" style="left:15px;top:-160px" onclick="resizeX(-1)">⇦</button>',
-                '<button class="size" style="left:65px;top:-160px" onclick="resizeX(1)">⇨</button>',
-                '<button class="size" style="left:40px;top:-110px" onclick="resizeY(1)">⇩</button>');
+                '<button class="size" style="left:15px;top:-160px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
+                '<button class="size" style="left:65px;top:-160px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
+                '<button class="size" style="left:40px;top:-110px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button>');
         }
         html.push('<div class="tip">Ctrl⌘ + mouse scroll to resize the date axis.<br>Shift⇧ + mouse scroll to resize the time axis.</div>',
             '</div>');
 
         return html.join('');
+    }
+
+    function createCheckbox(id, text, checked, onchange) {
+        onchange = onchange ? ` onchange="${onchange}"` : '';
+        checked = checked ? ' checked' : '';
+        return '<span style="display:inline-block"><span class="checkbox-wrapper">' +
+            `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
     }
 
     function isTouchDevice() {
@@ -2660,11 +2739,10 @@
     async function updateSwimmerList(swimmers) {
         let html = [];
         for (let swimmer of swimmers) {
-            id = 's_' + swimmer.swimmer.pkey;
-            let checked = swimmer.hide ? '' : ' checked';
-            html.push(`<input type="checkbox"${checked} id="${id}" onchange="checkSwimmer(this, '${swimmer.swimmer.pkey}')">`,
-                `<label for="${id}">${swimmer.swimmer.alias} ${swimmer.swimmer.lastName}</label>`,
-                `<button onclick="removeSwimmer(this, '${swimmer.swimmer.pkey}')">❌</button>`);
+            let id = 's_' + swimmer.swimmer.pkey;
+            let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
+            html.push(createCheckbox(id, name, !swimmer.hide, `checkSwimmer(this, '${swimmer.swimmer.pkey}')`),
+                `<button style="font-size:larger;background:#0000" onclick="removeSwimmer(this, '${swimmer.swimmer.pkey}')">❌</button>`);
         }
 
         document.getElementById('swimmer-list').innerHTML = html.join('');

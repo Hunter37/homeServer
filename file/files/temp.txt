@@ -1,0 +1,77 @@
+        html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"',
+            ' onpointerup="pointerUp(this, event)" onpointercancel="pointerUp(this, event)" onpointerout="pointerUp(this, event)" onpointerleave="pointerUp(this, event)"',
+            ' onpointerdown="pointerDown(this, event)" onpointermove="pointerMove(this, event)"></canvas>');
+
+
+
+    function pointerDown(canvas, e) {
+        e = e || window.event;
+        e.preventDefault();
+        e.stopPropagation();
+
+        let eventMap = canvas.eventMap = canvas.eventMap || new Map();
+        eventMap.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        //console.log('pointerDown', e.pointerId, e.clientX.toFixed(2), e.clientY.toFixed(2));
+    }
+
+    async function pointerUp(canvas, e) {
+        e = e || window.event;
+        e.preventDefault();
+        e.stopPropagation();
+
+        let eventMap = canvas.eventMap = canvas.eventMap || new Map();
+        eventMap.delete(e.pointerId);
+
+        if (eventMap.size < 2) {
+            canvas.preXDiff = canvas.preYDiff = -1;
+        }
+
+        //console.log('pointerUp', e.pointerId, e.clientX.toFixed(2), e.clientY.toFixed(2));
+    }
+
+    async function pointerMove(canvas, e) {
+        e = e || window.event;
+        e.preventDefault();
+        e.stopPropagation();
+
+        let redraw = false;
+
+        let eventMap = canvas.eventMap = canvas.eventMap || new Map();
+        eventMap.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (eventMap.size == 2) {
+            let [e0, e1] = [...eventMap.values()];
+            let curXDiff = Math.abs(e0.x - e1.x);
+            let curYDiff = Math.abs(e0.y - e1.y);
+            if (curXDiff > curYDiff) {
+                let preXDiff = canvas.preXDiff = canvas.preXDiff || -1;
+                if (preXDiff > 0) {
+                    let factor = canvas.xZoomFactor || parseFloat(localStorage.getItem('xZoomFactor')) || 1;
+                    factor *= curXDiff / preXDiff;
+                    factor = Math.max(0.3, Math.min(3, factor));
+                    canvas.xZoomFactor = factor;
+                    localStorage.setItem('xZoomFactor', factor);
+                    redraw = true;
+                }
+            } else {
+                let preYDiff = canvas.preYDiff = canvas.preYDiff || -1;
+                if (preYDiff > 0) {
+                    let factor = canvas.yZoomFactor || parseFloat(localStorage.getItem('yZoomFactor')) || 1;
+                    factor *= curYDiff / preYDiff;
+                    factor = Math.max(0.3, Math.min(7, factor));
+                    canvas.yZoomFactor = factor;
+                    localStorage.setItem('yZoomFactor', factor);
+                    redraw = true;
+                }
+            }
+
+            canvas.preXDiff = curXDiff;
+            canvas.preYDiff = curYDiff;
+        }
+
+        if (redraw) {
+            await showGraph(canvas);
+        }
+
+        /
