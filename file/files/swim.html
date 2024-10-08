@@ -465,9 +465,59 @@
         margin: 0;
     }
 
-    .add-search>* {
-        margin: 5px;
+    #graph-title {
+        margin: 10px 0 0 0;
     }
+
+    /* add search */
+    .add-search {
+        float: right;
+        margin: 0;
+    }
+
+    .add-search>div {
+        margin: 0 5px 5px 0;
+        padding: 2px 5px;
+    }
+
+    .add-search input {
+        text-align: left;
+        font-size: 16px;
+        width: 150px;
+    }
+
+    .add-search .loading {
+        width: 200px;
+        overflow: hidden;
+    }
+
+    .add-search .loader {
+        width: 15px;
+        height: 15px;
+        margin: auto;
+        float: none;
+    }
+
+    .add-search button {
+        border: 1px solid;
+        margin: 0 0 0 3px;
+        padding: 2px 5px;
+    }
+
+    #adding-list {
+        padding: 5px;
+    }
+
+    #adding-list td {
+        padding: 5px;
+    }
+
+    #adding-list tr:hover {
+        background-color: #26D;
+        color: #FFF;
+    }
+
+    /* -------------- */
 
     .check-list input {
         margin: 0 3px 0 20px;
@@ -2213,7 +2263,9 @@
         let html = [];
         let hide25 = localStorage.getItem('hide25');
 
-        html.push('<div class="content"><div class="match-size">');
+        html.push('<div class="content">');
+
+        html.push('<div class="match-size">');
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
             if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
@@ -2221,7 +2273,17 @@
                     ` onclick="showGraph(null, '${pkey}', ${i})">${s}<br>${d}</button>`);
             }
         }
-        html.push('</div><h2 id="graph-title"></h2></div>');
+        html.push('</div>');
+
+        html.push('<h2 id="graph-title"></h2>');
+
+        let searchDropdown = new Dropdown('add-search',
+            '<div class="center-row" onclick="event.stopPropagation()"><input id="add-input" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">Search</button><button onclick="addSearch(null, true)">19&Over</button></div>',
+            '<div id="adding-list" onclick="event.stopPropagation()"></div>');
+
+        html.push('<div class="add-search"><div>Compare progress with other swimmers:</div>', searchDropdown.render(), '</div>');
+
+        html.push('</div>');
 
         html.push('<div class="check-list"><input type="checkbox" id="show-scy" onchange="showGraph()" checked><label for="show-scy">SCY</label>',
             '<input type="checkbox" id="show-scm" onchange="showGraph()" checked><label for="show-scm">SCM</label>',
@@ -2238,8 +2300,6 @@
         }
         html.push('<div class="tip">Ctrl⌘ + mouse scroll to resize the date axis.<br>Shift⇧ + mouse scroll to resize the time axis.</div>',
             '</div>');
-
-        html.push('<div class="add-search">Compare progress with other swimmers:<input id="addInput" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">search</button><button onclick="addSearch(null, true)">19&Over</button><div id="adding-list"></div></div>');
 
         return html.join('');
     }
@@ -2527,7 +2587,11 @@
     }
 
     async function addSearch(value, all) {
-        value = value || document.getElementById('addInput').value;
+        document.getElementById('adding-list').innerHTML = '<div class=""><div class="loader"></div></div>';
+        let dropdown = Dropdown.get('add-search');
+        dropdown.open();
+
+        value = value || document.getElementById('add-input').value;
         let html = [];
         if (value) {
             let list = await loadSearch(value, all);
@@ -2544,19 +2608,27 @@
     }
 
     async function addSwimmer(pkey) {
-        document.getElementById('adding-list').innerHTML = '';
+        document.getElementById('adding-list').innerHTML = '<div class="loading"><div class="loader"></div></div>';
+
         let canvas = document.getElementById('canvas');
         let swimmers = canvas.swimmers;
 
+        let skip = false;
         for (let swimmer of swimmers) {
             if (swimmer.swimmer.pkey == pkey) {
-                return;
+                skip = true;
+                break;
             }
         }
 
-        let swimmer = await loadDetails(pkey);
-        swimmers.push(swimmer);
-        await updateSwimmerList(swimmers);
+        if (!skip) {
+            let swimmer = await loadDetails(pkey);
+            swimmers.push(swimmer);
+            await updateSwimmerList(swimmers);
+        }
+
+        let dropdown = Dropdown.get('add-search');
+        dropdown.close();
     }
 
     function removeSwimmer(elem, pkey) {
