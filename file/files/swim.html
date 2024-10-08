@@ -1908,13 +1908,6 @@
         data.swimmer.birthday = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
         data.swimmer.alias = getAlias(data.swimmer.firstName, data.swimmer.lastName);
 
-        if (data.events.length > 0) {
-            data.events.idx.name = data.events[0].length;
-            for (let row of data.events) {
-                row.push(data.swimmer.alias + ' ' + data.swimmer.lastName);
-            }
-        }
-
         return data;
     }
 
@@ -2463,22 +2456,8 @@
     //                  l-blue,  brown,  l-green p-blue  l-red   siyan   l-purple pink   l-yellow orange
     const graphColors = ['#0AF', '#D85', '#0C4', '#88C', '#EBA', '#8CD', '#c9E', '#F9C', '#DD7', '#FC5'];
 
-    async function showGraph(canvas, pkey, event, mouseX, mouseY) {
-        TabView.tab('swimmerTabView', 3);
-
-        canvas = canvas || document.getElementById('canvas');
-        pkey = canvas.swimmerPkey = pkey || canvas.swimmerPkey;
-        let list = canvas.swimmers = canvas.swimmers || [];
-        if (list.length == 0) {
-            list.push(await loadDetails(pkey));
-        }
-        let data = list[0];
-        let idx = data.events.idx;
-
-        event = canvas.graphEvent = event || canvas.graphEvent || data.events[0][idx.event];
-
-        let xZoomFactor = canvas.xZoomFactor || parseFloat(localStorage.getItem('xZoomFactor')) || 1;
-        let yZoomFactor = canvas.yZoomFactor || parseFloat(localStorage.getItem('yZoomFactor')) || 1;
+    function prepareGraphData(list, event, idx) {
+        let [dist, stroke, course] = _eventList[event].split(' ');
 
         let eventStrs = [];
         let values = [];
@@ -2488,11 +2467,6 @@
         let latest = new Date();
         latest.setMonth(latest.getMonth() + 3);
 
-        let [dist, stroke, course] = _eventList[event].split(' ');
-        UpdateGraphTitle(dist, stroke);
-        canvas.classList.remove('hide');
-
-        // calculate the slowest, fastest, earliest, latest, todo: extract to a function
         for (let swimmer of list) {
             if (swimmer.hide) {
                 continue;
@@ -2504,6 +2478,8 @@
                 let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
                 let evt = _eventIndexMap.get(eventStr);
                 let value = swimmer.events.filter(e => e[idx.event] == evt);
+                value.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
+
                 for (let row of value) {
                     let t = timeToInt(row[idx.time]);
                     slowest = Math.max(slowest, t);
@@ -2524,21 +2500,12 @@
         let delta = (slowest - fastest) * 0.1;
         slowest += delta;
         fastest = Math.floor((fastest - delta) / 100) * 100;
+        return [eventStrs, values, slowest, fastest, earliest, latest];
+    }
 
-        delta = slowest - fastest;
+    function drawXYscale(ctx, width, height, earliest, latest, fastest, slowest) {
+        let delta = slowest - fastest;
         let duration = latest - earliest;
-        let width = (duration / _1DayInMilliSeconds / 3) * xZoomFactor;
-        let height = 500 * yZoomFactor;
-        const margin = 50;
-
-        canvas.height = height + margin * 2;
-        canvas.width = width + margin * 2 + 300;
-
-        let ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.translate(margin, margin);
-        ctx.font = "14px Verdana";
-
         // draw the axis
         ctx.strokeStyle = 'black';
         ctx.fillStyle = 'blue';
@@ -2571,30 +2538,37 @@
         }
 
         ctx.stroke();
+    }
 
-        if (list.length == 1) {
-            // draw age dots line and age text
-            let [left, right] = list[0].swimmer.birthday;
-            left = new Date(left);
-            right = new Date(right);
-            let d = new Date(left);
-            for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
-                let x = (d - earliest) / duration * width;
-                if (x < 1) {
-                    continue;
-                }
-                ctx.beginPath();
-                ctx.strokeStyle = ctx.fillStyle = 'lightblue';
-                ctx.setLineDash([5, 5]);
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, height);
-                ctx.stroke();
-                ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
-                ctx.fill();
+    function drawAgeDots(ctx, list, width, height, earliest, latest) {
+        let duration = latest - earliest;
+
+        // draw age dots line and age text
+        let [left, right] = list[0].swimmer.birthday;
+        left = new Date(left);
+        right = new Date(right);
+        let d = new Date(left);
+        for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
+            let x = (d - earliest) / duration * width;
+            if (x < 1) {
+                continue;
             }
+            ctx.beginPath();
+            ctx.strokeStyle = ctx.fillStyle = 'lightblue';
+            ctx.setLineDash([5, 5]);
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+            ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
+            ctx.fill();
         }
+    }
 
-        // draw the cruve and dots, then find the tip row
+    // draw the cruve and dots, and find the tip row
+    function drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName) {
+        let delta = slowest - fastest;
+        let duration = latest - earliest;
+
         ctx.font = "16px Verdana";
         ctx.setLineDash([]);
         let tipRow;
@@ -2606,9 +2580,9 @@
                 // show the swimmer name and event name
                 ctx.fillText(eventStrs[index], topTextOffset, -10);
                 let offset = ctx.measureText(eventStrs[index]).width;
-                if (list.length > 1) {
-                    ctx.fillText(value[0][idx.name], topTextOffset, -30);
-                    offset = Math.max(offset, ctx.measureText(value[0][idx.name]).width);
+                if (showName) {
+                    ctx.fillText(value.name, topTextOffset, -30);
+                    offset = Math.max(offset, ctx.measureText(value.name).width);
                 }
                 topTextOffset += offset + 30;
             }
@@ -2634,9 +2608,7 @@
                 ctx.fill();
 
                 if (!tipRow && ctx.isPointInPath(mouseX, mouseY)) {
-                    tipRow = row;
-                    mouseX = x;
-                    mouseY = y;
+                    tipRow = [row, x, y, value.name];
                 }
 
                 if (preTime && preTime < t) {
@@ -2654,29 +2626,85 @@
             }
         }
 
-        if (tipRow) {
-            ctx.beginPath();
-            ctx.strokeStyle = 'blue';
-            ctx.arc(mouseX, mouseY, 5, 0, 2 * Math.PI);
-            ctx.stroke();
+        return tipRow;
+    }
 
-            let meetName = data.meetDict.get(tipRow[idx.meet])[data.meetDict.idx.name];
-            let dateAge = formatDate(tipRow[idx.date]) + '   ' + _eventList[tipRow[idx.event]].split(' ').pop() + '   Age:' + tipRow[idx.age];
-            let timeStd = tipRow[idx.time] + '     ' + formatStandard(tipRow[idx.std]) + (list.length > 1 ? '  (' + tipRow[idx.name] + ')' : '');
-
-            ctx.beginPath();
-            ctx.fillStyle = "#777C";
-            ctx.roundRect(mouseX + 5, mouseY - 70,
-                Math.max(ctx.measureText(timeStd).width, Math.max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width)) + 10, 66, 5);
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.fillStyle = '#FFF';
-            ctx.fillText(timeStd, mouseX + 10, mouseY - 10);
-            ctx.fillText(dateAge, mouseX + 10, mouseY - 10 - 20);
-            ctx.fillText(meetName, mouseX + 10, mouseY - 10 - 2 * 20);
-            ctx.fill();
+    function drawTip(ctx, tipRow, idx, meetDict, showName) {
+        if (!tipRow) {
+            return;
         }
+
+        let [row, x, y, name] = tipRow;
+        ctx.beginPath();
+        ctx.strokeStyle = 'blue';
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        let meetName = meetDict.get(row[idx.meet])[meetDict.idx.name];
+        let dateAge = formatDate(row[idx.date]) + '   ' + _eventList[row[idx.event]].split(' ').pop() + '   Age:' + row[idx.age];
+        let timeStd = row[idx.time] + '     ' + formatStandard(row[idx.std]) + (showName ? '  (' + name + ')' : '');
+
+        ctx.beginPath();
+        ctx.fillStyle = "#777C";
+        ctx.roundRect(x + 5, y - 70,
+            Math.max(ctx.measureText(timeStd).width, Math.max(ctx.measureText(meetName).width, ctx.measureText(dateAge).width)) + 10, 66, 5);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.fillStyle = '#FFF';
+        ctx.fillText(timeStd, x + 10, y - 10);
+        ctx.fillText(dateAge, x + 10, y - 10 - 20);
+        ctx.fillText(meetName, x + 10, y - 10 - 2 * 20);
+        ctx.fill();
+    }
+
+    async function showGraph(canvas, pkey, event, mouseX, mouseY) {
+        TabView.tab('swimmerTabView', 3);
+
+        canvas = canvas || document.getElementById('canvas');
+        pkey = canvas.swimmerPkey = pkey || canvas.swimmerPkey;
+        let list = canvas.swimmers = canvas.swimmers || [];
+        if (list.length == 0) {
+            list.push(await loadDetails(pkey));
+        }
+        let data = list[0];
+        let idx = data.events.idx;
+
+        event = canvas.graphEvent = event || canvas.graphEvent || data.events[0][idx.event];
+
+        let xZoomFactor = canvas.xZoomFactor || parseFloat(localStorage.getItem('xZoomFactor')) || 1;
+        let yZoomFactor = canvas.yZoomFactor || parseFloat(localStorage.getItem('yZoomFactor')) || 1;
+
+        let [dist, stroke, course] = _eventList[event].split(' ');
+        UpdateGraphTitle(dist, stroke);
+        canvas.classList.remove('hide');
+
+        let [eventStrs, values, slowest, fastest, earliest, latest] = await prepareGraphData(list, event, idx);
+
+        let duration = latest - earliest;
+        let width = (duration / _1DayInMilliSeconds / 3) * xZoomFactor;
+        let height = 500 * yZoomFactor;
+        const margin = 50;
+
+        canvas.height = height + margin * 2;
+        canvas.width = width + margin * 2 + 300;
+
+        let ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(margin, margin);
+        ctx.font = "14px Verdana";
+
+        drawXYscale(ctx, width, height, earliest, latest, fastest, slowest);
+
+        if (list.length == 1) {
+            drawAgeDots(ctx, list, width, height, earliest, latest);
+        }
+
+        let showName = list.length > 1;
+
+        let tipRow = drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName);
+
+        drawTip(ctx, tipRow, idx, data.meetDict, showName);
     }
 
     async function addKeypress(input, e) {
