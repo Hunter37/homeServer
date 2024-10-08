@@ -763,6 +763,19 @@
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
+    // app version check
+    async function checkVersion() {
+        const version = 1;
+
+        let preVersion = Number(localStorage.getItem('version'));
+        if (preVersion < 1) {
+            await new Promise(resolve => ldb.clear(resolve));
+        }
+
+        localStorage.setItem('version', version);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     // club dictionary
 
     class ClubDictinary {
@@ -1125,6 +1138,7 @@
 
 
     async function loadContent() {
+        await checkVersion();
         _backgroundActions.length = 0;
         //hideModal();
 
@@ -2574,7 +2588,7 @@
     async function getRank(params) {
         let [mapKey, timeInt, pkey, id] = params;
 
-        let values = await loadRank(mapKey);
+        let data = await loadRank(mapKey);
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
         // 0        1     2     3     4          5     6        7     8         9     10
 
@@ -2584,7 +2598,7 @@
             return;
         }
 
-        let rank = calculateRank(values, pkey, timeInt);
+        let rank = calculateRank(data.values, pkey, timeInt);
 
         element.innerHTML = `<button onclick="go('rank', '${mapKey}')">${rank}</button>`;
     }
