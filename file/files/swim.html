@@ -2214,7 +2214,7 @@
         return _courseOrder.indexOf(course) * 100_000 + _strokeOrder.indexOf(stroke) * 10_000 + Number(dist);
     }
 
-    function buildPopup(text, popupText) {
+    function createPopup(text, popupText) {
         if (!text) {
             return '';
         }
@@ -2223,10 +2223,10 @@
     }
 
     function createBestTimeTableHeader(data) {
-        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th><th>', buildPopup('Time', 'Best Time'),
-            '</th ><th>', buildPopup('Date', 'Event Date'), '</th><th>', buildPopup('Count', 'Total Event Count'), '</th><th>',
-            buildPopup(data.swimmer.club, data.swimmer.clubName), '</th><th>', buildPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)),
-            '</th><th>', buildPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th>', buildPopup('US', 'USA Swimming'), '</th>'];
+        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th><th>', createPopup('Time', 'Best Time'),
+            '</th ><th>', createPopup('Date', 'Event Date'), '</th><th>', createPopup('Count', 'Total Event Count'), '</th><th>',
+            createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th>', createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)),
+            '</th><th>', createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th>', createPopup('US', 'USA Swimming'), '</th>'];
 
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
         if (data.swimmer.age < 19) {
@@ -2237,7 +2237,7 @@
 
         let meetStds = getMeetStandards(data.swimmer.age);
         for (let std of meetStds) {
-            html.push('<th>', buildPopup(std.short, std.meet), '</th>');
+            html.push('<th>', createPopup(std.short, std.meet), '</th>');
         }
 
         html.push('</tr>');
@@ -2456,7 +2456,7 @@
     //                  l-blue,  brown,  l-green p-blue  l-red   siyan   l-purple pink   l-yellow orange
     const graphColors = ['#0AF', '#D85', '#0C4', '#88C', '#EBA', '#8CD', '#c9E', '#F9C', '#DD7', '#FC5'];
 
-    function prepareGraphData(list, event, idx) {
+    function prepareGraphData(list, event, idx, ageAlign) {
         let [dist, stroke, course] = _eventList[event].split(' ');
 
         let eventStrs = [];
@@ -2464,13 +2464,21 @@
         let slowest = 0;
         let fastest = Infinity;
         let earliest = new Date();
-        let latest = new Date();
-        latest.setMonth(latest.getMonth() + 3);
+        let latest = new Date(0);
 
+        let baseBirthday;
         for (let swimmer of list) {
             if (swimmer.hide) {
                 continue;
             }
+
+            let [left, right] = swimmer.swimmer.birthday;
+            let bday = new Date((new Date(right).getTime() + new Date(left).getTime()) / 2);
+            if (!baseBirthday) {
+                baseBirthday = bday;
+            }
+            let bdayOffset = ageAlign ? bday - baseBirthday : 0;
+
             for (let c of _courseOrder) {
                 if (!document.getElementById(`show-${c.toLowerCase()}`).checked) {
                     continue;
@@ -2479,6 +2487,8 @@
                 let evt = _eventIndexMap.get(eventStr);
                 let value = swimmer.events.filter(e => e[idx.event] == evt);
                 value.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
+                value.birthday = bday;
+                value.bdayOffset = bdayOffset;
 
                 for (let row of value) {
                     let t = timeToInt(row[idx.time]);
@@ -2491,10 +2501,13 @@
             }
 
             for (let row of swimmer.events) {
-                earliest = min(earliest, new Date(row[idx.date]));
+                let d = new Date(new Date(row[idx.date]) - bdayOffset);
+                earliest = min(earliest, d);
+                latest = max(latest, d);
             }
         }
 
+        latest.setMonth(latest.getMonth() + 2);
         earliest.setMonth(earliest.getMonth() - 1);
         earliest.setDate(1);
         let delta = (slowest - fastest) * 0.1;
@@ -2503,7 +2516,7 @@
         return [eventStrs, values, slowest, fastest, earliest, latest];
     }
 
-    function drawXYscale(ctx, width, height, earliest, latest, fastest, slowest) {
+    function drawXYscale(ctx, width, height, earliest, latest, fastest, slowest, birthday) {
         let delta = slowest - fastest;
         let duration = latest - earliest;
         // draw the axis
@@ -2514,14 +2527,29 @@
         ctx.lineTo(width, height);
 
         // draw the x-scale
-        for (let date = new Date(earliest); date < latest; date.setMonth(date.getMonth() + 1)) {
-            let x = (date - earliest) / duration * width;
-            ctx.moveTo(x, height);
-            if (date.getMonth() === 0) {
-                ctx.lineTo(x, height - 12);
-                ctx.fillText(date.getFullYear(), x - 10, height + 15);
-            } else {
-                ctx.lineTo(x, height - (date.getMonth() % 6 === 0 ? 9 : 5));
+        if (!birthday) {
+            for (let date = new Date(earliest); date < latest; date.setMonth(date.getMonth() + 1)) {
+                let x = (date - earliest) / duration * width;
+                ctx.moveTo(x, height);
+                if (date.getMonth() === 0) {
+                    ctx.lineTo(x, height - 12);
+                    ctx.fillText(date.getFullYear(), x - 10, height + 15);
+                } else {
+                    ctx.lineTo(x, height - (date.getMonth() % 6 === 0 ? 9 : 5));
+                }
+            }
+        } else {
+            for (let date = new Date(birthday); date < latest; date.setMonth(date.getMonth() + 1)) {
+                if (date < earliest) {
+                    continue;
+                }
+                let x = (date - earliest) / duration * width;
+                ctx.moveTo(x, height);
+                let monthDiff = date.getMonth() - birthday.getMonth();
+                if (monthDiff === 0) {
+                    ctx.fillText(date.getUTCFullYear() - birthday.getUTCFullYear(), x, height + 15);
+                }
+                ctx.lineTo(x, height - (monthDiff % 6 === 0 ? 12 : 5));
             }
         }
 
@@ -2540,32 +2568,28 @@
         ctx.stroke();
     }
 
-    function drawAgeDots(ctx, list, width, height, earliest, latest) {
+    function drawAgeDots(ctx, birthday, width, height, earliest, latest) {
         let duration = latest - earliest;
 
         // draw age dots line and age text
-        let [left, right] = list[0].swimmer.birthday;
-        left = new Date(left);
-        right = new Date(right);
-        let d = new Date(left);
-        for (d.setDate(d.getDate() + Math.floor(((right - d) / 2) / _1DayInMilliSeconds)); d < latest; d.setFullYear(d.getFullYear() + 1)) {
+        for (let d = new Date(birthday); d < latest; d.setFullYear(d.getFullYear() + 1)) {
             let x = (d - earliest) / duration * width;
             if (x < 1) {
                 continue;
             }
             ctx.beginPath();
-            ctx.strokeStyle = ctx.fillStyle = 'lightblue';
+            ctx.strokeStyle = ctx.fillStyle = '#89F';
             ctx.setLineDash([5, 5]);
             ctx.moveTo(x, 0);
             ctx.lineTo(x, height);
             ctx.stroke();
-            ctx.fillText(d.getFullYear() - left.getFullYear(), x + 5, 10);
+            ctx.fillText(d.getFullYear() - birthday.getFullYear(), x + 5, 10);
             ctx.fill();
         }
     }
 
     // draw the cruve and dots, and find the tip row
-    function drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName) {
+    function drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName, ageAlign) {
         let delta = slowest - fastest;
         let duration = latest - earliest;
 
@@ -2592,7 +2616,7 @@
             let highLight = [];
             for (let row of value) {
                 let t = timeToInt(row[idx.time]);
-                let d = new Date(row[idx.date]);
+                let d = new Date(new Date(row[idx.date]) - value.bdayOffset);
                 let x = (d - earliest) / duration * width;
                 let y = height - (t - fastest) / delta * height;
 
@@ -2661,6 +2685,8 @@
     async function showGraph(canvas, pkey, event, mouseX, mouseY) {
         TabView.tab('swimmerTabView', 3);
 
+        let ageAlign = (document.getElementById('age-align') || {}).checked;
+
         canvas = canvas || document.getElementById('canvas');
         pkey = canvas.swimmerPkey = pkey || canvas.swimmerPkey;
         let list = canvas.swimmers = canvas.swimmers || [];
@@ -2679,7 +2705,7 @@
         UpdateGraphTitle(dist, stroke);
         canvas.classList.remove('hide');
 
-        let [eventStrs, values, slowest, fastest, earliest, latest] = await prepareGraphData(list, event, idx);
+        let [eventStrs, values, slowest, fastest, earliest, latest] = await prepareGraphData(list, event, idx, ageAlign);
 
         let duration = latest - earliest;
         let width = (duration / _1DayInMilliSeconds / 3) * xZoomFactor;
@@ -2694,15 +2720,15 @@
         ctx.translate(margin, margin);
         ctx.font = "14px Verdana";
 
-        drawXYscale(ctx, width, height, earliest, latest, fastest, slowest);
+        drawXYscale(ctx, width, height, earliest, latest, fastest, slowest, ageAlign ? values[0].birthday : null);
 
-        if (list.length == 1) {
-            drawAgeDots(ctx, list, width, height, earliest, latest);
+        if (list.length == 1 || ageAlign) {
+            drawAgeDots(ctx, values[0].birthday, width, height, earliest, latest);
         }
 
         let showName = list.length > 1;
 
-        let tipRow = drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName);
+        let tipRow = drawCurve(ctx, values, eventStrs, width, height, earliest, latest, fastest, slowest, mouseX, mouseY, idx, showName, ageAlign);
 
         drawTip(ctx, tipRow, idx, data.meetDict, showName);
     }
@@ -2785,7 +2811,8 @@
     }
 
     async function updateSwimmerList(swimmers) {
-        let html = [];
+        let html = [createPopup(createCheckbox('age-align', 'Align by Age', false, 'showGraph()'),
+            'Comparing swim times for swimmers of the same age.')];
         for (let swimmer of swimmers) {
             let id = 's_' + swimmer.swimmer.pkey;
             let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
@@ -2919,7 +2946,7 @@
                     let short = formatStandard(std, true);
                     let date = formatDate(bestTimeEvent[idx.date]);
                     let cls = !preBestTime ? '' : timeToInt(bestTime) < timeToInt(preBestTime) ? 'dp' : 'ad';
-                    html.push('<td>', buildTimeCell(bestTime, buildPopup(short, std), date, cls), '</td>');
+                    html.push('<td>', buildTimeCell(bestTime, createPopup(short, std), date, cls), '</td>');
                 } else {
                     html.push('<td></td>');
                 }
@@ -3103,7 +3130,7 @@
                             let std = formatStandard(cell[idx.std]);
                             let short = formatStandard(std, true);
 
-                            html.push(buildTimeCell(time, buildPopup(short, std), formatDelta(delta), style));
+                            html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
                             clubName = await _clubDictinary.loadClubName(cell[idx.lsc], cell[idx.club]);
                         }
                         html.push('</td>');
