@@ -348,7 +348,7 @@
         /* Position the tooltip */
         position: absolute;
         z-index: 1;
-        top: 50%;
+        top: -40px;
         transition-property: visibility;
         transition-delay: 0s;
     }
@@ -2373,10 +2373,10 @@
 
         html.push('<div style="position:relative;margin:0 50px"class="size-panel">');
         if (isTouchDevice()) {
-            html.push('<button class="size" style="left:40px;top:-210px" onclick="resizeY(-1)">⇧</button>',
-                '<button class="size" style="left:15px;top:-160px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
-                '<button class="size" style="left:65px;top:-160px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
-                '<button class="size" style="left:40px;top:-110px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button>');
+            html.push('<button class="size" style="left:40px;top:-190px" onclick="resizeY(-1)">⇧</button>',
+                '<button class="size" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
+                '<button class="size" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
+                '<button class="size" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button>');
         }
         html.push('<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
             '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>',
@@ -2511,9 +2511,13 @@
             }
         }
 
-        latest.setMonth(latest.getMonth() + 2);
-        earliest.setMonth(earliest.getMonth() - 1);
-        earliest.setDate(1);
+        latest.setUTCMonth(latest.getUTCMonth() + 2);
+        earliest.setUTCMonth(earliest.getUTCMonth() - 1);
+        earliest.setUTCDate(1);
+        earliest.setUTCHours(0);
+        if (config.ageAlign) {
+            earliest.setUTCDate(baseBirthday.getUTCDate());
+        }
         let delta = (slowest - fastest) * 0.1;
         slowest += delta;
         fastest = Math.floor((fastest - delta) / 100) * 100;
@@ -2533,7 +2537,7 @@
         config.marginL = 50;
         config.marginR = 350;
         config.marginT = 50;
-        config.marginB = 50;
+        config.marginB = 30;
     }
 
     function drawXYscale(ctx, config) {
@@ -2553,6 +2557,7 @@
         ctx.moveTo(0, 0);
         ctx.lineTo(0, height);
         ctx.lineTo(width, height);
+        ctx.lineTo(width, 0);
 
         // draw the x-scale
         if (!birthday) {
@@ -2567,30 +2572,56 @@
                 }
             }
         } else {
-            for (let date = new Date(birthday); date < latest; date.setMonth(date.getMonth() + 1)) {
-                if (date < earliest) {
+            let date = new Date(birthday);
+            date.setFullYear(earliest.getFullYear() - 1);
+            let end = new Date(birthday);
+            end.setFullYear(latest.getFullYear() + 1);
+            let diff = end.getFullYear() - date.getFullYear();
+            let interval = (end - date) / diff / 12;
+
+            date = date.getTime();
+            for (let i = 0; date < latest; ++i, date += interval) {
+                let x = (date - earliest) / duration * width;
+                if (x < 1) {
                     continue;
                 }
-                let x = (date - earliest) / duration * width;
                 ctx.moveTo(x, height);
-                let monthDiff = date.getMonth() - birthday.getMonth();
-                if (monthDiff === 0) {
-                    ctx.fillText(date.getUTCFullYear() - birthday.getUTCFullYear(), x, height + 15);
+                ctx.moveTo
+                if (i % 12 === 0) {
+                    ctx.fillText(new Date(date).getUTCFullYear() - birthday.getUTCFullYear(), x, height + 15);
                 }
-                ctx.lineTo(x, height - (monthDiff % 6 === 0 ? 12 : 5));
+                ctx.lineTo(x, height - (i % 6 === 0 ? 12 : 5));
             }
         }
+        ctx.stroke();
 
         // draw the y-scale
-        let interval = (Math.floor(delta / 1000) || 1) * 100;
+        let lineHeight = 35;
+        let fontHeight = 20;
+        let interval = Math.ceil(delta / 100 / (height / fontHeight)) * 100;
+        let lineInterval = Math.ceil(delta / 100 / (height / lineHeight)) * 100;
         for (let t = fastest; t <= slowest; t += interval) {
             let y = height - (t - fastest) / delta * height;
             if (t > fastest) {
-                ctx.moveTo(0, y);
-                ctx.lineTo(5, y);
+                if ((t - fastest) % lineInterval === 0) {
+                    ctx.strokeStyle = 'lightgray';
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = 'black';
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(5, y);
+                    ctx.moveTo(width, y);
+                    ctx.lineTo(width - 5, y);
+                    ctx.stroke();
+                }
             }
             let time = formatTime(t).slice(0, -3);
             ctx.fillText(time, -5 - ctx.measureText(time).width, y + 3);
+            ctx.fillText(time, width + 5, y + 3);
         }
 
         ctx.stroke();
@@ -2860,7 +2891,7 @@
 
         if (config.swimmerList.length > 1) {
             html.push(createPopup(createCheckbox('age-align', 'Align by Age', config.ageAlign, 'showGraph(null,{ageAlign:this.checked})'),
-                'Comparing swim times for swimmers of the same age.'));
+                `Compare swimmers' times at the same age.`));
         }
 
         for (let swimmer of config.swimmerList) {
