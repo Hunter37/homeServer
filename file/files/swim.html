@@ -1907,6 +1907,7 @@
 
         data.swimmer.birthday = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
         data.swimmer.alias = getAlias(data.swimmer.firstName, data.swimmer.lastName);
+        data.swimmer.gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
 
         return data;
     }
@@ -2158,9 +2159,8 @@
 
         console.log(data.swimmer);
 
-        let gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
         html.push('<div class="match-size"><span>', data.swimmer.alias, ' ', data.swimmer.lastName, '</span><span>',
-            convetToGenderString(gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
+            convetToGenderString(data.swimmer.gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
             BirthdayDictionary.format(data.swimmer.birthday), '</span><span>Total Event: ', data.events.length, '</span></div>');
 
         return html.join('');
@@ -2261,7 +2261,7 @@
 
         let idx = data.events.idx;
         let ageKey = getAgeKey(data.swimmer.age);
-        let genderStr = convetToGenderString(fastRowList[0][idx.gender]);
+        let genderStr = convetToGenderString(data.swimmer.gender);
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
         let meetStds = getMeetStandards(data.swimmer.age);
 
@@ -2535,7 +2535,7 @@
         config.width = (config.duration / _1DayInMilliSeconds / 3) * config.xZoomFactor;
         config.height = 500 * config.yZoomFactor;
         config.marginL = 50;
-        config.marginR = 350;
+        config.marginR = 500;
         config.marginT = 50;
         config.marginB = 30;
     }
@@ -2625,6 +2625,41 @@
         }
 
         ctx.stroke();
+    }
+
+    function drawMeetStandards(ctx, config) {
+        let swimerList = config.swimmerList;
+        if (swimerList.length > 1) {
+            return;
+        }
+        let swimmer = swimerList[0].swimmer;
+        let genderStr = convetToGenderString(swimmer.gender);
+        let eventStr = _eventList[config.event]
+
+        let lines = []
+        let meetStds = getMeetStandards(swimmer.age);
+        for (let meet of meetStds) {
+            let std = meet[genderStr].get(eventStr);
+            if (!std || std[1] < config.fastest || std[1] > config.slowest) {
+                continue;
+            }
+            lines.push([std[1], std[0], meet.meet]);
+        }
+
+        lines.sort((a, b) => a[1] - b[1]);
+        let step = 20;
+        let colors = ["#F66", "#6A6", "#66F", "#A6A", "#6AA", "#F99", "#9F9", "#99F", "#FF9", "#F9F", "#9FF"];
+        for (let [i, line] of lines.entries()) {
+            y = config.height - (line[0] - config.fastest) / config.delta * config.height;
+            ctx.beginPath();
+            ctx.setLineDash([3, 7]);
+            ctx.strokeStyle = ctx.fillStyle = colors[i % colors.length];
+            ctx.moveTo(0, y);
+            ctx.lineTo(config.width, y);
+            ctx.stroke();
+            ctx.fillText(line[1] + '  ' + line[2], config.width + 40, config.height - i * step);
+            //console.log(std);
+        }
     }
 
     function drawAgeDots(ctx, config) {
@@ -2802,6 +2837,7 @@
         canvas.classList.remove('hide');
 
         drawXYscale(ctx, config);
+        //drawMeetStandards(ctx, config);
         drawAgeDots(ctx, config);
         let tipRow = drawCurve(ctx, config);
         drawTip(ctx, tipRow, config);
