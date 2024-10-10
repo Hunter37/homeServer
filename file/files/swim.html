@@ -17,47 +17,69 @@
         background: #FFF !important;
     }
 
+    .gy {
+        background-color: #DDD !important;
+    }
+
     div {
-        margin: 10px;
         font: 14px Verdana;
     }
 
-    td,
-    th {
+    tr>* {
         border: 1px solid black;
-        padding: 4px;
+    }
+
+    th {
+        padding: 10px 5px;
     }
 
     td {
         white-space: nowrap;
         text-align: right;
-    }
-
-    td>a,
-    td>button {
-        padding: 0 5px;
-        display: inline-block;
-        width: 100%;
-        text-decoration: underline;
-        background: #0000;
-        cursor: pointer;
-        box-sizing: border-box;
-        min-height: 14px;
-    }
-
-    td * {
-        text-align: right;
+        padding: 5px;
     }
 
     button {
         border: 0;
+        padding: 10px;
         font: 14px Verdana;
         color: inherit;
         cursor: pointer;
+        border-radius: 5px;
+    }
+
+    select {
+        border-radius: 5px;
+        padding: 5px;
+    }
+
+    #input {
+        border-radius: 5px;
+        padding: 9px;
+        width: 100%;
+        max-width: 300px;
+    }
+
+    .search {
+        background-color: #7DF;
+        width: 100px;
+    }
+
+    #content {
+        margin: 10px;
+    }
+
+    .header {
+        margin: 16px 0;
+        font-size: 16px;
     }
 
     .hide {
         display: none !important;
+    }
+
+    .top-margin {
+        margin: 10px 0 0 0;
     }
 
     .big,
@@ -358,34 +380,26 @@
         transition-delay: 0.3s;
     }
 
-    /* modal
-    #modal {
-        display: none;
-        position: fixed;
-        z-index: 1;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        overflow: none;
-        background-color: #0006;
-    }
-
-    .mc {
-        background-color: #FFF;
-        margin: 5% auto;
-        width: 80%;
-        overflow: auto;
-        border: 1px solid #000;
-    } */
-
     .clickable {
         cursor: pointer;
     }
 
+    /* clibable table cell */
+    .full>.clickable {
+        display: flex;
+        justify-content: end;
+        align-items: center;
+        padding: 0 5px;
+        min-height: 30px;
+        height: 100%;
+        text-decoration: underline;
+    }
+
+    .full.left>.clickable {
+        justify-content: start;
+    }
+
     canvas {
-        overflow: none;
         display: block;
     }
 
@@ -481,6 +495,17 @@
         text-align: left;
         font-size: 16px;
         width: 150px;
+        border-radius: 5px;
+        padding: 3px 5px;
+        margin: 0 3px;
+    }
+
+    .add-search button {
+        border: 1px solid;
+        margin: 0 3px;
+        padding: 5px;
+        width: 75px;
+        background-color: #7DF;
     }
 
     .add-search .loading {
@@ -495,12 +520,6 @@
         float: none;
     }
 
-    .add-search button {
-        border: 1px solid;
-        margin: 0 0 0 3px;
-        padding: 3px 5px;
-    }
-
     #adding-list {
         padding: 5px;
     }
@@ -509,6 +528,20 @@
         padding: 5px;
     }
 
+    /* search table */
+    #search-table .th:hover {
+        background-color: #0000;
+        color: #000;
+        cursor: default;
+    }
+
+    #search-table tr {
+        cursor: pointer;
+    }
+
+    #search-table tr:hover,
+    /* clibable table cell */
+    .full>.clickable:hover,
     .tabs>.selected:hover,
     .tab:hover,
     .match-size button:hover,
@@ -519,6 +552,7 @@
     #adding-list tr:hover {
         background-color: #57E;
         color: #FFF;
+        text-decoration: none;
     }
 
     /* checkbox style */
@@ -632,17 +666,26 @@
 
     .fill td {
         height: 100%;
+    }
+
+    .fill .full {
         padding: 0;
     }
 
-    .fill td>* {
-        height: 100%;
-        margin: 0;
+    /* table buttion */
+    .full>button:hover {
+        background-color: #00F8;
+        color: #FFF;
     }
 
     /* dropdown */
     .drop-layout>tbody>tr>td {
         border: 0;
+        padding: 0;
+    }
+
+    .drop-layout>tbody>tr>td>* {
+        margin: 0;
     }
 
     .dropdown * {
@@ -718,16 +761,11 @@
 
 <body>
     <div class="row">
-        <input id="input" autofocus style="width:100%; max-width: 300px" class="big" />
-        <button onclick="onSearch()" style="width:100px" class="big">SEARCH</button>
-        <button onclick="onSearchAll()" style="width:100px" class="big">19&OVER</button>
+        <input id="input" autofocus class="big" />
+        <button onclick="onSearch()" class="big search">SEARCH</button>
+        <button onclick="onSearchAll()" class="big search">19&OVER</button>
     </div>
-    <div id="table" class="container"></div>
-    <!-- <div id="modal" onclick="if(window.event.target==this)hideModal()">
-        <div class="mc">
-            <canvas id="canvas1" onmousemove="onCanvasMouseMove(this)"></canvas>
-        </div>
-    </div> -->
+    <div id="content" class="container"></div>
 </body>
 <script>
     Date.prototype.toDateInputValue = (function () {
@@ -792,7 +830,7 @@
     }
 
     function updateContent(html) {
-        document.getElementById('table').innerHTML = html;
+        document.getElementById('content').innerHTML = html;
     }
 
     function min(a, b) {
@@ -1702,11 +1740,11 @@
         let html = [];
         // name, age, club, lsc, pkey
 
-        html.push('<table style="border-collapse:collapse"><tbody>');
+        html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
         let index = 0;
         for (let [name, age, club, lsc, pkey] of values) {
-            html.push('<tr><td>', ++index, `</td><td class="left"><button class="search" onclick="go('swimmer', ${pkey})">`,
-                name, '</button></td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
+            html.push(`<tr onclick="go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left full">', name, //createClickableDiv(name, `go('swimmer', ${pkey})`),
+                '</td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
 
@@ -2120,7 +2158,8 @@
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', await createMeetTable(data));
-        tabView.addTab(buildClickableDiv('Progress Graph', `showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
+        tabView.addTab(createClickableDiv('Progress Graph', `showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
+        // tabView.addTab('<p>Ranking</p>', await createRankingTable(data, fastRowList, rowInfo));
         html.push(tabView.render());
 
         html.push(addHide25Botton());
@@ -2159,7 +2198,7 @@
 
         console.log(data.swimmer);
 
-        html.push('<div class="match-size"><span>', data.swimmer.alias, ' ', data.swimmer.lastName, '</span><span>',
+        html.push('<div class="match-size header"><span>', data.swimmer.alias, ' ', data.swimmer.lastName, '</span><span>',
             convetToGenderString(data.swimmer.gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
             BirthdayDictionary.format(data.swimmer.birthday), '</span><span>Total Event: ', data.events.length, '</span></div>');
 
@@ -2223,21 +2262,32 @@
     }
 
     function createBestTimeTableHeader(data) {
-        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th><th>', createPopup('Time', 'Best Time'),
-            '</th ><th>', createPopup('Date', 'Event Date'), '</th><th>', createPopup('Count', 'Total Event Count'), '</th><th>',
-            createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th>', createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)),
-            '</th><th>', createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th>', createPopup('US', 'USA Swimming'), '</th>'];
-
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+        let meetStds = getMeetStandards(data.swimmer.age);
+
+        let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
+            '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2">',
+            createPopup('Event<br>Count', 'Total Event Count'), '</th><th class="rk" colspan="4">Rankings</th>'];
+
+        if (data.swimmer.age < 19) {
+            html.push(`<th colspan="${stdName.length}" class="mt">`,
+                createPopup('Motivational Standards', 'USA Swimming 2024-2028 Motivational Standards'),
+                '</th>');
+        }
+
+        html.push(`<th colspan="${meetStds.length}" class="mc">Meet Standards</th></tr>`,
+            '<tr class="gy"><th class="rk">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk">',
+            createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk">',
+            createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk">', createPopup('US', 'USA Swimming'), '</th>');
+
         if (data.swimmer.age < 19) {
             for (let std of stdName) {
-                html.push('<th>', std, '</th>');
+                html.push('<th class="mt">', std, '</th>');
             }
         }
 
-        let meetStds = getMeetStandards(data.swimmer.age);
         for (let std of meetStds) {
-            html.push('<th>', createPopup(std.short, std.meet), '</th>');
+            html.push('<th class="mc">', createPopup(std.short, std.meet), '</th>');
         }
 
         html.push('</tr>');
@@ -2265,7 +2315,20 @@
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
         let meetStds = getMeetStandards(data.swimmer.age);
 
-        let html = ['<div class="content"><h2>Personal Best</h2><table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div class="content"><h2>Personal Best</h2>',
+            '<div class="center-row">',
+            '<style id="show-rk-style"></style>',
+            createCheckbox('show-rk', 'show rankings', true, `document.getElementById('show-rk-style').innerText = this.checked ? '' : '.rk{display:none}'`)];
+
+        if (data.swimmer.age < 19) {
+            html.push('<style id="show-mt-style"></style>',
+                createCheckbox('show-mt', 'motivation times', true, `document.getElementById('show-mt-style').innerText = this.checked ? '' : '.mt{display:none}'`))
+        }
+        
+        html.push('<style id="show-mc-style"></style>',
+            createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`),
+            '</div>',
+            '<table class="fill top-margin"><tbody>');
 
         // create the table header
         let header = createBestTimeTableHeader(data);
@@ -2296,7 +2359,7 @@
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
-            html.push('<td>', buildClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td><td>',
+            html.push('<td class="full">', createClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td><td>',
                 time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
                 await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.club),
                 await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
@@ -2311,21 +2374,23 @@
                     stds.push(getAgeGroupMotivationTime(`${stdKey} ${std}`));
                 }
             }
+            let motivationTimeCount = stds.length;
             for (let std of meetStds) {
                 stds.push(std[genderStr].get(eventStr) || ['', 0]);
             }
 
             let preTime;
-            for (let [stdStr, stdInt] of stds) {
+            for (let [i, [stdStr, stdInt]] of stds.entries()) {
+                let css = i < motivationTimeCount ? 'mt' : 'mc';
                 if (!stdInt) {
-                    html.push('<td></td>');
+                    html.push(`<td class="${css}"></td>`);
                     continue;
                 }
                 preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
                 let precent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
                 percent = 100 - (precent < 5 && precent > 0 ? 5 : Math.floor(precent))
                 let cls = timeInt <= stdInt ? 'dp' : 'ad';
-                html.push('<td>', buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
+                html.push(`<td class="${css}">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
                 preTime = stdInt;
             }
 
@@ -2343,11 +2408,11 @@
 
         html.push('<div class="content">');
 
-        html.push('<div class="match-size">');
+        html.push('<div class="match-size top-margin">');
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
             if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
-                html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
+                html.push(`<button class="d${d} ${s}" style="border:1px solid;width:45px;"`,
                     ` onclick="showGraph(null,{pkey:${pkey},event:${i}})">${s}<br>${d}</button>`);
             }
         }
@@ -2363,7 +2428,7 @@
 
         html.push('</div>');
 
-        html.push('<div class="check-list">');
+        html.push('<div class="top-margin">');
         for (let c of _courseOrder) {
             html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `showGraph(null,{${c}:this.checked})`));
         }
@@ -2959,10 +3024,11 @@
         // 0        1     2     3     4          5     6        7     8         9     10
         if (values) {
             let rank = calculateRank(values, pkey, timeInt);
-            html.push(`<td><button onclick="go('rank', '${rankDataKey}')">${rank}</button></td>`);
+            // html.push(`<td class="full"><button onclick="go('rank', '${rankDataKey}')">${rank}</button></td>`);
+            html.push('<td class="full rk">', createClickableDiv(rank, `go('rank','${rankDataKey}')`), '</td>');
         } else {
             let id = rankDataKey + '_' + pkey;
-            html.push(`<td id="${id}"><button onclick="go('rank', '${rankDataKey}')"><div class="loader"></div></button></td>`);
+            html.push(`<td class="full rk" id="${id}">`, createClickableDiv('<div class="loader"></div>', `go('rank','${rankDataKey}')`), '</td>');
 
             _backgroundActions.push([getRank, [rankDataKey, timeInt, pkey, id]]);
         }
@@ -2970,7 +3036,7 @@
         return html.join('');
     }
 
-    function buildClickableDiv(content, action) {
+    function createClickableDiv(content, action) {
         return `<div class="clickable" onclick="${action}">${content}</div>`;
     }
 
@@ -2989,7 +3055,7 @@
 
         let rank = calculateRank(data.values, pkey, timeInt);
 
-        element.innerHTML = `<button onclick="go('rank', '${mapKey}')">${rank}</button>`;
+        element.innerHTML = createClickableDiv(rank, `go('rank', '${mapKey}')`);
     }
 
     function calculateRank(values, pkey, timeInt) {
@@ -3025,7 +3091,7 @@
         // 0     1    2    3    4     5     6      7     8
 
         let idx = data.events.idx;
-        let html = ['<div class="content"><h2>Age Best Time</h2><table style="border-collapse:collapse"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill"><tbody>'];
 
         // get all age column
         let ages = new Set(data.events.map(e => e[idx.age]));
@@ -3053,7 +3119,7 @@
                 html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
-            html.push('<td>', buildClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
+            html.push('<td class="full">', createClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
             for (let age of uniqueAges) {
                 let bestTimeEvent = findBestTimeEventByAge(data.events, event, age);
                 if (bestTimeEvent) {
@@ -3142,7 +3208,7 @@
         // 0     1    2    3    4     5     6      7     8
         let idx = events.idx;
         let html = ['<div class="match-size"><span>', course, ' Event Count: ', events.length,
-            '</span></div><table style="border-collapse:collapse"><tbody>'];
+            '</span></div><table class="fill"><tbody>'];
 
         // remove dup event in one meet
         let meetEvents = new Map();
@@ -3201,7 +3267,7 @@
             for (let i = 1; i < col.length; ++i) {
                 let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
                 let action = `showGraph(null,{pkey:${pkey},event:${evt}})`;
-                html.push('<td>', buildClickableDiv(col[i], action), '</td>');
+                html.push('<td class="full">', createClickableDiv(col[i], action), '</td>');
             }
         }
         html.push('</tr>');
@@ -3807,7 +3873,7 @@
         let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
         //oldBrowser = true;
 
-        html.push('<div class="center-row"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, oldBrowser),
+        html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, oldBrowser),
             '<p style="margin:0 5px 0 20px">Course:</p>', createCourseSelect(key, oldBrowser),
             '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, oldBrowser), '</div>');
 
@@ -3816,11 +3882,11 @@
 
         let meetDate = localStorage.getItem('meetDate') || '';
 
-        html.push('<div class="center-row"><p style="margin:0 5px 0 0">Meet date:</p>',
+        html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>',
             `<input type="${oldBrowser ? 'text' : 'date'}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
             '<p style="margin:0 5px 0 20px">Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
 
-        html.push('<div id="rank-table">', await showRankTable(data, key), '</div>');
+        html.push('<div id="rank-table" class="top-margin">', await showRankTable(data, key), '</div>');
 
         html.push(addHide25Botton());
 
@@ -3905,12 +3971,12 @@
         let course = getEventCourse(event);
         let hide25 = localStorage.getItem('hide25');
 
-        html.push('<div class="match-size">');
+        html.push('<div class="match-size top-margin">');
 
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
             if (c == course && d != '_' && (d != '25' || !hide25)) {
-                html.push(`<button class="search d${d} ${s}" style="border:1px solid;width:45px;"`,
+                html.push(`<button class="d${d} ${s}" style="border:1px solid;width:45px;"`,
                     ` onclick="go('rank', '${getRankDataKey(genderStr, i, ageKey, zone, lsc, club)}')">${s}<br>${d}</button>`);
             }
         }
@@ -3970,7 +4036,7 @@
             return html.join('');
         }
 
-        html.push('<table style="border-collapse:collapse"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
+        html.push('<table class="fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
         let index = 0;
         let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
         for (let row of data.values) {
@@ -4006,8 +4072,8 @@
 
             let clubName = row[idx.clubName] || await _clubDictinary.loadClubName(row[idx.lsc], row[idx.club]);
 
-            html.push(`<tr${color}><td>`, ++index, `</td><td class="left"><button onclick="go('swimmer', ${row[idx.pkey]})">`,
-                row[idx.name], '</button></td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
+            html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
+                '</td><td>', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
                 '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range), '</td><td class="left">',
                 clubName, '</td><td class="left">', row[idx.lsc], '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
         }
