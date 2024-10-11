@@ -500,15 +500,14 @@
         font-size: 16px;
         width: 150px;
         border-radius: 5px;
-        padding: 3px 5px;
+        padding: 7px 10px;
         margin: 0 3px;
     }
 
     .add-search button {
-        border: 1px solid;
         margin: 0 3px;
-        padding: 5px;
-        width: 75px;
+        padding: 10px;
+        width: 80px;
         background-color: #7DF;
     }
 
@@ -525,11 +524,11 @@
     }
 
     #adding-list {
-        padding: 5px;
+        padding: 10px;
     }
 
     #adding-list td {
-        padding: 5px;
+        padding: 10px 7px;
     }
 
     /* search table */
@@ -3692,6 +3691,11 @@
                     datatype: "text",
                 },
                 {
+                    title: 'club',
+                    dim: "[OrgUnit.Level4Code]",
+                    datatype: "text",
+                },
+                {
                     title: 'lsc',
                     dim: "[OrgUnit.Level3Code]",
                     datatype: "text"
@@ -4074,12 +4078,18 @@
                 }
             }
 
+            let rowZone = getLSCZone(row[idx.lsc]);
+            let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], row[idx.club]) : '';
+            let rowlscRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], '') : '';
+
             let clubName = row[idx.clubName] || await _clubDictinary.loadClubName(row[idx.lsc], row[idx.club]);
 
             html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
                 '</td><td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
-                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range), '</td><td class="left">',
-                clubName, '</td><td class="left">', row[idx.lsc], '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
+                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range),
+                `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(clubName, `go('rank','${rowTeamRankKey}')`) : clubName,
+                `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(row[idx.lsc], `go('rank','${rowlscRankKey}')`) : row[idx.lsc],
+                '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
         }
         html.push('</tbody></table>');
         return html.join('');
@@ -4303,79 +4313,79 @@
 
     (function () {
         let data = `
-Adirondack Swimming-AD-Eastern
-Alaska Swimming-AK-Western
-Allegheny Mountain Swimming-AM-Eastern
-Arkansas Swimming-AR-Central
-Arizona Swimming-AZ-Western
-Border Swimming-BD-Southern
-Central California Swimming-CC-Western
-Colorado Swimming-CO-Western
-Connecticut Swimming-CT-Eastern
-Florida Swimming-FL-Southern
-Florida Gold Coast Swimming-FG-Southern
-Georgia Swimming-GA-Southern
-Gulf Swimming-GU-Southern
-Hawaiian Swimming-HI-Western
-Illinois Swimming-IL-Central
-Indiana Swimming-IN-Central
-Inland Empire Swimming-IE-Western
-Iowa Swimming-IA-Central
-Kentucky Swimming-KY-Southern
-Lake Erie Swimming-LE-Central
-Louisiana Swimming-LA-Southern
-Maine Swimming-ME-Eastern
-Maryland Swimming-MD-Eastern
-Metropolitan Swimming-MR-Eastern
-Michigan Swimming-MI-Central
-Middle Atlantic Swimming-MA-Eastern
-Midwestern Swimming-MW-Central
-Minnesota Swimming-MN-Central
-Mississippi Swimming-MS-Southern
-Missouri Valley Swimming-MV-Central
-Montana Swimming-MT-Western
-New England Swimming-NE-Eastern
-New Jersey Swimming-NJ-Eastern
-New Mexico Swimming-NM-Western
-Niagara Swimming-NI-Eastern
-North Carolina Swimming-NC-Southern
-North Dakota Swimming-ND-Central
-North Texas Swimming-NT-Southern
-Ohio Swimming-OH-Central
-Oklahoma Swimming-OK-Central
-Oregon Swimming-OR-Western
-Ozark Swimming-OZ-Central
-Pacific Swimming-PC-Western
-Pacific Northwest Swimming-PN-Western
-Potomac Valley Swimming-PV-Eastern
-San Diego-Imperial Swimming-SI-Western
-Sierra Nevada Swimming-SN-Western
-Snake River Swimming-SR-Western
-South Carolina Swimming-SC-Southern
-South Dakota Swimming-SD-Central
-South Texas Swimming-ST-Southern
-Southeastern Swimming-SE-Southern
-Southern California Swimming-CA-Western
-Utah Swimming-UT-Western
-Virginia Swimming-VA-Eastern
-West Texas Swimming-WT-Southern
-West Virginia Swimming-WV-Southern
-Wisconsin Swimming-WI-Central
-Wyoming Swimming-WY-Western`;
+Adirondack Swimming|AD|Eastern
+Alaska Swimming|AK|Western
+Allegheny Mountain Swimming|AM|Eastern
+Arkansas Swimming|AR|Central
+Arizona Swimming|AZ|Western
+Border Swimming|BD|Southern
+Central California Swimming|CC|Western
+Colorado Swimming|CO|Western
+Connecticut Swimming|CT|Eastern
+Florida Swimming|FL|Southern
+Florida Gold Coast Swimming|FG|Southern
+Georgia Swimming|GA|Southern
+Gulf Swimming|GU|Southern
+Hawaiian Swimming|HI|Western
+Illinois Swimming|IL|Central
+Indiana Swimming|IN|Central
+Inland Empire Swimming|IE|Western
+Iowa Swimming|IA|Central
+Kentucky Swimming|KY|Southern
+Lake Erie Swimming|LE|Central
+Louisiana Swimming|LA|Southern
+Maine Swimming|ME|Eastern
+Maryland Swimming|MD|Eastern
+Metropolitan Swimming|MR|Eastern
+Michigan Swimming|MI|Central
+Middle Atlantic Swimming|MA|Eastern
+Midwestern Swimming|MW|Central
+Minnesota Swimming|MN|Central
+Mississippi Swimming|MS|Southern
+Missouri Valley Swimming|MV|Central
+Montana Swimming|MT|Western
+New England Swimming|NE|Eastern
+New Jersey Swimming|NJ|Eastern
+New Mexico Swimming|NM|Western
+Niagara Swimming|NI|Eastern
+North Carolina Swimming|NC|Southern
+North Dakota Swimming|ND|Central
+North Texas Swimming|NT|Southern
+Ohio Swimming|OH|Central
+Oklahoma Swimming|OK|Central
+Oregon Swimming|OR|Western
+Ozark Swimming|OZ|Central
+Pacific Swimming|PC|Western
+Pacific Northwest Swimming|PN|Western
+Potomac Valley Swimming|PV|Eastern
+San Diego-Imperial Swimming|SI|Western
+Sierra Nevada Swimming|SN|Western
+Snake River Swimming|SR|Western
+South Carolina Swimming|SC|Southern
+South Dakota Swimming|SD|Central
+South Texas Swimming|ST|Southern
+Southeastern Swimming|SE|Southern
+Southern California Swimming|CA|Western
+Utah Swimming|UT|Western
+Virginia Swimming|VA|Eastern
+West Texas Swimming|WT|Southern
+West Virginia Swimming|WV|Southern
+Wisconsin Swimming|WI|Central
+Wyoming Swimming|WY|Western`;
         let lines = data.split('\n');
         let map = new Map();
         for (let line of lines) {
-            let parts = line.split('-');
+            let parts = line.split('|');
             if (parts.length == 3) {
                 map.set(parts[1], [parts[0], parts[2]]);
             }
         }
         window.lscMap = map;
         window.getLSCName = function (lsc) {
-            return map.get(lsc)[0];
+            return map.get(lsc) || ['', ''][0];
         }
         window.getLSCZone = function (lsc) {
-            return map.get(lsc)[1];
+            return (map.get(lsc) || ['', ''])[1];
         }
     })();
 
