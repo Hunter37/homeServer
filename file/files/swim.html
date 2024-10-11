@@ -454,7 +454,7 @@
     }
 
     /* graph re-size panel */
-    .size {
+    .resize {
         font-size: x-large;
         width: 40px;
         height: 40px;
@@ -466,7 +466,7 @@
         padding: 0 5px;
     }
 
-    .size-panel {
+    .resize-panel {
         position: relative;
     }
 
@@ -551,7 +551,7 @@
     button.big:hover,
     .add-search button:hover,
     .dropdown .option:hover,
-    .size:hover,
+    .resize:hover,
     #adding-list tr:hover {
         background-color: #57E;
         color: #FFF;
@@ -576,7 +576,7 @@
     }
 
     .checkbox-wrapper label {
-        margin: 0 2px 0 5px;
+        margin: 0 5px;
     }
 
     .checkbox-wrapper input {
@@ -2439,15 +2439,16 @@
 
         html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
 
-        html.push('<div style="position:relative;margin:0 50px"class="size-panel">');
-        if (isTouchDevice()) {
-            html.push('<button class="size" style="left:40px;top:-190px" onclick="resizeY(-1)">⇧</button>',
-                '<button class="size" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
-                '<button class="size" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
-                '<button class="size" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button>');
-        }
-        html.push('<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
-            '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>',
+        html.push('<div style="position:relative;margin:0 50px"class="resize-panel">',
+            '<button class="resize hide" style="left:40px;top:-190px" onclick="resizeY(-1)">⇧</button>',
+            '<button class="resize hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
+            '<button class="resize hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
+            '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button></div>',
+            '<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
+            '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>');
+
+        html.push('<div class="top-margin">',
+            createCheckbox('show-resize', 'show graph resize controls', false, `for(let e of document.getElementsByClassName('resize'))e.classList.toggle('hide')`),
             '</div>');
 
         return html.join('');
@@ -2460,11 +2461,11 @@
             `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
     }
 
-    function isTouchDevice() {
-        return (('ontouchstart' in window) ||
-            (navigator.maxTouchPoints > 0) ||
-            (navigator.msMaxTouchPoints > 0));
-    }
+    // function isTouchDevice() {
+    //     return (('ontouchstart' in window) ||
+    //         (navigator.maxTouchPoints > 0) ||
+    //         (navigator.msMaxTouchPoints > 0));
+    // }
 
     async function onCanvasMouseMove(canvas, e) {
         e = e || window.event;
@@ -2509,7 +2510,7 @@
 
         let factor = canvas.config.xZoomFactor;
         factor += delta / 10;
-        factor = Math.max(0.3, Math.min(10, factor));
+        factor = Math.max(0.3, Math.min(20, factor));
         localStorage.setItem('xZoomFactor', factor.toFixed(2));
         await showGraph(canvas, { xZoomFactor: factor });
     }
@@ -2519,7 +2520,7 @@
 
         let factor = canvas.config.yZoomFactor;
         factor += delta / 10;
-        factor = Math.max(0.3, Math.min(5, factor));
+        factor = Math.max(0.3, Math.min(10, factor));
         localStorage.setItem('yZoomFactor', factor.toFixed(2));
         await showGraph(canvas, { yZoomFactor: factor });
     }
@@ -2629,22 +2630,22 @@
 
         // draw the x-scale
         if (!birthday) {
-            for (let date = new Date(earliest); date < latest; date.setMonth(date.getMonth() + 1)) {
+            for (let date = new Date(earliest); date < latest; date.setUTCMonth(date.getUTCMonth() + 1)) {
                 let x = (date - earliest) / duration * width;
                 ctx.moveTo(x, height);
-                if (date.getMonth() === 0) {
+                if (date.getUTCMonth() === 0) {
                     ctx.lineTo(x, height - 12);
-                    ctx.fillText(date.getFullYear(), x - 10, height + 15);
+                    ctx.fillText(date.getUTCFullYear(), x - 10, height + 15);
                 } else {
-                    ctx.lineTo(x, height - (date.getMonth() % 6 === 0 ? 9 : 5));
+                    ctx.lineTo(x, height - (date.getUTCMonth() % 6 === 0 ? 9 : 5));
                 }
             }
         } else {
             let date = new Date(birthday);
-            date.setFullYear(earliest.getFullYear() - 1);
+            date.setUTCFullYear(earliest.getUTCFullYear() - 1);
             let end = new Date(birthday);
-            end.setFullYear(latest.getFullYear() + 1);
-            let diff = end.getFullYear() - date.getFullYear();
+            end.setUTCFullYear(latest.getUTCFullYear() + 1);
+            let diff = end.getUTCFullYear() - date.getUTCFullYear();
             let interval = (end - date) / diff / 12;
 
             date = date.getTime();
@@ -2667,7 +2668,7 @@
         let lineHeight = 50;
         let fontHeight = 20;
         let interval = Math.ceil(delta / 100 / (height / fontHeight)) * 100;
-        let intervalHeight = interval / delta * height;        
+        let intervalHeight = interval / delta * height;
         let lineInterval = Math.ceil(lineHeight / intervalHeight) * interval;
         for (let t = fastest; t <= slowest; t += interval) {
             let y = height - (t - fastest) / delta * height;
@@ -2739,7 +2740,7 @@
         let birthday = config.values[0].birthday;
 
         // draw age dots line and age text
-        for (let d = new Date(birthday); d < config.latest; d.setFullYear(d.getFullYear() + 1)) {
+        for (let d = new Date(birthday); d < config.latest; d.setUTCFullYear(d.getUTCFullYear() + 1)) {
             let x = (d - config.earliest) / config.duration * config.width;
             if (x < 1) {
                 continue;
@@ -2750,7 +2751,7 @@
             ctx.moveTo(x, 0);
             ctx.lineTo(x, config.height);
             ctx.stroke();
-            ctx.fillText(d.getFullYear() - birthday.getFullYear(), x + 5, 10);
+            ctx.fillText(d.getUTCFullYear() - birthday.getUTCFullYear(), x + 5, 10);
             ctx.fill();
         }
     }
