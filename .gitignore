@@ -15,3 +15,8 @@ vendor/
 
 # OS stuff
 .DS_Store
+
+node_modules/
+eslint.config.mjs
+package-lock.json
+package.json
