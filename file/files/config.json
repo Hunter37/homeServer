@@ -1,0 +1,7 @@
+{
+  "debugProtection": true,
+  "debugProtectionInterval": 3000,
+  "identifierNamesGenerator": "mangled-shuffled",
+  "optionsPreset": "high-obfuscation",
+  "compact": true
+}

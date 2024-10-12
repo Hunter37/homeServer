@@ -398,7 +398,7 @@ class MeetDictionary {
     }
 }
 
-_meetDictinary = new MeetDictionary();
+let _meetDictinary = new MeetDictionary();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // birthday dictionary
@@ -485,7 +485,7 @@ class BirthdayDictionary {
         return html.join('');
     }
 }
-_birthdayDictionary = new BirthdayDictionary();
+let _birthdayDictionary = new BirthdayDictionary();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // usa swimming data fetch utility functions
@@ -766,7 +766,7 @@ class Select {
         // clean list selection
         let root = document.getElementById(this.#id);
 
-        for (let [i, [txt, val]] of this.#values.entries()) {
+        for (let i = 0; i < this.#values.length; ++i) {
             let elem = root.querySelector('.o' + i);
             elem.classList.remove('selected');
         }
@@ -1403,7 +1403,7 @@ function getAlias(firstName, lastName) {
             alias = alias.substring(0, alias.length - lastName.length);
         }
 
-        parts = alias.trim().split(' ');
+        let parts = alias.trim().split(' ');
         alias = parts.pop();
     } else {
         alias = alias.substring(0, alias.length - 1);
@@ -1616,8 +1616,8 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
                 continue;
             }
             preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
-            let precent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
-            percent = 100 - (precent < 5 && precent > 0 ? 5 : Math.floor(precent))
+            let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
+            percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent))
             let cls = timeInt <= stdInt ? 'dp' : 'ad';
             html.push(`<td class="${css} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
             preTime = stdInt;
@@ -1946,7 +1946,7 @@ function drawMeetStandards(ctx, config) {
     let step = 20;
     let colors = ["#F66", "#6A6", "#66F", "#A6A", "#6AA", "#F99", "#9F9", "#99F", "#FF9", "#F9F", "#9FF"];
     for (let [i, line] of lines.entries()) {
-        y = config.height - (line[0] - config.fastest) / config.delta * config.height;
+        let y = config.height - (line[0] - config.fastest) / config.delta * config.height;
         ctx.beginPath();
         ctx.setLineDash([3, 7]);
         ctx.strokeStyle = ctx.fillStyle = colors[i % colors.length];
@@ -3114,7 +3114,7 @@ async function showRank(data, key) {
         '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, oldBrowser), '</div>');
 
     html.push(showEventButtons(key));
-    html.push(await showRankTableTitle(data.values, key));
+    html.push(await showRankTableTitle(key));
 
     let meetDate = localStorage.getItem('meetDate') || '';
 
@@ -3278,12 +3278,11 @@ function showEventButtons(key) {
     return html.join('');
 }
 
-async function showRankTableTitle(values, key) {
+async function showRankTableTitle(key) {
     let [genderStr, ageKey, event, zone, lsc, club] = decodeRankMapKey(key);
 
     // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
     // 0        1     2     3     4          5         6    7         8      9     10
-    let idx = values.idx;
     let html = [];
 
     html.push('<h2>');
@@ -4057,7 +4056,7 @@ Wyoming Swimming|WY|Western`;
 
     let rows = data.split('\n');
     let ageKey;
-    for (row of rows) {
+    for (let row of rows) {
         if (row.startsWith('#') || row.trim() === '') {
             continue;
         }
@@ -4071,11 +4070,11 @@ Wyoming Swimming|WY|Western`;
 
         let std = `${ageKey} ${parts[6]} ${parts[7]} ${parts[8]}`;
 
-        for (i = 0; i < 6; ++i) {
+        for (let i = 0; i < 6; ++i) {
             times.set(`Female ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
         }
 
-        for (i = 9; i < 15; ++i) {
+        for (let i = 9; i < 15; ++i) {
             times.set(`Male ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
         }
     }
@@ -4647,7 +4646,7 @@ meet: OT : 2024 U.S. Olympic Team Trials (6/21/2024)
     let courseKey;
     let currentMeet;
     let currentMeetList;
-    for (row of rows) {
+    for (let row of rows) {
         if (row.startsWith('#') || row.trim() === '') {
             continue;
         }
