@@ -472,6 +472,13 @@
 
     /* ---- */
 
+    #datepicker {
+        max-width: 130px;
+        padding: 4px;
+        border-radius: 5px;
+        font: 16px Verdana;
+    }
+
     .tip {
         display: inline-block;
         position: relative;
@@ -748,6 +755,7 @@
         border: 1px solid;
         min-width: 50px;
         margin: 0;
+        border-radius: 5px;
     }
 
     .select-text .arrow {
@@ -3892,15 +3900,50 @@
 
         let meetDate = localStorage.getItem('meetDate') || '';
 
-        html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>',
-            `<input type="${oldBrowser ? 'text' : 'date'}" class="big" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`,
-            '<p style="margin:0 5px 0 20px">Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
+        let root = location.protocol === 'file:' ? '' : '/files/';
+        html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>');
+        if (oldBrowser) {
+            html.push(`<link rel="stylesheet" href="${root}datepicker.material.css"><input id="datepicker" value="${meetDate}">`);
+        } else {
+            html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`);
+        }
+        html.push('<p style="margin:0 5px 0 20px">Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
 
         html.push('<div id="rank-table" class="top-margin">', await showRankTable(data, key), '</div>');
 
         html.push(addHide25Botton());
 
         updateContent(html.join(''));
+
+        if (oldBrowser) {
+            await loadScript(`${root}datepicker.js`);
+            new Datepicker('#datepicker', {
+                serialize: (date) => {
+                    let str = typeof date === 'string' ? date : date.toJSON().substring(0, 10);
+                    let part = str.split('-');
+                    return part[1] + '/' + part[2] + '/' + part[0];
+                },
+                onChange: (date) => onMeetDateChange(date.toJSON().substring(0, 10), key)
+            });
+        }
+    }
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+
+            script.onload = () => {
+                resolve();
+            };
+
+            script.onerror = () => {
+                reject(new Error(`Failed to load script: ${src}`));
+            };
+
+            document.head.appendChild(script);
+        });
     }
 
     function buildStandardSelects(key, custom) {
@@ -4384,7 +4427,7 @@ Wyoming Swimming|WY|Western`;
         }
         window.lscMap = map;
         window.getLSCName = function (lsc) {
-            return map.get(lsc) || ['', ''][0];
+            return (map.get(lsc) || ['', ''])[0];
         }
         window.getLSCZone = function (lsc) {
             return (map.get(lsc) || ['', ''])[1];
