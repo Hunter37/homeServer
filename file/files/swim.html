@@ -3903,10 +3903,9 @@
 
         let meetDate = localStorage.getItem('meetDate') || '';
 
-        let root = location.protocol === 'file:' ? '' : '/files/';
         html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>');
         if (oldBrowser) {
-            html.push(`<link rel="stylesheet" href="${root}datepicker.material.css"><input id="datepicker" value="${meetDate}">`);
+            html.push(`<input id="datepicker" value="${meetDate}">`);
         } else {
             html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`);
         }
@@ -3919,6 +3918,8 @@
         updateContent(html.join(''));
 
         if (oldBrowser) {
+            let root = location.protocol === 'file:' ? '' : '/files/';
+            loadCSS(`${root}datepicker.material.css`);
             await loadScript(`${root}datepicker.js`);
             new Datepicker('#datepicker', {
                 serialize: (date) => {
@@ -3932,10 +3933,16 @@
     }
 
     function loadScript(src) {
+        let id = encodeURIComponent(src);
+        if (document.getElementById(id)) {
+            return;
+        }
+
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = src;
             script.async = true;
+            script.id = id;
 
             script.onload = () => {
                 resolve();
@@ -3947,6 +3954,21 @@
 
             document.head.appendChild(script);
         });
+    }
+
+    function loadCSS(href) {
+        let id = encodeURIComponent(href);
+        if (document.getElementById(id)) {
+            return;
+        }
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = href;
+        link.id = id;
+
+        document.head.appendChild(link);
     }
 
     function buildStandardSelects(key, custom) {
