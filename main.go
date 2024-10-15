@@ -118,7 +118,7 @@ func routerHandler(writer http.ResponseWriter, req *http.Request) {
 	// writer.Header().Set("Connection", "close")
 	// writer.Header().Set("Location", "/swim")
 	// writer.WriteHeader(http.StatusTemporaryRedirect)
-	body, err := storage.File.Read("file/files/swim.html")
+	body, err := storage.File.Read("file/files/swim.min.html")
 	utils.LogError(err)
 
 	writer.Header().Set("Content-Type", "text/html")
