@@ -124,17 +124,19 @@ function convertToGenderCode(genderStr) {
 // local caches
 
 class LocalCache {
+    static currentVersion = 1;
+
     static set(key, value) {
-        ldb.set(key, { time: new Date(), data: value });
+        ldb.set(key, { time: new Date(), data: value, version: LocalCache.currentVersion });
     }
 
-    static async get(key, timeoutInSec) {
+    static async get(key, timeoutInSec, minVersion) {
         // todo: remove this, just for testing
         //return null;
 
         let item = await new Promise(resolve => ldb.get(key, r => resolve(r)));
 
-        if (!item) {
+        if (!item || (item.version || 0) < (minVersion || 0)) {
             return;
         }
 
@@ -146,8 +148,8 @@ class LocalCache {
         return item.data;
     }
 
-    static async func(key, func, timeoutInSec) {
-        let data = await LocalCache.get(key, timeoutInSec);
+    static async func(key, func, timeoutInSec, minVersion) {
+        let data = await LocalCache.get(key, timeoutInSec, minVersion);
         if (data) {
             return data;
         }
@@ -160,19 +162,6 @@ class LocalCache {
         LocalCache.set(key, data);
         return data;
     }
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-// app version check
-async function checkVersion() {
-    const version = 1;
-
-    let preVersion = Number(localStorage.getItem('version'));
-    if (preVersion < 1) {
-        await new Promise(resolve => ldb.clear(resolve));
-    }
-
-    localStorage.setItem('version', version);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -189,32 +178,6 @@ class ClubDictinary {
             let bodyObj = {
                 metadata: [
                     {
-                        title: 'clubName',
-                        dim: "[Persons.ClubName]",
-                        datatype: "text"
-                    },
-                    {
-                        dim: "[Persons.LscCode]",
-                        datatype: "text",
-                        filter: {
-                            equals: lsc
-                        },
-                        panel: "scope"
-                    }
-                ],
-                count: 5000
-            };
-
-            let values = await fetchSwimValues(bodyObj);
-            if (!values) {
-                return;
-            }
-
-            let names = values.map(v => v[values.idx.clubName]);
-
-            bodyObj = {
-                metadata: [
-                    {
                         title: 'club',
                         dim: "[OrgUnit.Level4Code]",
                         datatype: "text",
@@ -222,10 +185,7 @@ class ClubDictinary {
                     {
                         title: 'clubName',
                         dim: "[OrgUnit.Level4Name]",
-                        datatype: "text",
-                        filter: {
-                            members: names
-                        }
+                        datatype: "text"
                     },
                     {
                         dim: "[OrgUnit.Level3Code]",
@@ -236,11 +196,11 @@ class ClubDictinary {
                         panel: "scope"
                     }
                 ],
-                count: names.length
+                count: 5000
             };
 
             return await fetchSwimValues(bodyObj, 'event');
-        }, _1WeekInSec);
+        }, _1WeekInSec, 1);
     }
 
     async loadClubMap(lsc) {
@@ -538,7 +498,6 @@ window.addEventListener('load', loadContent);
 
 
 async function loadContent() {
-    await checkVersion();
     _backgroundActions.length = 0;
 
     let hash = window.location.hash.substring(1);
