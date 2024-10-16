@@ -13,3 +13,6 @@ $updatedHtmlContent = $htmlContent -replace '<script src="swim.js"></script>', "
 
 # Save the updated content to swim.min.html
 Set-Content -Path "swim.min.html" -Value $updatedHtmlContent
+
+# Remove the minified JS file
+Remove-Item -Path "swim.min.js"
