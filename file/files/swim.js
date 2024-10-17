@@ -442,6 +442,7 @@ async function fetchSwimValues(bodyObj, type) {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
         },
+        signal: AbortSignal.timeout(7000),
         body: JSON.stringify(bodyObj)
     });
 
@@ -510,7 +511,7 @@ async function backgroundRunner() {
             try {
                 await action(value);
             } catch (e) {
-                console.error(e);
+                console.error(value, e);
             }
         } else {
             await new Promise(resolve => setTimeout(resolve, 100));
