@@ -1448,9 +1448,8 @@ function createPopup(text, popupText) {
     return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
 }
 
-function createBestTimeTableHeader(data) {
+function createBestTimeTableHeader(data, meetStds) {
     let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-    let meetStds = getMeetStandards(data.swimmer.age);
 
     let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
         '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2">',
@@ -1463,9 +1462,9 @@ function createBestTimeTableHeader(data) {
     }
 
     html.push(`<th colspan="${meetStds.length}" class="mc">Meet Standards</th></tr>`,
-        '<tr class="gy"><th class="rk">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk">',
-        createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk">',
-        createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk">', createPopup('US', 'USA Swimming'), '</th>');
+        '<tr class="gy"><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
+        createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
+        createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
 
     if (data.swimmer.age < 19) {
         for (let std of stdName) {
@@ -1474,7 +1473,7 @@ function createBestTimeTableHeader(data) {
     }
 
     for (let std of meetStds) {
-        html.push('<th class="mc">', createPopup(std.short, std.meet), '</th>');
+        html.push('<th class="mc full">', createPopup(std.short, std.meet), '</th>');
     }
 
     html.push('</tr>');
@@ -1518,7 +1517,7 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
         '<table class="fill top-margin"><tbody>');
 
     // create the table header
-    let header = createBestTimeTableHeader(data);
+    let header = createBestTimeTableHeader(data, meetStds);
     html.push(header);
 
     // create the best time table body
@@ -4081,7 +4080,7 @@ Wyoming Swimming|WY|Western`;
 
 (function () {
     let data = `
-# 2024-10-01
+# 2024-10-17 updated
 meet: SILVER: PNS 2024-2025 SILVER TIME
 5-10 SCM	LCM	SCY
 49.19	49.99	47.39	50	Free	47.19	49.99	49.19
@@ -4096,7 +4095,7 @@ meet: SILVER: PNS 2024-2025 SILVER TIME
 2:11.39	2:12.79	1:56.69	100	Fly	1:53.49	2:09.49	2:08.09
 1:58.99	X	1:51.19	100	IM	1:51.89	X	1:59.99
 4:12.49	4:15.69	3:45.89	200	IM	3:44.99	4:09.49	4:06.29
-11-12
+11-12						
 37.69	38.49	36.29	50	Free	36.79	38.89	37.89
 1:24.59	1:26.19	1:21.29	100	Free	1:22.29	1:28.19	1:26.59
 3:11.29	3:12.89	2:48.39	200	Free	2:52.29	3:19.39	3:17.79
@@ -4114,7 +4113,7 @@ meet: SILVER: PNS 2024-2025 SILVER TIME
 3:28.29	3:31.09	3:09.49	200	Fly	3:09.49	3:24.79	3:21.99
 1:37.09	X	1:30.89	100	IM	1:31.69	X	1:37.99
 3:27.59	3:30.79	3:05.49	200	IM	3:03.99	3:33.09	3:29.89
-7:25.69	7:28.89	6:31.69	400	IM	6:17.09	7:17.89	7:14.69
+7:25.69	7:28.89	6:31.69	400	IM	6:37.09	7:17.89	7:14.69
 13-14
 34.19	34.99	32.09	50	Free	29.79	32.29	31.49
 1:16.99	1:17.89	1:11.89	100	Free	1:06.69	1:11.79	1:10.99
@@ -4154,7 +4153,7 @@ meet: SILVER: PNS 2024-2025 SILVER TIME
 2:51.59	2:54.79	2:33.69	200	IM	2:19.29	2:36.39	2:33.19
 6:38.29	6:44.69	5:54.99	400	IM	5:22.19	6:14.69	6:08.29
 
-# 2024-10-01
+# 2024-10-17 updated
 meet: GOLD: PNS 2024-2025 GOLD TIME
 5-10 SCM	LCM	SCY
 40.99	41.79	39.09	50	Free	39.19	40.39	39.29
@@ -4556,6 +4555,23 @@ meet: Winter : 2024 Speedo Winter Junior Championships (12/11/2024)
 2:01.69 2:18.39 200 FL 2:06.39 1:49.29
 2:02.19 2:22.09 200 IM 2:09.49 1:49.79
 4:21.69 5:00.29 400 IM 4:35.89 3:56.99
+
+meet: Open : 2024 Toyota U.S. Open Championships (12/4/2024)
+13-99 SCY LCM
+22.79 26.59 50 FR 23.79 20.39
+49.69 57.59 100 FR 51.99 44.39
+1:47.39 2:04.29 200 FR 1:54.09 1:38.09
+4:48.09 4:21.39 400 FR 4:02.79 4:24.69
+9:56.79 8:58.69 800 FR 8:23.09 9:13.19
+16:32.59 17:11.29 1500 FR 16:05.09 15:34.19
+54.49 1:04.39 100 BK 58.19 48.89
+1:57.69 2:18.29 200 BK 2:06.99 1:47.09
+1:02.79 1:13.29 100 BR 1:05.29 55.29
+2:15.49 2:38.29 200 BR 2:22.89 2:00.99
+53.99 1:02.39 100 FL 55.99 48.39
+1:59.39 2:16.99 200 FL 2:05.09 1:47.89
+2:00.59 2:20.99 200 IM 2:08.19 1:48.89
+4:15.19 4:57.29 400 IM 4:33.09 3:52.69
 
 meet: Junior : 2025 Speedo Junior National Championships (7/30/2025)
 11-18 SCY LCM
