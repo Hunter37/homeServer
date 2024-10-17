@@ -1104,8 +1104,7 @@ async function loadDetails(pkey) {
 
         let [swimmerInfo, events] = await Promise.all([swimmerCall, eventsCall]);
         if (!swimmerInfo || !events) {
-            updateContent('Cannot get data for ' + pkey);
-            return;
+            throw new Error('Cannot get data for ' + pkey);
         }
 
         // swimmer
@@ -1384,7 +1383,7 @@ function createDetailsPageTitle(data) {
 
     let html = [];
 
-    console.log(data.swimmer);
+    console.log(JSON.stringify(data.swimmer));
 
     html.push('<div class="match-size header"><span>', data.swimmer.alias, ' ', data.swimmer.lastName, '</span><span>',
         convetToGenderString(data.swimmer.gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
@@ -1941,6 +1940,10 @@ function drawAgeDots(ctx, config) {
     }
 }
 
+function distance(x1, y1, x2, y2) {
+    return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+}
+
 // draw the cruve and dots, and find the tip row
 function drawCurve(ctx, config) {
     let idx = config.idx;
@@ -1966,38 +1969,43 @@ function drawCurve(ctx, config) {
         }
 
         let pre;
-        let preTime;
-        let highLight = [];
+        let bestTime = Infinity;
+        let darkers = [];
         for (let row of value) {
             let t = timeToInt(row[idx.time]);
             let d = new Date(new Date(row[idx.date]) - value.bdayOffset);
             let x = (d - config.earliest) / config.duration * config.width;
             let y = config.height - (t - config.fastest) / config.delta * config.height;
 
-            pre = pre || [x, y];
+            if (t > bestTime) {
+                darkers.push([x, y]);
+            }
+            bestTime = min(bestTime, t);
 
+            pre = pre || [x, y];
             ctx.beginPath();
             ctx.moveTo(pre[0], pre[1]);
             ctx.lineTo(x, y);
             ctx.stroke();
+            pre = [x, y];
 
             ctx.beginPath();
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
             ctx.fill();
 
-            if (!tipRow && ctx.isPointInPath(config.mouseX, config.mouseY)) {
-                tipRow = [row, x, y, value.name];
+            let touchPath = new Path2D();
+            touchPath.arc(x, y, 30, 0, 2 * Math.PI);
+            if (ctx.isPointInPath(touchPath, config.mouseX, config.mouseY)) {
+                let mX = config.mouseX - config.marginL;
+                let mY = config.mouseY - config.marginT
+                if (!tipRow || distance(x, y, mX, mY) < distance(tipRow[1], tipRow[2], mX, mY)) {
+                    tipRow = [row, x, y, value.name];
+                }
             }
-
-            if (preTime && preTime < t) {
-                highLight.push([x, y]);
-            }
-            preTime = min(preTime, t);
-            pre = [x, y];
         }
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-        for (let [x, y] of highLight) {
+        ctx.fillStyle = "#0005";
+        for (let [x, y] of darkers) {
             ctx.beginPath();
             ctx.arc(x, y, 5, 0, 2 * Math.PI);
             ctx.fill();
