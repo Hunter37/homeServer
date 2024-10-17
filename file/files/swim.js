@@ -152,7 +152,10 @@ class LocalCache {
 
         data = await func();
         if (!data) {
-            return;
+            // use old data if network is timeout
+            data = await LocalCache.get(key, _10YearsInSec, minVersion);
+            console.log('Using old data for ' + key);
+            return data;
         }
 
         LocalCache.set(key, data);
@@ -497,7 +500,11 @@ async function loadContent() {
 
     let func = window[action];
     if (func) {
-        await func(value);
+        try {
+            await func(value);
+        } catch (e) {
+            updateContent(e);
+        }
     } else {
         window.location.replace('');
     }
@@ -511,7 +518,7 @@ async function backgroundRunner() {
             try {
                 await action(value);
             } catch (e) {
-                console.error(value, e);
+                console.error(e, value);
             }
         } else {
             await new Promise(resolve => setTimeout(resolve, 100));
