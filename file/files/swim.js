@@ -150,12 +150,21 @@ class LocalCache {
             return data;
         }
 
-        data = await func();
-        if (!data) {
-            // use old data if network is timeout
+        try {
+            data = await func();
+        } catch (e) {
+            // try to use old data if network is down
             data = await LocalCache.get(key, _10YearsInSec, minVersion);
-            console.log('Using old data for ' + key);
+            console.error(e, key);
+            if (!data) {
+                throw e;
+            }
+            console.log('Using old data for', key);
             return data;
+        }
+
+        if (!data) {
+            return;
         }
 
         LocalCache.set(key, data);
