@@ -1974,8 +1974,8 @@ function drawAgeDots(ctx, config) {
     }
 }
 
-function distance(x1, y1, x2, y2) {
-    return Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2);
+function distance2(x1, y1, x2, y2) {
+    return (x1 - x2) ** 2 + (y1 - y2) ** 2;
 }
 
 // draw the cruve and dots, and find the tip row
@@ -2032,7 +2032,7 @@ function drawCurve(ctx, config) {
             if (ctx.isPointInPath(touchPath, config.mouseX, config.mouseY)) {
                 let mX = config.mouseX - config.marginL;
                 let mY = config.mouseY - config.marginT
-                if (!tipRow || distance(x, y, mX, mY) < distance(tipRow[1], tipRow[2], mX, mY)) {
+                if (!tipRow || distance2(x, y, mX, mY) < distance2(tipRow[1], tipRow[2], mX, mY)) {
                     tipRow = [row, x, y, value.name];
                 }
             }
