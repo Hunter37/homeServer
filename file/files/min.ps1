@@ -1,7 +1,10 @@
+Write-Output "Minifying swim.js..."
 javascript-obfuscator swim.js -o swim.min.js --config config.json
 
+Write-Output "Minifying swim.html..."
 html-minifier --collapse-whitespace --remove-comments --remove-optional-tags --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace --use-short-doctype --minify-css true --minify-js true -o swim.min.html swim.html
 
+Write-Output "Generating swim.min.html..."
 # Read the content of swim.html
 $htmlContent = Get-Content -Path "swim.min.html" -Raw
 

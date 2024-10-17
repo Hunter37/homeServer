@@ -483,16 +483,15 @@ let _loadingHash;
 async function loadContent() {
     _backgroundActions.length = 0;
 
-    let hash = window.location.hash.substring(1);
-    if (!hash) {
-        updateContent(`Please enter the swimmer's name or the club name in the search box.`);
+    _loadingHash = window.location.hash.substring(1);
+    if (!_loadingHash) {
+        updateContent(`Please enter the swimmer's name or the club name in the search box.`, true);
         return;
     }
 
     updateContent('Loading....');
-    _loadingHash = hash;
 
-    let [action, value] = hash.split('/');
+    let [action, value] = _loadingHash.split('/');
     value = decodeURIComponent(value);
 
     let func = window[action];
