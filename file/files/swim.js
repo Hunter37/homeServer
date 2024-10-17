@@ -1638,6 +1638,40 @@ function createProgressGraph(pkey, events) {
     return html.join('');
 }
 
+(() => {
+    document.body.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && !canvas.classList.contains('width')) {
+                canvas.classList.add('width');
+            }
+        }
+
+        if (e.shiftKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && !canvas.classList.contains('height')) {
+                canvas.classList.add('height');
+            }
+        }
+    });
+
+    document.body.addEventListener('keyup', (e) => {
+        if (!(e.ctrlKey || e.metaKey)) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && canvas.classList.contains('width')) {
+                canvas.classList.remove('width');
+            }
+        }
+
+        if (!e.shiftKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && canvas.classList.contains('height')) {
+                canvas.classList.remove('height');
+            }
+        }
+    });
+})();
+
 function createCheckbox(id, text, checked, onchange) {
     onchange = onchange ? ` onchange="${onchange}"` : '';
     checked = checked ? ' checked' : '';
