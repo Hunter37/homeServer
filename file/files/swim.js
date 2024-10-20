@@ -825,6 +825,84 @@ class Select {
     }
 }
 
+class DoubleRange {
+
+    static #items = new Map();
+    static get(id) {
+        return DoubleRange.#items.get(id);
+    }
+
+    constructor(id, min, max, value1, value2, minGap, onchange) {
+        this.id = id;
+        this.onchange = onchange || (() => { });
+        this.#setValues(min, max, value1, value2, minGap);
+        DoubleRange.#items.set(id, this);
+    }
+
+    getValues() {
+        return [this.min, this.max, this.minGap, this.value1, this.value2];
+    }
+
+    setValues(min, max, value1, value2, minGap) {
+        this.#setValues(min, max, value1, value2, minGap);
+
+        let root = document.getElementById(this.id);
+        let left = root.querySelectorAll('input[type="range"]')[0];
+        let right = root.querySelectorAll('input[type="range"]')[1];
+        left.min = right.min = this.min;
+        left.max = right.max = this.max;
+        left.value = this.value1;
+        right.value = this.value2;
+        this.fillColor();
+    }
+
+    #setValues(min, max, value1, value2, minGap) {
+        this.min = min;
+        this.max = Math.max(max, min + minGap);
+        this.value1 = Math.max(min, Math.min(max - minGap, value1));
+        this.value2 = Math.max(this.value1 + minGap, Math.min(max, value2));;
+        this.minGap = minGap || 0;
+    }
+
+    render() {
+        let percent1 = (((this.value1 - this.min) / (this.max - this.min)) * 100).toFixed(2);
+        let percent2 = (((this.value2 - this.min) / (this.max - this.min)) * 100).toFixed(2);
+        let background = `linear-gradient(to right, #DDE ${percent1}%, #7DF ${percent1}%, #7DF ${percent2}%, #DDE ${percent2}%)`;
+
+        return [
+            `<div id="${this.id}" class="double-range"><div class="slider-track" style="background:${background}"></div>`,
+            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value1}" oninput="DoubleRange.get('${this.id}').slideOne(this)">`,
+            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value2}" oninput="DoubleRange.get('${this.id}').slideTwo(this)">`,
+            '</div>'].join('');
+    }
+
+    slideOne(e, event) {
+        let value = e.value = Math.min(e.value, this.value2 - this.minGap);
+        if (value != this.value1) {
+            this.value1 = value;
+            this.onchange(this, this.value1, this.value2);
+            this.fillColor();
+        }
+    }
+
+    slideTwo(e, event) {
+        let value = e.value = Math.max(e.value, this.value1 + this.minGap);
+        if (value != this.value2) {
+            this.value2 = value;
+            this.onchange(this, this.value1, this.value2);
+            this.fillColor();
+        }
+    }
+
+    fillColor() {
+        this.sliderTrack = this.sliderTrack || document.querySelector(`#${this.id}>.slider-track`);
+        let range = 100 / (this.max - this.min);
+        let percent1 = ((this.value1 - this.min) * range).toFixed(2);
+        let percent2 = ((this.value2 - this.min) * range).toFixed(2);
+        this.sliderTrack.style.background = `linear-gradient(to right, #DDE ${percent1}%, #7DF ${percent1}%, #7DF ${percent2}%, #DDE ${percent2}%)`;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // search functions
 
@@ -1626,15 +1704,23 @@ function createProgressGraph(pkey, events) {
         '<button class="resize hide" style="left:40px;top:-190px" onclick="resizeY(-1)">⇧</button>',
         '<button class="resize hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
         '<button class="resize hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
-        '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button></div>',
-        '<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
-        '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>');
+        '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button></div>');
+
+    let dateRange = new DoubleRange('date-range', 0, 1000, 0, 1000, 5, rangeChange);
+    html.push('<div>', dateRange.render(), '</div>');
 
     html.push('<div class="top-margin">',
         createCheckbox('show-resize', 'show graph resize controls', false, `for(let e of document.getElementsByClassName('resize'))e.classList.toggle('hide')`),
         '</div>');
 
+    html.push('<div class="tip"><span style="width:70px;display:inline-block;text-align:right;margin:0 8px">Mouse:</span>Ctrl⌘ + wheel to resize the date axis.  Shift + wheel to resize the time axis.<br>',
+        '<span style="width:70px;display:inline-block;text-align:right;margin:0 8px">TouchPad:</span>Shift + two-finger up/down or left/right scroll to resize the date & time axis.</div>');
+
     return html.join('');
+}
+
+function rangeChange(obj, left, right) {
+    showGraph(null, { slideLeft: left, slideRight: right });
 }
 
 (() => {
@@ -1742,6 +1828,56 @@ async function resizeY(delta, canvas) {
     await showGraph(canvas, { yZoomFactor: factor });
 }
 
+function updateSlider(config) {
+    let idx = config.idx;
+
+    let earliest = new Date();
+    let latest = new Date(0);
+
+    let baseBirthday;
+    for (let swimmer of config.swimmerList) {
+        if (swimmer.hide) {
+            continue;
+        }
+
+        let [left, right] = swimmer.swimmer.birthday;
+        let bday = new Date((new Date(right).getTime() + new Date(left).getTime()) / 2);
+        if (!baseBirthday) {
+            baseBirthday = bday;
+        }
+        let bdayOffset = config.ageAlign ? bday - baseBirthday : 0;
+
+        for (let row of swimmer.events) {
+            let d = new Date(new Date(row[idx.date]) - bdayOffset);
+            earliest = min(earliest, d);
+            latest = max(latest, d);
+        }
+    }
+
+    config.slide = DoubleRange.get('date-range');
+    config.slideLeft = config.slideLeft || earliest.getTime();
+    config.slideRight = config.slideRight || latest.getTime();
+    config.slide.setValues(earliest.getTime(), latest.getTime(), config.slideLeft || earliest.getTime(), config.slideRight || latest.getTime(), 5_000_000_000);
+    let [min_, max_, minGap, left, right] = config.slide.getValues();
+
+    config.sliderLeft = left;
+    config.sliderRight = right;
+
+    earliest = new Date(left);
+    latest = new Date(right);
+
+    latest.setUTCMonth(latest.getUTCMonth() + 2);
+    earliest.setUTCMonth(earliest.getUTCMonth() - 1);
+    earliest.setUTCDate(1);
+    earliest.setUTCHours(0);
+    if (config.ageAlign) {
+        earliest.setUTCDate(baseBirthday.getUTCDate());
+    }
+    config.earliest = earliest;
+    config.latest = latest;
+    config.duration = latest - earliest;
+}
+
 //                  l-blue,  brown,  l-green p-blue  l-red   siyan   l-purple pink   l-yellow orange
 const graphColors = ['#0AF', '#D85', '#0C4', '#88C', '#EBA', '#8CD', '#c9E', '#F9C', '#DD7', '#FC5'];
 
@@ -1753,8 +1889,6 @@ function prepareGraphData(config) {
     let values = [];
     let slowest = 0;
     let fastest = Infinity;
-    let earliest = new Date();
-    let latest = new Date(0);
 
     let baseBirthday;
     for (let swimmer of config.swimmerList) {
@@ -1776,34 +1910,29 @@ function prepareGraphData(config) {
             let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
             let evt = _eventIndexMap.get(eventStr);
             let value = swimmer.events.filter(e => e[idx.event] == evt);
-            value.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
-            value.birthday = bday;
-            value.bdayOffset = bdayOffset;
+
+            let filterValue = [];
+            filterValue.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
+            filterValue.birthday = bday;
+            filterValue.bdayOffset = bdayOffset;
+
 
             for (let row of value) {
+                let d = new Date(new Date(row[idx.date]) - bdayOffset);
+                if (d < config.sliderLeft || d > config.sliderRight) {
+                    continue;
+                }
+                filterValue.push(row);
                 let t = timeToInt(row[idx.time]);
                 slowest = Math.max(slowest, t);
                 fastest = Math.min(fastest, t);
                 //earliest = min(earliest, new Date(row[idx.date]));
             }
             eventStrs.push(eventStr);
-            values.push(value);
-        }
-
-        for (let row of swimmer.events) {
-            let d = new Date(new Date(row[idx.date]) - bdayOffset);
-            earliest = min(earliest, d);
-            latest = max(latest, d);
+            values.push(filterValue);
         }
     }
 
-    latest.setUTCMonth(latest.getUTCMonth() + 2);
-    earliest.setUTCMonth(earliest.getUTCMonth() - 1);
-    earliest.setUTCDate(1);
-    earliest.setUTCHours(0);
-    if (config.ageAlign) {
-        earliest.setUTCDate(baseBirthday.getUTCDate());
-    }
     let delta = (slowest - fastest) * 0.1;
     slowest += delta;
     fastest = Math.floor((fastest - delta) / 100) * 100;
@@ -1813,10 +1942,7 @@ function prepareGraphData(config) {
     config.values = values;
     config.slowest = slowest;
     config.fastest = fastest;
-    config.earliest = earliest;
-    config.latest = latest;
 
-    config.duration = latest - earliest;
     config.delta = slowest - fastest;
     config.width = (config.duration / _1DayInMilliSeconds / 3) * config.xZoomFactor;
     config.height = 400 * config.yZoomFactor;
@@ -2118,6 +2244,8 @@ async function showGraph(canvas, config) {  //, pkey, event, mouseX, mouseY) {
     }
 
     updateGraphTitle(config);
+
+    updateSlider(config);
 
     prepareGraphData(config);
 
