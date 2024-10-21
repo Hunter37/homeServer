@@ -1797,7 +1797,6 @@ function createCheckbox(id, text, checked, onchange) {
 // }
 
 async function onCanvasMouseMove(canvas, e) {
-    e = e || window.event;
     e.preventDefault();
     e.stopPropagation();
 
@@ -1813,8 +1812,6 @@ function updateGraphTitle(config) {
 }
 
 async function wheelGraph(canvas, e) {
-    e = e || window.event;
-
     if (e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
@@ -1829,8 +1826,15 @@ async function wheelGraph(canvas, e) {
         e.preventDefault();
         e.stopPropagation();
 
-        await resizeX(e.deltaY > 0 ? -1 : 1, canvas);
-
+        if (e.deltaX == 0) {
+            await resizeX(e.deltaY > 0 ? -1 : 1, canvas);
+        } else {
+            if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+                await resizeX(e.deltaX > 0 ? -1 : 1, canvas);
+            } else {
+                resizeY(e.deltaY > 0 ? -1 : 1, canvas);
+            }
+        }
     }
 }
 
@@ -2118,7 +2122,7 @@ function drawAgeDots(ctx, config) {
     }
 }
 
-function distance2(x1, y1, x2, y2) {
+function squaredDistance(x1, y1, x2, y2) {
     return (x1 - x2) ** 2 + (y1 - y2) ** 2;
 }
 
@@ -2212,7 +2216,7 @@ function drawCurve(ctx, config) {
                 if (ctx.isPointInPath(touchPath, config.mouseX, config.mouseY)) {
                     let mX = config.mouseX - config.marginL;
                     let mY = config.mouseY - config.marginT
-                    if (!tipRow || distance2(x, y, mX, mY) < distance2(tipRow[1], tipRow[2], mX, mY)) {
+                    if (!tipRow || squaredDistance(x, y, mX, mY) < squaredDistance(tipRow[1], tipRow[2], mX, mY)) {
                         tipRow = [row, x, y, value.name];
                     }
                 }
@@ -2309,6 +2313,14 @@ async function showGraph(canvas, config) {  //, pkey, event, mouseX, mouseY) {
     updateSlider(config);
 
     prepareGraphData(config);
+
+    let mouseX = config.mouseX - config.marginL;
+    let mouseY = config.mouseY - config.marginT;
+    if (mouseX > 0 && mouseY > 0 && mouseX < config.width && mouseY < config.height) {
+        canvas.classList.add('cross');
+    } else {
+        canvas.classList.remove('cross');
+    }
 
     // prepare the canvas
     canvas.height = config.height + config.marginT + config.marginB;
