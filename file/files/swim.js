@@ -1886,9 +1886,6 @@ function updateSlider(config) {
     config.slide.setValues(earliest.getTime(), latest.getTime(), config.slideLeft || earliest.getTime(), config.slideRight || latest.getTime(), 30 * 24 * 60 * 60 * 1000);
     let [min_, max_, minGap, left, right] = config.slide.getValues();
 
-    config.sliderLeft = left;
-    config.sliderRight = right;
-
     earliest = new Date(left);
     latest = new Date(right);
 
@@ -1944,7 +1941,7 @@ function prepareGraphData(config) {
 
             for (let row of value) {
                 let d = new Date(new Date(row[idx.date]) - bdayOffset);
-                if (d < config.sliderLeft || d > config.sliderRight) {
+                if (d < config.earliest || d > config.latest) {
                     continue;
                 }
                 let t = timeToInt(row[idx.time]);
