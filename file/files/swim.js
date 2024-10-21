@@ -1936,26 +1936,22 @@ function prepareGraphData(config) {
             let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
             let evt = _eventIndexMap.get(eventStr);
             let value = swimmer.events.filter(e => e[idx.event] == evt);
-
-            let filterValue = [];
-            filterValue.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
-            filterValue.birthday = bday;
-            filterValue.bdayOffset = bdayOffset;
-
+            value.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
+            value.birthday = bday;
+            value.bdayOffset = bdayOffset;
+            values.push(value);
+            eventStrs.push(eventStr);
 
             for (let row of value) {
                 let d = new Date(new Date(row[idx.date]) - bdayOffset);
                 if (d < config.sliderLeft || d > config.sliderRight) {
                     continue;
                 }
-                filterValue.push(row);
                 let t = timeToInt(row[idx.time]);
                 slowest = Math.max(slowest, t);
                 fastest = Math.min(fastest, t);
                 //earliest = min(earliest, new Date(row[idx.date]));
             }
-            eventStrs.push(eventStr);
-            values.push(filterValue);
         }
     }
 
@@ -2129,6 +2125,48 @@ function distance2(x1, y1, x2, y2) {
     return (x1 - x2) ** 2 + (y1 - y2) ** 2;
 }
 
+function drawClippedLine(ctx, width, height, x1, y1, x2, y2) {
+    function clipLine(x1, y1, x2, y2, minX, minY, maxX, maxY) {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+
+        let p = [-dx, dx, -dy, dy];
+        let q = [x1 - minX, maxX - x1, y1 - minY, maxY - y1];
+
+        let u1 = 0, u2 = 1;
+
+        for (let i = 0; i < 4; i++) {
+            if (p[i] === 0 && q[i] < 0) {
+                return;
+            }
+
+            let t = q[i] / p[i];
+            if (p[i] < 0) {
+                u1 = Math.max(u1, t);
+            } else if (p[i] > 0) {
+                u2 = Math.min(u2, t);
+            }
+        }
+
+        if (u1 > u2) {
+            return;
+        }
+
+        return [
+            x1 + u1 * dx, y1 + u1 * dy,
+            x1 + u2 * dx, y1 + u2 * dy
+        ];
+    }
+
+    let clipped = clipLine(x1, y1, x2, y2, 0, 0, width, height);
+    if (clipped) {
+        ctx.beginPath();
+        ctx.moveTo(clipped[0], clipped[1]);
+        ctx.lineTo(clipped[2], clipped[3]);
+        ctx.stroke();
+    }
+}
+
 // draw the cruve and dots, and find the tip row
 function drawCurve(ctx, config) {
     let idx = config.idx;
@@ -2162,31 +2200,31 @@ function drawCurve(ctx, config) {
             let x = (d - config.earliest) / config.duration * config.width;
             let y = config.height - (t - config.fastest) / config.delta * config.height;
 
-            if (t > bestTime) {
-                darkers.push([x, y]);
+            if (pre) {
+                drawClippedLine(ctx, config.width, config.height, pre[0], pre[1], x, y);
             }
-            bestTime = min(bestTime, t);
-
-            pre = pre || [x, y];
-            ctx.beginPath();
-            ctx.moveTo(pre[0], pre[1]);
-            ctx.lineTo(x, y);
-            ctx.stroke();
             pre = [x, y];
 
-            ctx.beginPath();
-            ctx.arc(x, y, 5, 0, 2 * Math.PI);
-            ctx.fill();
+            if (x > 0 && x < config.width && y > 0 && y < config.height) {
+                ctx.beginPath();
+                ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                ctx.fill();
 
-            let touchPath = new Path2D();
-            touchPath.arc(x, y, 30, 0, 2 * Math.PI);
-            if (ctx.isPointInPath(touchPath, config.mouseX, config.mouseY)) {
-                let mX = config.mouseX - config.marginL;
-                let mY = config.mouseY - config.marginT
-                if (!tipRow || distance2(x, y, mX, mY) < distance2(tipRow[1], tipRow[2], mX, mY)) {
-                    tipRow = [row, x, y, value.name];
+                let touchPath = new Path2D();
+                touchPath.arc(x, y, 30, 0, 2 * Math.PI);
+                if (ctx.isPointInPath(touchPath, config.mouseX, config.mouseY)) {
+                    let mX = config.mouseX - config.marginL;
+                    let mY = config.mouseY - config.marginT
+                    if (!tipRow || distance2(x, y, mX, mY) < distance2(tipRow[1], tipRow[2], mX, mY)) {
+                        tipRow = [row, x, y, value.name];
+                    }
+                }
+
+                if (t > bestTime) {
+                    darkers.push([x, y]);
                 }
             }
+            bestTime = min(bestTime, t);
         }
 
         ctx.fillStyle = "#0005";
