@@ -2202,7 +2202,16 @@ function drawCurve(ctx, config) {
             let y = config.height - (t - config.fastest) / config.delta * config.height;
 
             if (pre) {
-                drawClippedLine(ctx, config.width, config.height, pre[0], pre[1], x, y);
+                if (pre[0] >= 0 && x < config.width) {
+                    // Check if both points are inside the range
+                    ctx.beginPath();
+                    ctx.moveTo(pre[0], pre[1]);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                } else if (x >= 0 && pre[0] < config.width) {
+                    // Check if at least one point is inside the range
+                    drawClippedLine(ctx, config.width, config.height, pre[0], pre[1], x, y);
+                }
             }
             pre = [x, y];
 
