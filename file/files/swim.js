@@ -1957,8 +1957,8 @@ function prepareGraphData(config) {
     }
 
     let delta = (slowest - fastest) * 0.1;
-    slowest += delta;
-    fastest = Math.floor((fastest - delta) / 100) * 100;
+    slowest += Math.max(delta, 100);
+    fastest = Math.floor((fastest - Math.max(delta, 50)) / 100) * 100;
 
     config.drawName = config.swimmerList.length > 1;
     config.eventStrs = eventStrs;
