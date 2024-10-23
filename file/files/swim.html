@@ -563,8 +563,8 @@
 
     /* search table */
     #search-table .th:hover {
-        background-color: #0000;
-        color: #000;
+        background-color: inherit;
+        color: inherit;
         cursor: default;
     }
 
@@ -572,6 +572,7 @@
         cursor: pointer;
     }
 
+    .checkbox-wrapper input:checked:hover,
     .double-range>input[type="range"]:hover::-webkit-slider-thumb,
     .select-text:hover,
     #datepicker:hover,
@@ -596,12 +597,13 @@
         display: flex;
         align-items: center;
         margin: 0 0 0 20px;
-        border-radius: 72px
+        border-radius: 72px;
     }
 
+    .checkbox-wrapper input:hover,
     .checkbox-wrapper:hover,
     .xbutton:hover {
-        background: #0002;
+        background: #0003;
     }
 
     .checkbox-wrapper>* {
@@ -649,13 +651,8 @@
         width: 14px;
     }
 
-    .checkbox-wrapper input:hover {
-        background-color: #999;
-        transition-duration: 0s;
-    }
-
     .checkbox-wrapper input:checked {
-        background-color: #26D;
+        background-color: #7DF;
     }
 
     .checkbox-wrapper input:checked::after {
@@ -665,10 +662,6 @@
 
     .checkbox-wrapper :focus:not(.focus-visible) {
         outline: 0;
-    }
-
-    .checkbox-wrapper input:checked:hover {
-        background-color: #25A;
     }
 
     /* x-button */
