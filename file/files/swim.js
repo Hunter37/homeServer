@@ -67,7 +67,6 @@ function max(a, b) {
     return a > b ? a : b;
 }
 
-
 function formatDate(date) {
     return date.substring(5, 7) + '/' + date.substring(8, 10) + '/' + date.substring(2, 4);
 }
@@ -187,21 +186,21 @@ class ClubDictinary {
                 metadata: [
                     {
                         title: 'clubName',
-                        dim: "[OrgUnit.Level4Name]",
-                        datatype: "text"
+                        dim: '[OrgUnit.Level4Name]',
+                        datatype: 'text'
                     },
                     {
                         title: 'club',
-                        dim: "[OrgUnit.Level4Code]",
-                        datatype: "text",
+                        dim: '[OrgUnit.Level4Code]',
+                        datatype: 'text',
                     },
                     {
-                        dim: "[OrgUnit.Level3Code]",
-                        datatype: "text",
+                        dim: '[OrgUnit.Level3Code]',
+                        datatype: 'text',
                         filter: {
                             equals: lsc,
                         },
-                        panel: "scope"
+                        panel: 'scope'
                     }
                 ],
                 count: 5000
@@ -253,23 +252,23 @@ class MeetDictionary {
             metadata: [
                 {
                     title: 'meet',
-                    dim: "[UsasSwimTime.MeetKey]",
-                    datatype: "numeric",
+                    dim: '[UsasSwimTime.MeetKey]',
+                    datatype: 'numeric',
                     filter: {
                         members: [...meets]
                     }
                 },
                 {
                     title: 'date',
-                    dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                    datatype: "datetime",
-                    level: "days",
-                    sort: "asc"
+                    dim: '[SeasonCalendar.CalendarDate (Calendar)]',
+                    datatype: 'datetime',
+                    level: 'days',
+                    sort: 'asc'
                 },
                 {
                     title: 'meetName',
-                    dim: "[Meet.MeetName]",
-                    datatype: "text"
+                    dim: '[Meet.MeetName]',
+                    datatype: 'text'
                 }
             ],
             count: meets.size * 5
@@ -1021,33 +1020,33 @@ async function loadClubSearch(value, all) {
     let bodyObj = {
         metadata: [
             {
-                title: "name",
-                dim: "[Persons.FullName]",
-                datatype: "text"
+                title: 'name',
+                dim: '[Persons.FullName]',
+                datatype: 'text'
             },
             {
-                title: "age",
-                dim: "[Persons.Age]",
-                datatype: "numeric",
-                sort: "asc"
+                title: 'age',
+                dim: '[Persons.Age]',
+                datatype: 'numeric',
+                sort: 'asc'
             },
             {
-                title: "clubName",
-                dim: "[Persons.ClubName]",
-                datatype: "text",
+                title: 'clubName',
+                dim: '[Persons.ClubName]',
+                datatype: 'text',
                 filter: {
                     contains: value
                 }
             },
             {
-                title: "lsc",
-                dim: "[Persons.LscCode]",
-                datatype: "text"
+                title: 'lsc',
+                dim: '[Persons.LscCode]',
+                datatype: 'text'
             },
             {
-                title: "pkey",
-                dim: "[Persons.PersonKey]",
-                datatype: "numeric"
+                title: 'pkey',
+                dim: '[Persons.PersonKey]',
+                datatype: 'numeric'
             }
         ],
         count: 5000
@@ -1107,44 +1106,44 @@ async function loadSwimmerSearchByFirstAndLastName(firstName, lastName, all) {
     let bodyObj = {
         metadata: [
             {
-                title: "name",
-                dim: "[Persons.FullName]",
-                datatype: "text"
+                title: 'name',
+                dim: '[Persons.FullName]',
+                datatype: 'text'
             },
             {
-                title: "age",
-                dim: "[Persons.Age]",
-                datatype: "numeric",
-                sort: "asc"
+                title: 'age',
+                dim: '[Persons.Age]',
+                datatype: 'numeric',
+                sort: 'asc'
             },
             {
-                title: "clubName",
-                dim: "[Persons.ClubName]",
-                datatype: "text"
+                title: 'clubName',
+                dim: '[Persons.ClubName]',
+                datatype: 'text'
             },
             {
-                title: "lsc",
-                dim: "[Persons.LscCode]",
-                datatype: "text"
+                title: 'lsc',
+                dim: '[Persons.LscCode]',
+                datatype: 'text'
             },
             {
-                title: "pkey",
-                dim: "[Persons.PersonKey]",
-                datatype: "numeric"
+                title: 'pkey',
+                dim: '[Persons.PersonKey]',
+                datatype: 'numeric'
             },
             {
-                dim: "[Persons.LastName]",
+                dim: '[Persons.LastName]',
                 filter: {
                     startsWith: lastName
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[Persons.FirstAndPreferredName]",
+                dim: '[Persons.FirstAndPreferredName]',
                 filter: {
                     contains: firstName
                 },
-                panel: "scope"
+                panel: 'scope'
             }
         ],
         count: 5000
@@ -1219,59 +1218,59 @@ async function loadEvents(pkey) {
     let bodyObj = {
         metadata: [
             {
-                title: "time",
-                dim: "[UsasSwimTime.SwimTimeFormatted]",
-                datatype: "text"
+                title: 'time',
+                dim: '[UsasSwimTime.SwimTimeFormatted]',
+                datatype: 'text'
             },
             {
-                title: "age",
-                dim: "[UsasSwimTime.AgeAtMeetKey]",
-                datatype: "numeric"
+                title: 'age',
+                dim: '[UsasSwimTime.AgeAtMeetKey]',
+                datatype: 'numeric'
             },
             {
-                title: "std",
-                dim: "[TimeStandard.TimeStandardName]",
-                datatype: "text"
+                title: 'std',
+                dim: '[TimeStandard.TimeStandardName]',
+                datatype: 'text'
             },
             {
-                title: "lsc",
-                dim: "[OrgUnit.Level3Code]",
-                datatype: "text"
+                title: 'lsc',
+                dim: '[OrgUnit.Level3Code]',
+                datatype: 'text'
             },
             {
-                title: "clubName",
-                dim: "[OrgUnit.Level4Name]",
-                datatype: "text"
+                title: 'clubName',
+                dim: '[OrgUnit.Level4Name]',
+                datatype: 'text'
             },
             {
-                title: "date",
-                dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                datatype: "datetime",
-                level: "days",
-                sort: "asc"
+                title: 'date',
+                dim: '[SeasonCalendar.CalendarDate (Calendar)]',
+                datatype: 'datetime',
+                level: 'days',
+                sort: 'asc'
             },
             {
-                title: "event",
-                dim: "[UsasSwimTime.SwimEventKey]",
-                datatype: "numeric"
+                title: 'event',
+                dim: '[UsasSwimTime.SwimEventKey]',
+                datatype: 'numeric'
             },
             {
-                title: "meet",
-                dim: "[UsasSwimTime.MeetKey]",
-                datatype: "numeric"
+                title: 'meet',
+                dim: '[UsasSwimTime.MeetKey]',
+                datatype: 'numeric'
             },
             {
                 title: 'gender',
-                dim: "[UsasSwimTime.EventCompetitionCategoryKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.EventCompetitionCategoryKey]',
+                datatype: 'numeric'
             },
             {
-                dim: "[UsasSwimTime.PersonKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.PersonKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: pkey
                 },
-                panel: "scope",
+                panel: 'scope'
             }
         ],
         count: 5000
@@ -1299,34 +1298,34 @@ async function loadSwimerInfo(pkey) {
     let bodyObj = {
         metadata: [
             {
-                title: "firstName",
-                dim: "[Persons.FirstAndPreferredName]",
-                datatype: "text"
+                title: 'firstName',
+                dim: '[Persons.FirstAndPreferredName]',
+                datatype: 'text'
             },
             {
-                title: "lastName",
-                dim: "[Persons.LastName]",
-                datatype: "text"
+                title: 'lastName',
+                dim: '[Persons.LastName]',
+                datatype: 'text'
             },
             {
-                title: "age",
-                dim: "[Persons.Age]",
-                datatype: "numeric"
+                title: 'age',
+                dim: '[Persons.Age]',
+                datatype: 'numeric'
             },
             {
-                title: "clubName",
-                dim: "[Persons.ClubName]",
-                datatype: "text",
+                title: 'clubName',
+                dim: '[Persons.ClubName]',
+                datatype: 'text',
             },
             {
-                title: "lsc",
-                dim: "[Persons.LscCode]",
-                datatype: "text"
+                title: 'lsc',
+                dim: '[Persons.LscCode]',
+                datatype: 'text'
             },
             {
-                title: "pkey",
-                dim: "[Persons.PersonKey]",
-                datatype: "numeric",
+                title: 'pkey',
+                dim: '[Persons.PersonKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: pkey
                 }
@@ -2935,33 +2934,33 @@ async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
             metadata: [
                 {
                     title: 'pkey',
-                    dim: "[Persons.PersonKey]",
-                    datatype: "numeric"
+                    dim: '[Persons.PersonKey]',
+                    datatype: 'numeric'
                 },
                 {
                     title: 'age',
-                    dim: "[Persons.Age]",
-                    datatype: "numeric",
+                    dim: '[Persons.Age]',
+                    datatype: 'numeric',
                     filter: {
                         from: from,
                         to: to
                     }
                 },
                 {
-                    dim: "[Persons.ClubName]",
-                    datatype: "text",
+                    dim: '[Persons.ClubName]',
+                    datatype: 'text',
                     filter: {
                         contains: clubName
                     },
-                    panel: "scope"
+                    panel: 'scope'
                 },
                 {
-                    dim: "[Persons.LscCode]",
-                    datatype: "text",
+                    dim: '[Persons.LscCode]',
+                    datatype: 'text',
                     filter: {
                         equals: lsc
                     },
-                    panel: "scope"
+                    panel: 'scope'
                 }
             ],
             count: 1000
@@ -2988,77 +2987,77 @@ async function loadRankDataByClub(key) {
         metadata: [
             {
                 title: 'name',
-                dim: "[Person.FullName]",
-                datatype: "text"
+                dim: '[Person.FullName]',
+                datatype: 'text'
             },
             {
                 title: 'date',
-                dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                datatype: "datetime",
-                level: "days"
+                dim: '[SeasonCalendar.CalendarDate (Calendar)]',
+                datatype: 'datetime',
+                level: 'days'
             },
             {
                 title: 'time',
-                dim: "[UsasSwimTime.SwimTimeFormatted]",
-                datatype: "text"
+                dim: '[UsasSwimTime.SwimTimeFormatted]',
+                datatype: 'text'
             },
             {
                 title: 'clubName',
-                dim: "[OrgUnit.Level4Name]",
-                datatype: "text",
+                dim: '[OrgUnit.Level4Name]',
+                datatype: 'text',
             },
             {
                 title: 'lsc',
-                dim: "[OrgUnit.Level3Code]",
-                datatype: "text"
+                dim: '[OrgUnit.Level3Code]',
+                datatype: 'text'
             },
             {
-                title: "meet",
-                dim: "[UsasSwimTime.MeetKey]",
-                datatype: "numeric"
+                title: 'meet',
+                dim: '[UsasSwimTime.MeetKey]',
+                datatype: 'numeric'
             },
             {
                 title: 'pkey',
-                dim: "[UsasSwimTime.PersonKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.PersonKey]',
+                datatype: 'numeric',
                 filter: {
                     members: swimmerList.map(row => row[swimmerList.idx.pkey])
                 }
             },
             {
                 title: 'sortkey',
-                dim: "[UsasSwimTime.SortKey]",
-                datatype: "text",
-                sort: "asc"
+                dim: '[UsasSwimTime.SortKey]',
+                datatype: 'text',
+                sort: 'asc'
             },
             {
                 title: 'event',
-                dim: "[UsasSwimTime.SwimEventKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.SwimEventKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: Number(event)
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[UsasSwimTime.EventCompetitionCategoryKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.EventCompetitionCategoryKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: convertToGenderCode(genderStr)
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[SeasonCalendar.SeasonYearDesc]",
-                datatype: "text",
+                dim: '[SeasonCalendar.SeasonYearDesc]',
+                datatype: 'text',
                 filter: {
                     members: [
-                        year + " (9/1/" + (year - 1) + " - 8/31/" + year + ")",
-                        (year - 1) + " (9/1/" + (year - 2) + " - 8/31/" + (year - 1) + ")",
-                        (year - 2) + " (9/1/" + (year - 3) + " - 8/31/" + (year - 2) + ")"
+                        `${year} (9/1/${year - 1} - 8/31/${year})`,
+                        `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,
+                        `${year - 2} (9/1/${year - 3} - 8/31/${year - 2})`
                     ]
                 },
-                panel: "scope"
+                panel: 'scope'
             }
         ],
         count: 5000
@@ -3116,83 +3115,83 @@ async function LoadRankDataAll(mapKey) {
         metadata: [
             {
                 title: 'name',
-                dim: "[UsasSwimTime.FullName]",
-                datatype: "text"
+                dim: '[UsasSwimTime.FullName]',
+                datatype: 'text'
             },
             {
                 title: 'date',
-                dim: "[SeasonCalendar.CalendarDate (Calendar)]",
-                datatype: "datetime",
-                level: "days"
+                dim: '[SeasonCalendar.CalendarDate (Calendar)]',
+                datatype: 'datetime',
+                level: 'days'
             },
             {
                 title: 'time',
-                dim: "[UsasSwimTime.SwimTimeFormatted]",
-                datatype: "text"
+                dim: '[UsasSwimTime.SwimTimeFormatted]',
+                datatype: 'text'
             },
             {
                 title: 'clubName',
-                dim: "[OrgUnit.Level4Name]",
-                datatype: "text",
+                dim: '[OrgUnit.Level4Name]',
+                datatype: 'text',
             },
             {
                 title: 'lsc',
-                dim: "[OrgUnit.Level3Code]",
-                datatype: "text"
+                dim: '[OrgUnit.Level3Code]',
+                datatype: 'text'
             },
             {
-                title: "meet",
-                dim: "[UsasSwimTime.MeetKey]",
-                datatype: "numeric"
+                title: 'meet',
+                dim: '[UsasSwimTime.MeetKey]',
+                datatype: 'numeric'
             },
             {
                 title: 'pkey',
-                dim: "[UsasSwimTime.PersonKey]",
-                datatype: "numeric"
+                dim: '[UsasSwimTime.PersonKey]',
+                datatype: 'numeric'
             },
             {
                 title: 'sortkey',
-                dim: "[UsasSwimTime.SortKey]",
-                datatype: "text",
-                sort: "asc"
+                dim: '[UsasSwimTime.SortKey]',
+                datatype: 'text',
+                sort: 'asc'
             },
             {
                 title: 'event',
-                dim: "[UsasSwimTime.SwimEventKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.SwimEventKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: Number(eventKey)
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[UsasSwimTime.AgeAtMeetKey]",
-                datatype: "numeric",
+                dim: '[UsasSwimTime.AgeAtMeetKey]',
+                datatype: 'numeric',
                 filter: {
                     from: from,
                     to: to
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[EventCompetitionCategory.EventCompetitionCategoryKey]",
-                datatype: "numeric",
+                dim: '[EventCompetitionCategory.EventCompetitionCategoryKey]',
+                datatype: 'numeric',
                 filter: {
                     equals: convertToGenderCode(genderStr)
                 },
-                panel: "scope"
+                panel: 'scope'
             },
             {
-                dim: "[SeasonCalendar.SeasonYearDesc]",
-                datatype: "text",
+                dim: '[SeasonCalendar.SeasonYearDesc]',
+                datatype: 'text',
                 filter: {
                     members: [
-                        year + " (9/1/" + (year - 1) + " - 8/31/" + year + ")",
-                        (year - 1) + " (9/1/" + (year - 2) + " - 8/31/" + (year - 1) + ")",
-                        // (year - 2) + " (9/1/" + (year - 3) + " - 8/31/" + (year - 2) + ")"
+                        `${year} (9/1/${year - 1} - 8/31/${year})`,
+                        `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,
+                        // `${year - 2} (9/1/${year - 3} - 8/31/${year - 2})`
                     ]
                 },
-                panel: "scope"
+                panel: 'scope'
             }
         ],
         count: 10000
@@ -3200,23 +3199,23 @@ async function LoadRankDataAll(mapKey) {
 
     if (zone) {
         bodyObj.metadata.push({
-            dim: "[OrgUnit.Level2Code]",
-            datatype: "text",
+            dim: '[OrgUnit.Level2Code]',
+            datatype: 'text',
             filter: {
                 equals: zone
             },
-            panel: "scope"
+            panel: 'scope'
         });
     }
 
     if (lsc) {
         bodyObj.metadata.push({
-            dim: "[OrgUnit.Level3Code]",
-            datatype: "text",
+            dim: '[OrgUnit.Level3Code]',
+            datatype: 'text',
             filter: {
                 equals: lsc
             },
-            panel: "scope"
+            panel: 'scope'
         });
     }
 
@@ -3255,16 +3254,16 @@ async function filterByAge(values, ageKey) {
         metadata: [
             {
                 title: 'pkey',
-                dim: "[Persons.PersonKey]",
-                datatype: "numeric",
+                dim: '[Persons.PersonKey]',
+                datatype: 'numeric',
                 filter: {
                     members: [...pkeys]
                 }
             },
             {
                 title: 'age',
-                dim: "[Persons.Age]",
-                datatype: "numeric",
+                dim: '[Persons.Age]',
+                datatype: 'numeric',
                 filter: {
                     from: from,
                     to: to
