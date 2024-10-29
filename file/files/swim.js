@@ -1887,9 +1887,15 @@ function updateSlider(config) {
     }
 
     config.slide = DoubleRange.get('date-range');
-    config.slideLeft = config.slideLeft || earliest.getTime();
-    config.slideRight = config.slideRight || latest.getTime();
-    config.slide.setValues(earliest.getTime(), latest.getTime(), config.slideLeft || earliest.getTime(), config.slideRight || latest.getTime(), 30 * 24 * 60 * 60 * 1000);
+    let l = earliest.getTime();
+    let r = latest.getTime();
+    if (config.slideLeft == l) {
+        delete config.slideLeft;
+    }
+    if (config.slideRight == r) {
+        delete config.slideRight;
+    }
+    config.slide.setValues(l, r, config.slideLeft || l, config.slideRight || r, 30 * 24 * 60 * 60 * 1000);
     let [min_, max_, minGap, left, right] = config.slide.getValues();
 
     earliest = new Date(left);
