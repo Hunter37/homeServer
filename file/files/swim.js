@@ -2485,9 +2485,12 @@ function createClickableDiv(content, action) {
 async function getRank(params) {
     let [mapKey, timeInt, pkey, id] = params;
 
-    let data = await loadRank(mapKey);
-    // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
-    // 0        1     2     3     4          5     6        7     8         9     10
+    let data;
+    try {
+        data = await loadRank(mapKey);
+    } catch (e) {
+        console.log(e, 'load rank failed', mapKey);
+    }
 
     const element = document.getElementById(id);
     if (!element) {
@@ -2495,7 +2498,7 @@ async function getRank(params) {
         return;
     }
 
-    let rank = calculateRank(data.values, pkey, timeInt);
+    let rank = data ? calculateRank(data.values, pkey, timeInt) : '⛓‍💥';
 
     element.innerHTML = createClickableDiv(rank, `go('rank', '${mapKey}')`);
 }
@@ -3797,65 +3800,65 @@ function timeToInt(stime) {
 
 (function () {
     let data = `
-Adirondack Swimming|AD|Eastern
-Alaska Swimming|AK|Western
-Allegheny Mountain Swimming|AM|Eastern
-Arkansas Swimming|AR|Central
-Arizona Swimming|AZ|Western
-Border Swimming|BD|Southern
-Central California Swimming|CC|Western
-Colorado Swimming|CO|Western
-Connecticut Swimming|CT|Eastern
-Florida Swimming|FL|Southern
-Florida Gold Coast Swimming|FG|Southern
-Georgia Swimming|GA|Southern
-Gulf Swimming|GU|Southern
-Hawaiian Swimming|HI|Western
-Illinois Swimming|IL|Central
-Indiana Swimming|IN|Central
-Inland Empire Swimming|IE|Western
-Iowa Swimming|IA|Central
-Kentucky Swimming|KY|Southern
-Lake Erie Swimming|LE|Central
-Louisiana Swimming|LA|Southern
-Maine Swimming|ME|Eastern
-Maryland Swimming|MD|Eastern
-Metropolitan Swimming|MR|Eastern
-Michigan Swimming|MI|Central
-Middle Atlantic Swimming|MA|Eastern
-Midwestern Swimming|MW|Central
-Minnesota Swimming|MN|Central
-Mississippi Swimming|MS|Southern
-Missouri Valley Swimming|MV|Central
-Montana Swimming|MT|Western
-New England Swimming|NE|Eastern
-New Jersey Swimming|NJ|Eastern
-New Mexico Swimming|NM|Western
-Niagara Swimming|NI|Eastern
-North Carolina Swimming|NC|Southern
-North Dakota Swimming|ND|Central
-North Texas Swimming|NT|Southern
-Ohio Swimming|OH|Central
-Oklahoma Swimming|OK|Central
-Oregon Swimming|OR|Western
-Ozark Swimming|OZ|Central
-Pacific Swimming|PC|Western
-Pacific Northwest Swimming|PN|Western
-Potomac Valley Swimming|PV|Eastern
-San Diego-Imperial Swimming|SI|Western
-Sierra Nevada Swimming|SN|Western
-Snake River Swimming|SR|Western
-South Carolina Swimming|SC|Southern
-South Dakota Swimming|SD|Central
-South Texas Swimming|ST|Southern
-Southeastern Swimming|SE|Southern
-Southern California Swimming|CA|Western
-Utah Swimming|UT|Western
-Virginia Swimming|VA|Eastern
-West Texas Swimming|WT|Southern
-West Virginia Swimming|WV|Southern
-Wisconsin Swimming|WI|Central
-Wyoming Swimming|WY|Western`;
+Adirondack|AD|Eastern
+Alaska|AK|Western
+Allegheny Mountain|AM|Eastern
+Arkansas|AR|Central
+Arizona|AZ|Western
+Border|BD|Southern
+Central California|CC|Western
+Colorado|CO|Western
+Connecticut|CT|Eastern
+Florida|FL|Southern
+Florida Gold Coast|FG|Southern
+Georgia|GA|Southern
+Gulf|GU|Southern
+Hawaiian|HI|Western
+Illinois|IL|Central
+Indiana|IN|Central
+Inland Empire|IE|Western
+Iowa|IA|Central
+Kentucky|KY|Southern
+Lake Erie|LE|Central
+Louisiana|LA|Southern
+Maine|ME|Eastern
+Maryland|MD|Eastern
+Metropolitan|MR|Eastern
+Michigan|MI|Central
+Middle Atlantic|MA|Eastern
+Midwestern|MW|Central
+Minnesota|MN|Central
+Mississippi|MS|Southern
+Missouri Valley|MV|Central
+Montana|MT|Western
+New England|NE|Eastern
+New Jersey|NJ|Eastern
+New Mexico|NM|Western
+Niagara|NI|Eastern
+North Carolina|NC|Southern
+North Dakota|ND|Central
+North Texas|NT|Southern
+Ohio|OH|Central
+Oklahoma|OK|Central
+Oregon|OR|Western
+Ozark|OZ|Central
+Pacific|PC|Western
+Pacific Northwest|PN|Western
+Potomac Valley|PV|Eastern
+San Diego-Imperial|SI|Western
+Sierra Nevada|SN|Western
+Snake River|SR|Western
+South Carolina|SC|Southern
+South Dakota|SD|Central
+South Texas|ST|Southern
+Southeastern|SE|Southern
+Southern California|CA|Western
+Utah|UT|Western
+Virginia|VA|Eastern
+West Texas|WT|Southern
+West Virginia|WV|Southern
+Wisconsin|WI|Central
+Wyoming|WY|Western`;
     let lines = data.split('\n');
     let map = new Map();
     for (let line of lines) {
