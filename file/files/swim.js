@@ -936,6 +936,7 @@ async function searchAll(params) {
 }
 
 async function loadSearch(name, all) {
+    name = name.trim().replace(/\s+/g, ' ');
     let key = 'search/' + name + (all ? '<ALL>' : '');
     return await LocalCache.func(key, async () => {
         let values = await loadSwimmerSearch(name, all);
