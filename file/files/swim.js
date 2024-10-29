@@ -1530,16 +1530,16 @@ function createBestTimeTableHeader(data, meetStds, ageKey) {
     let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
     let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
-        '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2">',
+        '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
         createPopup('Event<br>Count', 'Total Event Count'), '</th><th class="rk" colspan="4">Rankings</th>'];
 
     if (data.swimmer.age < 19) {
         if (data.swimmer.age > 9) {
-            html.push(`<th colspan="${stdName.length}" class="smt">`,
+            html.push(`<th colspan="${stdName.length}" class="smt full">`,
                 createPopup(`Motivational Standards (${data.swimmer.age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
                 '</th>');
         }
-        html.push(`<th colspan="${stdName.length}" class="mt">`,
+        html.push(`<th colspan="${stdName.length}" class="mt full">`,
             createPopup(`Motivational Standards (${ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
             '</th>');
     }

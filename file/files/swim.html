@@ -48,7 +48,6 @@
         padding: 10px;
         font: 14px Verdana;
         color: inherit;
-        cursor: pointer;
         border-radius: 5px;
     }
 
@@ -390,10 +389,7 @@
         justify-content: center;
         align-items: center;
         padding: 10px 5px;
-    }
-
-    .clickable {
-        cursor: pointer;
+        box-sizing: border-box;
     }
 
     /* clibable table cell */
@@ -443,7 +439,7 @@
     .tab {
         display: inline-block;
         padding: 0;
-        cursor: pointer;
+        /* cursor: pointer; */
         margin: 0;
         border: 1px solid #CCC;
         border-radius: 5px 5px 0 0;
@@ -568,10 +564,6 @@
         cursor: default;
     }
 
-    #search-table tr {
-        cursor: pointer;
-    }
-
     .checkbox-wrapper input:checked:hover,
     .double-range>input[type="range"]:hover::-webkit-slider-thumb,
     .select-text:hover,
@@ -590,6 +582,7 @@
         background-color: #57E;
         color: #FFF;
         text-decoration: none;
+        cursor: pointer;
     }
 
     /* checkbox style */
