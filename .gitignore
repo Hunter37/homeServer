@@ -22,3 +22,5 @@ package-lock.json
 package.json
 
 file/files/swim.min.js
+*.exe
+~*

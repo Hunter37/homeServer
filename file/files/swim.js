@@ -121,13 +121,22 @@ function convertToGenderCode(genderStr) {
 class LocalCache {
     static currentVersion = 2;
 
+    static enable(yes) {
+        if (typeof yes === 'boolean') {
+            localStorage.setItem('use-local-cache', yes);
+        }
+
+        return (localStorage.getItem('use-local-cache') || 'true') == 'true';
+    }
+
     static set(key, value) {
         ldb.set(key, { time: new Date(), data: value, version: LocalCache.currentVersion });
     }
 
     static async get(key, timeoutInSec, minVersion) {
-        // todo: remove this, just for testing
-        //return null;
+        if (!LocalCache.enable()) {
+            return null;
+        }
 
         let item = await new Promise(resolve => ldb.get(key, r => resolve(r)));
 
@@ -438,6 +447,14 @@ let _birthdayDictionary = new BirthdayDictionary();
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // usa swimming data fetch utility functions
 
+function useProxy(yes) {
+    if (typeof yes === 'boolean') {
+        localStorage.setItem('use-proxy', yes);
+    }
+
+    return (localStorage.getItem('use-proxy') || 'false') == 'true';
+}
+
 async function fetchSwimValues(bodyObj, type) {
     let map = {
         swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
@@ -446,6 +463,10 @@ async function fetchSwimValues(bodyObj, type) {
     }
 
     let url = map[type || 'swimmer'];
+
+    if (useProxy()) {
+        url = '/q?url=' + encodeURIComponent(url);
+    }
 
     let response = await fetch(url, {
         method: 'POST',
@@ -588,16 +609,25 @@ class TabView {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// settings page
+// config page
 
-async function settings(params) {
-    let tabView = new TabView('settingsTabView');
+async function config(params) {
+    let tabView = new TabView('configTabView');
 
-    tabView.addTab('<p>General</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
-    tabView.addTab('<p>Advanced</p>', buildAdvancedSettings());
+    tabView.addTab('<p>General</p>', buildGeneralConfig());
+    tabView.addTab('<p>Cache</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
+    tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
     tabView.addTab('<p>About</p>', '--about--');
 
     updateContent(tabView.render());
+}
+
+function buildGeneralConfig() {
+    return ['<div class="top-margin">',
+        createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
+        '</div><div class="top-margin">',
+        createCheckbox('use-proxy-checkbox', 'Proxy', useProxy(), 'useProxy(this.checked)'),
+        '</div>'].join('');
 }
 
 async function clearCache(elem) {
@@ -631,9 +661,7 @@ async function clearCache(elem) {
     //window.location.reload();
 }
 
-
-function buildAdvancedSettings() {
-
+function buildAdvancedConfig() {
 
     let dropDown = new Dropdown('testid',
         '<div style="background-color:blue;">hello</div>',
@@ -1785,9 +1813,17 @@ function rangeChange(obj, left, right) {
     });
 })();
 
+let func = new Map();
+
 function createCheckbox(id, text, checked, onchange) {
-    onchange = onchange ? ` onchange="${onchange}"` : '';
+    if (typeof onchange == 'function') {
+        func.set(`${id}-onchange`, onchange);
+        onchange = ` onchange="func.get('${id}-onchange')(this.checked)"`;
+    } else {
+        onchange = onchange ? ` onchange="${onchange}"` : '';
+    }
     checked = checked ? ' checked' : '';
+
     return '<span style="display:inline-block"><span class="checkbox-wrapper">' +
         `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
 }

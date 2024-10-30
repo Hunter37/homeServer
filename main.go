@@ -30,6 +30,7 @@ var router = map[string]func(http.ResponseWriter, *http.Request){
 	"/file":                             file.FileHandler,
 	"/apple-touch-icon.png":             appleIconHandler,
 	"/apple-touch-icon-precomposed.png": appleIconHandler,
+	"/q":								 swim.QueryHandler,
 }
 
 func main() {
