@@ -16,14 +16,13 @@ type CacheItem struct {
 }
 
 var (
-	cache = utils.NewTTLCache[string, CacheItem](512 * 1024 * 1024 * 1024)
+	cache = utils.NewTTLCache[string, CacheItem](512 * 1024 * 1024) // 512MB
 )
 
 const (
 	TTL = 24 * time.Hour
 )
 
-// SwimHandler the swim root handler
 func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
@@ -52,7 +51,7 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
 
 		item = CacheItem{body: responseBody, header: header}
-		cache.Put(key, item, int64(8+len(responseBody)), TTL) //igonre header size
+		cache.Put(key, item, 8+len(responseBody), TTL) //igonre header size
 	}
 
 	for key, values := range item.header {

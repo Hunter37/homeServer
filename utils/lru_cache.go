@@ -10,18 +10,18 @@ import (
 type CacheItem[K constraints.Ordered, V any] struct { // over head item * 3 * 8
 	key   K
 	value V
-	size  int64
+	size  int
 }
 
 type LRUCache[K constraints.Ordered, V any] struct {
-	size     int64
-	capacity int64
+	size     int
+	capacity int
 	cache    map[K]*list.Element // over head item * 2 * 8	?
 	list     *list.List          // over head item * 3 * 8
 	mu       sync.Mutex
 }
 
-func NewLRUCache[K constraints.Ordered, V any](capacity int64) *LRUCache[K, V] {
+func NewLRUCache[K constraints.Ordered, V any](capacity int) *LRUCache[K, V] {
 	return &LRUCache[K, V]{
 		size:     0,
 		capacity: capacity,
@@ -42,7 +42,7 @@ func (c *LRUCache[K, V]) Get(key K) (V, bool) {
 	return zero, false
 }
 
-func (c *LRUCache[K, V]) Put(key K, value V, size int64) {
+func (c *LRUCache[K, V]) Put(key K, value V, size int) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -62,7 +62,7 @@ func (c *LRUCache[K, V]) Put(key K, value V, size int64) {
 	c.cache[key] = newElem
 	c.size += size
 
-	for c.size+int64(c.list.Len())*64 > c.capacity {
+	for c.size+c.list.Len()*64 > c.capacity {
 		backElem := c.list.Back()
 		if backElem != nil {
 			c.list.Remove(backElem)

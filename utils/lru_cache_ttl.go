@@ -15,7 +15,7 @@ type TTLCache[K constraints.Ordered, V any] struct {
 	cache *LRUCache[K, TTLCacheItem[V]]
 }
 
-func NewTTLCache[K constraints.Ordered, V any](capacity int64) *TTLCache[K, V] {
+func NewTTLCache[K constraints.Ordered, V any](capacity int) *TTLCache[K, V] {
 	return &TTLCache[K, V]{cache: NewLRUCache[K, TTLCacheItem[V]](capacity)}
 }
 
@@ -36,6 +36,6 @@ func (c *TTLCache[K, V]) Get(key K) (V, bool) {
 // value: the value to be stored in the cache.
 // size: the size of the value in bytes.
 // ttl: the duration for which the value should remain in the cache.
-func (c *TTLCache[K, V]) Put(key K, value V, size int64, ttl time.Duration) {
+func (c *TTLCache[K, V]) Put(key K, value V, size int, ttl time.Duration) {
 	c.cache.Put(key, TTLCacheItem[V]{expiration: time.Now().Add(ttl), value: value}, size+8)
 }
