@@ -1,10 +1,26 @@
 package swim
 
 import (
+	"bytes"
+	"hash/fnv"
 	"io"
 	"net/http"
+	"time"
 
 	"homeServer/utils"
+)
+
+type CacheItem struct {
+	header http.Header
+	body   []byte
+}
+
+var (
+	cache = utils.NewTTLCache[string, CacheItem](512 * 1024 * 1024 * 1024)
+)
+
+const (
+	TTL = 24 * time.Hour
 )
 
 // SwimHandler the swim root handler
@@ -16,60 +32,62 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	utils.LogHttpCaller(req, true)
 
 	url := req.URL.Query().Get("url")
-
-	// var requestBody map[string]interface{}
-	// if err := json.NewDecoder(req.Body).Decode(&requestBody); err != nil {
-	// 	http.Error(writer, "Failed to decode request body", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// requestBodyBytes, err := json.Marshal(requestBody)
-	// if err != nil {
-	// 	http.Error(writer, "Failed to serialize request body", http.StatusInternalServerError)
-	// 	return
-	// }
-	// body := bytes.NewReader(requestBodyBytes)
-
-	// newReq, err := http.NewRequest(req.Method, url, body)
-	newReq, err := http.NewRequest(req.Method, url, req.Body)
+	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
-		http.Error(writer, "Failed to create POST request", http.StatusInternalServerError)
-		return
-	}
-	newReq.Header = req.Header
-
-	client := &http.Client{}
-	resp, err := client.Do(newReq)
-	if resp != nil && resp.Body != nil {
-		defer resp.Body.Close()
-	}
-
-	if err != nil {
-		http.Error(writer, "Failed to send POST request", http.StatusInternalServerError)
+		http.Error(writer, "Failed to read request body", http.StatusBadRequest)
 		return
 	}
 
-	for key, values := range resp.Header {
+	hash := fnv.New64a()
+	hash.Write([]byte(url))
+	hash.Write(bodyBytes)
+	key := string(hash.Sum(nil))
+
+	item, found := cache.Get(key)
+	if !found {
+		code, header, responseBody := forwardRequest(req.Method, url, req.Header, bodyBytes, writer)
+		if code != http.StatusOK {
+			return
+		}
+		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
+
+		item = CacheItem{body: responseBody, header: header}
+		cache.Put(key, item, int64(8+len(responseBody)), TTL) //igonre header size
+	}
+
+	for key, values := range item.header {
 		for _, value := range values {
 			writer.Header().Add(key, value)
 		}
 	}
-	writer.WriteHeader(resp.StatusCode)
-	if _, err := io.Copy(writer, resp.Body); err != nil {
-		http.Error(writer, "Failed to copy response body", http.StatusInternalServerError)
+
+	writer.WriteHeader(http.StatusOK)
+	writer.Write(item.body)
+}
+
+func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte, writer http.ResponseWriter) (int, http.Header, []byte) {
+	req, err := http.NewRequest(method, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		http.Error(writer, "Failed to create request", http.StatusBadRequest)
+		return http.StatusBadRequest, nil, nil
+	}
+	req.Header = reqHeader
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		http.Error(writer, "Failed to send request", http.StatusInternalServerError)
+		return http.StatusInternalServerError, nil, nil
 	}
 
-	// responseBody, err := io.ReadAll(resp.Body)
-	// if err != nil {
-	// 	http.Error(writer, "Failed to read response body", http.StatusInternalServerError)
-	// 	return
-	// }
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		http.Error(writer, "Failed to read response body", http.StatusInternalServerError)
+		return http.StatusInternalServerError, nil, nil
+	}
 
-	// for key, values := range resp.Header {
-	// 	for _, value := range values {
-	// 		writer.Header().Add(key, value)
-	// 	}
-	// }
-
-	//utils.GzipWrite(writer, responseBody, resp.StatusCode)
+	return resp.StatusCode, resp.Header, responseBody
 }
