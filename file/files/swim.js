@@ -459,7 +459,7 @@ function useProxy(yes) {
         localStorage.setItem('use-proxy', yes);
     }
 
-    return (localStorage.getItem('use-proxy') || 'false') == 'true';
+    return (localStorage.getItem('use-proxy') || 'true') == 'true';
 }
 
 async function fetchSwimValues(bodyObj, type) {
