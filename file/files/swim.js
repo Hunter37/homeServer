@@ -130,7 +130,13 @@ class LocalCache {
     }
 
     static set(key, value) {
-        ldb.set(key, { time: new Date(), data: value, version: LocalCache.currentVersion });
+        let cacheTime = value.cacheTime;
+        delete value.cacheTime;
+        ldb.set(key, {
+            time: cacheTime || new Date(),
+            data: value,
+            version: LocalCache.currentVersion
+        });
     }
 
     static async get(key, timeoutInSec, minVersion) {
@@ -161,13 +167,14 @@ class LocalCache {
         try {
             data = await func();
         } catch (e) {
+            console.error(e, key);
+
             // try to use old data if network is down
             data = await LocalCache.get(key, _10YearsInSec, minVersion);
-            console.error(e, key);
             if (!data) {
                 throw e;
             }
-            console.log('Using old data for', key);
+            console.log('Using old data for:', key);
             return data;
         }
 
@@ -492,6 +499,8 @@ async function fetchSwimValues(bodyObj, type) {
         idx[data.headers[i]] = i;
     }
     data.values.idx = idx;
+    let cacheTime = response.headers.get("X-Cache-Date");
+    data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
 
     return data.values;
 }
@@ -503,28 +512,29 @@ function go(action, value) {
     window.location.hash = '#' + action + '/' + encodeURIComponent(value);
 }
 
-function updateContent(html) {
-    if (_loadingHash == window.location.hash.substring(1)) {
+function updateContent(html, loadingHash) {
+    if (window.location.hash.substring(1) == loadingHash) {
         document.getElementById('content').innerHTML = html;
+    } else {
+        console.log('Content is outdated:', loadingHash);
     }
 }
 
 window.addEventListener('hashchange', loadContent);
 window.addEventListener('load', loadContent);
 
-let _loadingHash;
 async function loadContent() {
     _backgroundActions.length = 0;
 
-    _loadingHash = window.location.hash.substring(1);
-    if (!_loadingHash) {
-        updateContent(`Please enter the swimmer's name or the club name in the search box.`, true);
+    let loadingHash = window.location.hash.substring(1);
+    if (!loadingHash) {
+        updateContent(`Please enter the swimmer's name or the club name in the search box.`, loadingHash);
         return;
     }
 
-    updateContent('Loading....');
+    updateContent('Loading....', loadingHash);
 
-    let [action, value] = _loadingHash.split('/');
+    let [action, value] = loadingHash.split('/');
     value = decodeURIComponent(value);
 
     let func = window[action];
@@ -532,7 +542,7 @@ async function loadContent() {
         try {
             await func(value);
         } catch (e) {
-            updateContent(e);
+            updateContent(e, loadingHash);
         }
     } else {
         window.location.replace('');
@@ -619,7 +629,7 @@ async function config(params) {
     tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
     tabView.addTab('<p>About</p>', '--about--');
 
-    updateContent(tabView.render());
+    updateContent(tabView.render(), 'config');
 }
 
 function buildGeneralConfig() {
@@ -956,7 +966,7 @@ async function search(name, all) {
 
     let values = await loadSearch(name, all);
 
-    showSearch(values);
+    showSearch(values, 'search/' + encodeURIComponent(name));
 }
 
 async function searchAll(params) {
@@ -1007,21 +1017,23 @@ async function filterSwimmers(values) {
     }
 
     pkeys = new Set(list.map(v => v[list.idx.pkey]));
-    let result = [];
     let idx = values.idx;
-    result.idx = idx;
+
+    let result = [];
     for (let row of values) {
         if (pkeys.has(row[idx.pkey])) {
             result.push(row);
         }
     }
 
+    result.idx = idx;
+    result.cacheTime = min(values.cacheTime, list.cacheTime);
     return result;
 }
 
-function showSearch(values) {
+function showSearch(values, loadingHash) {
     if (values.length == 0) {
-        updateContent('No result found');
+        updateContent('No result found', loadingHash);
         return;
     }
 
@@ -1042,7 +1054,7 @@ function showSearch(values) {
     }
     html.push('</tbody></table>');
 
-    updateContent(html.join(''));
+    updateContent(html.join(''), loadingHash);
 }
 
 async function loadClubSearch(value, all) {
@@ -1113,6 +1125,7 @@ async function loadSwimmerSearch(value, all) {
             }
         }
         values.idx = vs.idx;
+        values.cacheTime = min(values.cacheTime || new Date(), vs.cacheTime)
     }
 
     return values;
@@ -1200,7 +1213,7 @@ async function swimmer(pkey) {
         return;
     }
     let data = await loadDetails(Number(pkey));
-    await showDetails(data);
+    await showDetails(data, 'swimmer/' + pkey);
 }
 
 async function loadDetails(pkey) {
@@ -1222,7 +1235,8 @@ async function loadDetails(pkey) {
 
         return {
             events: events,
-            swimmer: swimmerInfo
+            swimmer: swimmerInfo,
+            cacheTime: events.cacheTime
         };
     }, null, 2);
 
@@ -1390,7 +1404,7 @@ async function loadSwimerInfo(pkey) {
     return swimmer;
 }
 
-async function showDetails(data) {
+async function showDetails(data, loadingHash) {
     // events
     // time, age, std, lsc, club, date, event, meet, gender
     // 0     1    2    3    4     5     6      7     8
@@ -1399,7 +1413,7 @@ async function showDetails(data) {
     // 0     1         2
 
     if (!data) {
-        updateContent('No swimmer found');
+        updateContent('No swimmer found', loadingHash);
         return;
     }
 
@@ -1417,7 +1431,7 @@ async function showDetails(data) {
     html.push(createDetailsPageTitle(data));
     if (data.events.length == 0) {
         html.push('<div>No events found</div>');
-        updateContent(html.join(''));
+        updateContent(html.join(''), loadingHash);
         return;
     }
 
@@ -1457,7 +1471,7 @@ async function showDetails(data) {
 
     html.push(addHide25Botton());
 
-    updateContent(html.join(''));
+    updateContent(html.join(''), loadingHash);
 }
 
 function getAlias(firstName, lastName) {
@@ -2905,8 +2919,10 @@ async function rank(key) {
     await showRank(data, key);
 }
 
+let rankDataRequiredVersion = 2;
+
 async function peekRank(key) {
-    return await LocalCache.get('rank/' + key);
+    return await LocalCache.get('rank/' + key, null, rankDataRequiredVersion);
 }
 
 async function loadRank(key) {
@@ -2935,7 +2951,10 @@ async function loadRank(key) {
 
         // truncate the data
         if (values.length > 1000) {
+            let cacheTime = values.cacheTime;
             values = values.slice(0, 1000);
+            values.idx = idx;
+            values.cacheTime = cacheTime;
         }
 
         // remove sortkey from values and idx
@@ -2951,10 +2970,9 @@ async function loadRank(key) {
             }
         }
         delete idx.sortkey;
-        values.idx = idx;
 
         return values;
-    }, null, 2);
+    }, null, rankDataRequiredVersion);
 
     if (values) {
         return await postLoadRank(values);
@@ -3133,6 +3151,7 @@ async function loadRankDataByClub(key) {
     }
 
     values.idx = list.idx;
+    values.cacheTime = list.cacheTime;
     return values;
 }
 
@@ -3346,10 +3365,12 @@ async function filterByAge(values, ageKey) {
     // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, (age)
     // 0        1     2     3     4          5     6        7     8         9     10
     result.idx = values.idx;
+    result.cacheTime = values.cacheTime;
     return result;
 }
 
 async function showRank(data, key) {
+    let loadingHash = 'rank/' + encodeURIComponent(key);
     // sortkey, name, date, time, eventName, club, lsc, meet, event, pkey, (age)
     // 0        1     2     3     4          5     6    7     8      9     10
     let html = [];
@@ -3380,7 +3401,7 @@ async function showRank(data, key) {
 
     html.push(addHide25Botton());
 
-    updateContent(html.join(''));
+    updateContent(html.join(''), loadingHash);
 
     if (oldBrowser) {
         let root = location.protocol === 'file:' ? '' : '/files/';

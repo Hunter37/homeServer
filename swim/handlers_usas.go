@@ -2,6 +2,8 @@ package swim
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"hash/fnv"
 	"io"
 	"net/http"
@@ -13,6 +15,10 @@ import (
 type CacheItem struct {
 	header http.Header
 	body   []byte
+}
+
+type ErrorResponse struct {
+	Error bool `json:"error"`
 }
 
 var (
@@ -48,10 +54,28 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 		if code != http.StatusOK {
 			return
 		}
-		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
+
+		decodedBody := responseBody
+		if header.Get("Content-Encoding") == "gzip" {
+			decodedBody, err = gzipDecode(responseBody)
+			if err != nil {
+				http.Error(writer, "Failed to decode response gzip body", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		var errResp ErrorResponse
+		if err := json.Unmarshal(decodedBody, &errResp); err != nil {
+			http.Error(writer, "Failed to unmarshal response body", http.StatusUnprocessableEntity)
+			return
+		}
 
 		item = CacheItem{body: responseBody, header: header}
-		cache.Put(key, item, 8+len(responseBody), TTL) //igonre header size
+
+		if !errResp.Error {
+			header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
+			cache.Put(key, item, 8+len(responseBody), TTL) //igonre header size
+		}
 	}
 
 	for key, values := range item.header {
@@ -62,6 +86,16 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(item.body)
+}
+
+func gzipDecode(responseBody []byte) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(bytes.NewReader(responseBody))
+	if err != nil {
+		return nil, err
+	}
+	defer gzipReader.Close()
+
+	return io.ReadAll(gzipReader)
 }
 
 func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte, writer http.ResponseWriter) (int, http.Header, []byte) {
