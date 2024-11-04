@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"net/http"
@@ -12,22 +13,23 @@ import (
 	"homeServer/utils"
 )
 
-type CacheItem struct {
+type httpCacheItem struct {
 	header http.Header
 	body   []byte
 }
 
-type ErrorResponse struct {
-	Error bool `json:"error"`
-}
-
 var (
-	cache = utils.NewTTLCache[string, CacheItem](512 * 1024 * 1024) // 512MB
+	httpCache             = utils.NewTTLCache[string, httpCacheItem](512 * 1024 * 1024) // 512MB
+	httpCacheItemOverhead = 8
 )
 
 const (
 	TTL = 24 * time.Hour
 )
+
+type ErrorResponse struct {
+	Error bool `json:"error"`
+}
 
 func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
@@ -48,34 +50,43 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	hash.Write(bodyBytes)
 	key := string(hash.Sum(nil))
 
-	item, found := cache.Get(key)
-	if !found {
-		code, header, responseBody := forwardRequest(req.Method, url, req.Header, bodyBytes, writer)
+	item, err := httpCache.GetWithLoader(key, func(key string) (*httpCacheItem, int, time.Duration, error) {
+		code, header, responseBody, err := forwardRequest(req.Method, url, req.Header, bodyBytes)
+		if err != nil {
+			return nil, 0, 0, fmt.Errorf("failed to forward request: %v", err)
+		}
+
 		if code != http.StatusOK {
-			return
+			return nil, 0, 0, fmt.Errorf("response code: %d", code)
 		}
 
 		decodedBody := responseBody
 		if header.Get("Content-Encoding") == "gzip" {
 			decodedBody, err = gzipDecode(responseBody)
 			if err != nil {
-				http.Error(writer, "Failed to decode response gzip body", http.StatusInternalServerError)
-				return
+				return nil, 0, 0, fmt.Errorf("failed to decode gzip body: %v", err)
 			}
 		}
 
 		var errResp ErrorResponse
 		if err := json.Unmarshal(decodedBody, &errResp); err != nil {
-			http.Error(writer, "Failed to unmarshal response body", http.StatusUnprocessableEntity)
-			return
+			return nil, 0, 0, fmt.Errorf("failed to unmarshal response body: %v", err)
 		}
 
-		item = CacheItem{body: responseBody, header: header}
+		item := &httpCacheItem{body: responseBody, header: header}
 
-		if !errResp.Error {
-			header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
-			cache.Put(key, item, 8+len(responseBody), TTL) //igonre header size
+		if errResp.Error {
+			// don't cache error responses (ttl=0), but return them to the client (err=nil)
+			return item, 0, 0, nil
 		}
+
+		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
+		return item, httpCacheItemOverhead + len(responseBody), TTL, nil //igonre header size
+	})
+
+	if err != nil {
+		http.Error(writer, err.Error(), http.StatusNotFound)
+		return
 	}
 
 	for key, values := range item.header {
@@ -98,11 +109,10 @@ func gzipDecode(responseBody []byte) ([]byte, error) {
 	return io.ReadAll(gzipReader)
 }
 
-func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte, writer http.ResponseWriter) (int, http.Header, []byte) {
+func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte) (int, http.Header, []byte, error) {
 	req, err := http.NewRequest(method, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		http.Error(writer, "Failed to create request", http.StatusBadRequest)
-		return http.StatusBadRequest, nil, nil
+		return http.StatusBadRequest, nil, nil, err
 	}
 	req.Header = reqHeader
 
@@ -112,15 +122,13 @@ func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte,
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		http.Error(writer, "Failed to send request", http.StatusInternalServerError)
-		return http.StatusInternalServerError, nil, nil
+		return http.StatusInternalServerError, nil, nil, err
 	}
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		http.Error(writer, "Failed to read response body", http.StatusInternalServerError)
-		return http.StatusInternalServerError, nil, nil
+		return http.StatusInternalServerError, nil, nil, err
 	}
 
-	return resp.StatusCode, resp.Header, responseBody
+	return resp.StatusCode, resp.Header, responseBody, nil
 }

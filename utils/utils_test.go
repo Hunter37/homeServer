@@ -4,9 +4,39 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"homeServer/test"
 )
+
+func TestChannel1(t *testing.T) {
+	fmt.Println("Start")
+	done := make(chan string)
+
+	for i := 0; i < 3; i++ {
+		go func(i int) {
+			str := <-done
+			fmt.Printf("%d Hello from  %v\n", i, str)
+		}(i)
+	}
+
+	done <- "hunter"
+
+	close(done)
+
+	for i := 3; i < 5; i++ {
+		go func(i int) {
+			str := <-done
+			fmt.Printf("%d Hello from  %v\n", i, str)
+			if str == "" {
+				fmt.Println("<empty>")
+			}
+		}(i)
+	}
+
+	time.Sleep(1 * time.Second)
+	fmt.Println("Done")
+}
 
 func TestForNilSlice(t *testing.T) {
 	var nilSlice []string
