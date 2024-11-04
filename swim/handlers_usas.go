@@ -28,7 +28,7 @@ const (
 )
 
 type ErrorResponse struct {
-	Error bool `json:"error"`
+	Error json.RawMessage `json:"error"`
 }
 
 func QueryHandler(writer http.ResponseWriter, req *http.Request) {
@@ -75,7 +75,7 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 
 		item := &httpCacheItem{body: responseBody, header: header}
 
-		if errResp.Error {
+		if errResp.Error != nil {
 			// don't cache error responses (ttl=0), but return them to the client (err=nil)
 			return item, 0, 0, nil
 		}
