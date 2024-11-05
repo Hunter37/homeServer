@@ -469,18 +469,25 @@ async function fetchSwimValues(bodyObj, type) {
         meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
     }
 
+    let headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+    };
+
     let url = map[type || 'swimmer'];
 
     if (useProxy()) {
         url = '/q?url=' + encodeURIComponent(url);
+
+        let ttl = localStorage.getItem('cache-ttl') || 0;
+        if (ttl) {
+            headers['X-Cache-TTL'] = ttl;
+        }
     }
 
     let response = await fetch(url, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
-        },
+        headers: headers,
         signal: AbortSignal.timeout(10_000),
         body: JSON.stringify(bodyObj)
     });
@@ -3070,7 +3077,7 @@ async function loadRankDataByClub(key) {
             {
                 title: 'clubName',
                 dim: '[OrgUnit.Level4Name]',
-                datatype: 'text',
+                datatype: 'text'
             },
             {
                 title: 'lsc',

@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"homeServer/utils"
@@ -31,6 +32,41 @@ type ErrorResponse struct {
 	Error json.RawMessage `json:"error"`
 }
 
+func getLoader(url string, req *http.Request, bodyBytes []byte) utils.Loader[string, httpCacheItem] {
+	return func(key string) (*httpCacheItem, int, error) {
+		code, header, responseBody, err := forwardRequest(req.Method, url, req.Header, bodyBytes)
+		if err != nil {
+			return nil, -1, fmt.Errorf("failed to forward request: %v", err)
+		}
+
+		if code != http.StatusOK {
+			return nil, -1, fmt.Errorf("response code: %d", code)
+		}
+
+		decodedBody := responseBody
+		if header.Get("Content-Encoding") == "gzip" {
+			decodedBody, err = gzipDecode(responseBody)
+			if err != nil {
+				return nil, -1, fmt.Errorf("failed to decode gzip body: %v", err)
+			}
+		}
+
+		var errResp ErrorResponse
+		if err := json.Unmarshal(decodedBody, &errResp); err != nil {
+			return nil, -1, fmt.Errorf("failed to unmarshal response body: %v", err)
+		}
+
+		item := &httpCacheItem{body: responseBody, header: header}
+
+		if errResp.Error != nil {
+			// don't cache error responses (size<0), but return them to the client (err=nil)
+			return item, -1, nil
+		}
+
+		return item, httpCacheItemOverhead + len(responseBody), nil //igonre header size
+	}
+}
+
 func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	if req != nil && req.Body != nil {
 		defer req.Body.Close()
@@ -50,39 +86,15 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	hash.Write(bodyBytes)
 	key := string(hash.Sum(nil))
 
-	item, err := httpCache.GetWithLoader(key, func(key string) (*httpCacheItem, int, time.Duration, error) {
-		code, header, responseBody, err := forwardRequest(req.Method, url, req.Header, bodyBytes)
-		if err != nil {
-			return nil, 0, 0, fmt.Errorf("failed to forward request: %v", err)
-		}
+	var ttl time.Duration
+	if ttlInSecond, err := strconv.Atoi(req.Header.Get("X-Cache-TTL")); err != nil {
+		ttl = TTL
+	} else {
+		ttl = time.Duration(ttlInSecond) * time.Second
+	}
+	req.Header.Del("X-Cache-TTL")
 
-		if code != http.StatusOK {
-			return nil, 0, 0, fmt.Errorf("response code: %d", code)
-		}
-
-		decodedBody := responseBody
-		if header.Get("Content-Encoding") == "gzip" {
-			decodedBody, err = gzipDecode(responseBody)
-			if err != nil {
-				return nil, 0, 0, fmt.Errorf("failed to decode gzip body: %v", err)
-			}
-		}
-
-		var errResp ErrorResponse
-		if err := json.Unmarshal(decodedBody, &errResp); err != nil {
-			return nil, 0, 0, fmt.Errorf("failed to unmarshal response body: %v", err)
-		}
-
-		item := &httpCacheItem{body: responseBody, header: header}
-
-		if errResp.Error != nil {
-			// don't cache error responses (ttl=0), but return them to the client (err=nil)
-			return item, 0, 0, nil
-		}
-
-		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
-		return item, httpCacheItemOverhead + len(responseBody), TTL, nil //igonre header size
-	})
+	item, exp, err := httpCache.GetWithLoader(key, ttl, getLoader(url, req, bodyBytes))
 
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusNotFound)
@@ -94,6 +106,7 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 			writer.Header().Add(key, value)
 		}
 	}
+	writer.Header().Add("X-Cache-Exp", exp.UTC().Format(time.RFC3339))
 
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(item.body)

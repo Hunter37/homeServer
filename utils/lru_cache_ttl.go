@@ -28,16 +28,17 @@ func NewTTLCache[K constraints.Ordered, V any](capacity int) *TTLCache[K, V] {
 	}
 }
 
-type Loader[K constraints.Ordered, V any] func(key K) (*V, int, time.Duration, error)
+type Loader[K constraints.Ordered, V any] func(key K) (*V, int, error)
 
-func (c *TTLCache[K, V]) GetWithLoader(key K, loader Loader[K, V]) (*V, error) {
+func (c *TTLCache[K, V]) GetWithLoader(key K, ttl time.Duration, loader Loader[K, V]) (*V, time.Time, error) {
 
 	item, found := func() (ttlCacheItem[V], bool) {
 		c.lock.Lock()
 		defer c.lock.Unlock()
 
 		if item, found := c.cache.Get(key); found {
-			if time.Now().Before(item.expiration) {
+			// ttl < 0, will force the item get expired
+			if time.Now().Before(item.expiration) && ttl >= 0 {
 				return item, true
 			} else {
 				close(item.valueChan)
@@ -52,27 +53,31 @@ func (c *TTLCache[K, V]) GetWithLoader(key K, loader Loader[K, V]) (*V, error) {
 	if found {
 		val := <-item.valueChan
 		item.valueChan <- val
-		return val, nil
+		return val, item.expiration, nil
 	}
 
-	value, size, ttl, err := loader(key)
+	if ttl < 0 {
+		ttl = -ttl
+	}
+
+	value, size, err := loader(key)
 	if err != nil {
 		c.cache.Remove(key)
 		close(item.valueChan)
-		return nil, err
+		return nil, time.Time{}, err
 	}
 
 	item = ttlCacheItem[V]{valueChan: item.valueChan, expiration: time.Now().Add(ttl)}
 	item.valueChan <- value
 
-	// if ttl is zero, don't cache the value, but return it to the client
-	if ttl > 0 {
-		c.cache.Put(key, item, size+ttlCachedItemOverhead)
-	} else {
+	// if size (cache item size) is negative, don't cache the value, but return it to the client
+	if size < 0 {
 		c.cache.Remove(key)
+	} else {
+		c.cache.Put(key, item, size+ttlCachedItemOverhead)
 	}
 
-	return value, nil
+	return value, item.expiration, nil
 }
 
 /*
@@ -96,8 +101,8 @@ func (c *TTLCache[K, V]) Get(key K) (*V, bool) {
 // size: the size of the value in bytes.
 // ttl: the duration for which the value should remain in the cache.
 func (c *TTLCache[K, V]) Put(key K, value *V, size int, ttl time.Duration) {
-	item := TTLCacheItem[V]{valueChan: make(chan *V, 1), expiration: time.Now().Add(ttl)}
+	item := ttlCacheItem[V]{valueChan: make(chan *V, 1), expiration: time.Now().Add(ttl)}
 	item.valueChan <- value
-	c.cache.Put(key, item, size+cachedItemOverhead)
+	c.cache.Put(key, item, size+ttlCachedItemOverhead)
 }
 //*/
