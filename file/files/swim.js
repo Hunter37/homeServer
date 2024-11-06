@@ -477,7 +477,7 @@ async function fetchSwimValues(bodyObj, type) {
     let url = map[type || 'swimmer'];
 
     if (useProxy()) {
-        url = '/q?url=' + encodeURIComponent(url);
+        url = localStorage.getItem('proxy-server') + '/q?url=' + encodeURIComponent(url);
 
         let ttl = localStorage.getItem('cache-ttl') || 0;
         if (ttl) {
@@ -643,7 +643,9 @@ function buildGeneralConfig() {
     return ['<div class="top-margin">',
         createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
         '</div><div class="top-margin">',
-        createCheckbox('use-proxy-checkbox', 'Proxy', useProxy(), 'useProxy(this.checked)'),
+        createCheckbox('use-proxy-checkbox',
+            `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
+            useProxy(), 'useProxy(this.checked)'),
         '</div>'].join('');
 }
 
@@ -2435,8 +2437,10 @@ async function addSearch(value, all) {
             html.push(`<tr onclick="addSwimmer(${row[idx.pkey]})"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
         }
         html.push('</tbody></table>');
+        html.push('<p class="tip">Click on the row to add the swimmer for comparison.</p>');
+    } else {
+        html.push(`<p class="tip">Enter the swimmer's name in the search box.</p>`);
     }
-    html.push('<p class="tip">Click on the row to add the swimmer.</p>');
 
     document.getElementById('adding-list').innerHTML = html.join('');
 }

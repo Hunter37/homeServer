@@ -63,6 +63,7 @@ func getLoader(url string, req *http.Request, bodyBytes []byte) utils.Loader[str
 			return item, -1, nil
 		}
 
+		header.Add("X-Cache-Date", time.Now().UTC().Format(time.RFC3339))
 		return item, httpCacheItemOverhead + len(responseBody), nil //igonre header size
 	}
 }
@@ -74,6 +75,15 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 
 	utils.LogHttpCaller(req, true)
 
+	if req.Method == http.MethodOptions {
+		writer.Header().Add("Access-Control-Allow-Methods", "POST")
+		writer.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		writer.Header().Add("Access-Control-Max-Age", "86400")
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	url := req.URL.Query().Get("url")
 	bodyBytes, err := io.ReadAll(req.Body)
 	if err != nil {
@@ -82,6 +92,7 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	}
 
 	hash := fnv.New64a()
+	hash.Write([]byte(req.Method))
 	hash.Write([]byte(url))
 	hash.Write(bodyBytes)
 	key := string(hash.Sum(nil))

@@ -593,7 +593,7 @@
         border-radius: 72px;
     }
 
-    .checkbox-wrapper input:hover,
+    .checkbox-wrapper input[type="checkbox"]:hover,
     .checkbox-wrapper:hover,
     .xbutton:hover {
         background: #0003;
@@ -607,7 +607,7 @@
         margin: 0 5px;
     }
 
-    .checkbox-wrapper input {
+    .checkbox-wrapper input[type="checkbox"] {
         appearance: none;
         background-color: #CCC;
         border-radius: 72px;
@@ -619,7 +619,7 @@
         width: 30px;
     }
 
-    .checkbox-wrapper input::before {
+    .checkbox-wrapper input[type="checkbox"]::before {
         bottom: -6px;
         content: "";
         left: -6px;
@@ -628,12 +628,12 @@
         top: -6px;
     }
 
-    .checkbox-wrapper input,
-    .checkbox-wrapper input::after {
+    .checkbox-wrapper input[type="checkbox"],
+    .checkbox-wrapper input[type="checkbox"]::after {
         transition: all 100ms ease-out;
     }
 
-    .checkbox-wrapper input::after {
+    .checkbox-wrapper input[type="checkbox"]::after {
         background-color: #fff;
         border-radius: 50%;
         content: "";
@@ -644,11 +644,11 @@
         width: 14px;
     }
 
-    .checkbox-wrapper input:checked {
+    .checkbox-wrapper input[type="checkbox"]:checked {
         background-color: #7DF;
     }
 
-    .checkbox-wrapper input:checked::after {
+    .checkbox-wrapper input[type="checkbox"]:checked::after {
         background-color: #FFF;
         left: 13px;
     }
