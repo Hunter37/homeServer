@@ -477,7 +477,7 @@ async function fetchSwimValues(bodyObj, type) {
     let url = map[type || 'swimmer'];
 
     if (useProxy()) {
-        url = localStorage.getItem('proxy-server') + '/q?url=' + encodeURIComponent(url);
+        url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
         let ttl = localStorage.getItem('cache-ttl') || 0;
         if (ttl) {
