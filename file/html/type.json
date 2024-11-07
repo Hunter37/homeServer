@@ -1,0 +1,10 @@
+{
+    ".css": "text/css",
+    ".html": "text/html",
+    ".jpg": "image/jpeg",
+    ".js": "text/javascript",
+    ".json": "text/json",
+    ".ps1": "text/plain",
+    ".txt": "text/plain",
+    "default": "application/octet-stream"
+}

@@ -2,6 +2,7 @@ package file
 
 import (
 	"bytes"
+	"encoding/json"
 	"homeServer/storage"
 	"homeServer/utils"
 	"html/template"
@@ -46,18 +47,16 @@ func FileHandler(writer http.ResponseWriter, req *http.Request) {
 }
 
 func getContentType(fileName string) string {
-	dict := map[string]string{
-		".html": "text/html",
-		".txt":  "text/plain",
-		".css":  "text/css",
-		".js":   "text/javascript",
-		".json": "text/json",
-		".jpg":  "image/jpeg",
-	}
+	typeFile, err := storage.File.Read("file/html/type.json")
+	utils.LogError(err)
+
+	var dict map[string]string
+	err = json.Unmarshal(typeFile, &dict)
+	utils.LogError(err)
 
 	contentType, ok := dict[filepath.Ext(fileName)]
 	if !ok {
-		contentType = "application/octet-stream"
+		contentType = dict["default"]
 	}
 	return contentType
 }
