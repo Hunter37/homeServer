@@ -4986,7 +4986,7 @@ meet: PNS_a : 2024 PN 14&U SC Championships (Automatic) (12/14/2024)
 
 # 2024-10-01
 meet: PNS_c : 2024 PNS Senior SC Championships (Consideration) (12/19/2024)
-15-18 SCM LCM SCY
+13-18 SCM LCM SCY
 28.79	29.59	25.79	50	Free	22.89	26.39	25.59
 1:02.99	1:04.49	55.99	100	Free	49.99	57.59	55.99
 2:20.39	2:23.59	2:02.99	200	Free	1:50.59	2:09.39	2:06.19
@@ -5007,7 +5007,7 @@ meet: PNS_c : 2024 PNS Senior SC Championships (Consideration) (12/19/2024)
 
 # 2024-10-01
 meet: PNS_a : 2024 PNS Senior SC Championships (Automatic) (12/19/2024)
-15-18 SCM LCM SCY
+13-18 SCM LCM SCY
 27.99	28.79	25.29	50	Free	22.49	25.89	25.09
 1:00.89	1:02.49	54.89	100	Free	49.09	54.49	53.19
 2:14.19	2:17.39	2:00.29	200	Free	1:48.19	2:06.19	2:02.99
