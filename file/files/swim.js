@@ -1755,7 +1755,7 @@ function createProgressGraph(pkey, events) {
     for (let i = 1; i < _eventList.length; ++i) {
         let [d, s, c] = _eventList[i].split(' ');
         if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
-            html.push(`<button class="d${d} ${s}" style="border:1px solid;width:45px;"`,
+            html.push(`<button class="evt d${d} ${s}" style="border:1px solid;width:45px;"`,
                 ` onclick="showGraph(null,{pkey:${pkey},event:${i}})">${s}<br>${d}</button>`);
         }
     }
@@ -1870,6 +1870,12 @@ function updateGraphTitle(config) {
 
     const map = { 500: "400/500", 1000: "800/1000", 1650: "1500/1650" };
     document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap[stroke]}`;
+
+    let selected = document.querySelector('button.evt.selected');
+    if (selected) {
+        selected.classList.remove('selected');
+    }
+    document.querySelector('button.evt.d' + dist + '.' + stroke).classList.add('selected');
 }
 
 async function wheelGraph(canvas, e) {
@@ -3551,7 +3557,8 @@ function showEventButtons(key) {
     for (let i = 1; i < _eventList.length; ++i) {
         let [d, s, c] = _eventList[i].split(' ');
         if (c == course && d != '_' && (d != '25' || !hide25)) {
-            html.push(`<button class="d${d} ${s}" style="border:1px solid;width:45px;"`,
+            let seleted = i == event ? ' selected' : '';
+            html.push(`<button class="evt d${d} ${s}${seleted}" style="border:1px solid;width:45px;"`,
                 ` onclick="go('rank', '${getRankDataKey(genderStr, i, ageKey, zone, lsc, clubName)}')">${s}<br>${d}</button>`);
         }
     }
