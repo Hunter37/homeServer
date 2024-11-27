@@ -118,7 +118,7 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 		}
 	}
 	writer.Header().Add("X-Cache-Exp", exp.UTC().Format(time.RFC3339))
-	writer.Header().Add("Access-Control-Allow-Origin", "*")
+	writer.Header().Set("Access-Control-Allow-Origin", "*")
 
 	writer.WriteHeader(http.StatusOK)
 	writer.Write(item.body)
