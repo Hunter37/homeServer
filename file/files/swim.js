@@ -977,7 +977,7 @@ async function search(name, all) {
 
     let values = await loadSearch(name, all);
 
-    showSearch(values, 'search/' + encodeURIComponent(name));
+    showSearch(values, `search${all ? 'All' : ''}/` + encodeURIComponent(name));
 }
 
 async function searchAll(params) {
