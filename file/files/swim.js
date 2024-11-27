@@ -835,8 +835,10 @@ class Select {
         this.#dropdown.onopen = () => {
             let root = document.getElementById(this.#id);
             let index = this.#values.findIndex(v => v[1] === this.#selected);
-            let elem = root.querySelector('.o' + index);
-            elem.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            if (index >= 0) {
+                let elem = root.querySelector('.o' + index);
+                elem.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            }
         }
         return this.#dropdown.render();
     }
@@ -2540,7 +2542,6 @@ async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, zone, l
     // 0        1     2     3     4          5     6        7     8         9     10
     if (values) {
         let rank = calculateRank(values, pkey, timeInt);
-        // html.push(`<td class="full"><button onclick="go('rank', '${rankDataKey}')">${rank}</button></td>`);
         html.push('<td class="full rk">', createClickableDiv(rank, `go('rank','${rankDataKey}')`), '</td>');
     } else {
         let id = rankDataKey + '_' + pkey;
@@ -3386,52 +3387,46 @@ async function filterByAge(values, ageKey) {
     return result;
 }
 
-async function showRank(data, key) {
-    let loadingHash = 'rank/' + encodeURIComponent(key);
-    // sortkey, name, date, time, eventName, club, lsc, meet, event, pkey, (age)
-    // 0        1     2     3     4          5     6    7     8      9     10
-    let html = [];
-
+function isOldBrowser() {
     let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
     //oldBrowser = true;
+    return oldBrowser;
+}
 
-    html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, oldBrowser),
-        '<p style="margin:0 5px 0 20px">Course:</p>', createCourseSelect(key, oldBrowser),
-        '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, oldBrowser), '</div>');
+async function showRank(data, key) {
+    let page = 'rank';
+    let loadingHash = page + '/' + encodeURIComponent(key);
+    let html = [];
+    let oldBrowser = isOldBrowser();
+    let meetDate = getMeetDate();
+    let onchange = v => go(page, v);
+
+    html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, oldBrowser, onchange),
+        '<p style="margin:0 5px 0 20px">Course:</p>', createCourseSelect(key, oldBrowser, onchange),
+        '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, oldBrowser, onchange), '</div>');
 
     html.push(showEventButtons(key));
     html.push(showRankTableTitle(key));
-
-    let meetDate = localStorage.getItem('meetDate') || '';
 
     html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>');
     if (oldBrowser) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
-        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}')">`);
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}','${page}')">`);
     }
     html.push('<p style="margin:0 5px 0 20px">Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
-
-    if (data) {
-        html.push('<div id="rank-table" class="top-margin">', await showRankTable(data, key), '</div>');
-    }
+    html.push('<div id="rank-table" class="top-margin"></div>');
 
     html.push(addHide25Botton());
 
     updateContent(html.join(''), loadingHash);
 
     if (oldBrowser) {
-        let root = location.protocol === 'file:' ? '' : '/files/';
-        loadCSS(`${root}datepicker.material.css`);
-        await loadScript(`${root}datepicker.js`);
-        new Datepicker('#datepicker', {
-            serialize: (date) => {
-                let str = typeof date === 'string' ? date : date.toJSON().substring(0, 10);
-                let part = str.split('-');
-                return part[1] + '/' + part[2] + '/' + part[0];
-            },
-            onChange: (date) => onMeetDateChange(date.toJSON().substring(0, 10), key)
-        });
+        await initDatepicker(key, page);
+    }
+
+    if (data) {
+        await updateRankTable(key, data);
     }
 }
 
@@ -3516,9 +3511,7 @@ function buildStandardSelects(key, custom) {
 
         let select = new Select('standard' + i, values, standard, async (value) => {
             localStorage.setItem('meetStds' + i, value);
-            let table = document.getElementById('rank-table');
-            let data = await loadRank(key);
-            table.innerHTML = await showRankTable(data, key);
+            await updateRankTable(key);
         });
         select.class = cls;
         html.push(select.render(custom));
@@ -3527,19 +3520,29 @@ function buildStandardSelects(key, custom) {
     return html.join('');
 }
 
-async function onMeetDateChange(value, key) {
+async function onMeetDateChange(value, key, table) {
     localStorage.setItem('meetDate', value);
 
-    let table = document.getElementById('rank-table');
-    let data = await loadRank(key);
-    table.innerHTML = await showRankTable(data, key);
+    if (table == 'rank') {
+        await updateRankTable(key);
+    } else if (table == 'relay') {
+        await updateRelayTables(key);
+    }
+}
+
+function getMeetDate() {
+    return localStorage.getItem('meetDate') || '';
 }
 
 async function onStandardChange(index, value, key) {
     localStorage.setItem('meetStds' + index, value);
 
+    await updateRankTable(key);
+}
+
+async function updateRankTable(key, data) {
     let table = document.getElementById('rank-table');
-    let data = await loadRank(key);
+    data = data || await loadRank(key);
     table.innerHTML = await showRankTable(data, key);
 }
 
@@ -3570,8 +3573,12 @@ function showEventButtons(key) {
 function showRankTableTitle(key) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
 
-    // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
-    // 0        1     2     3     4          5         6    7         8      9     10
+    return [showRankTableMainTitle(key), '<h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', genderStr, '</h3>'].join('');
+}
+
+function showRankTableMainTitle(key) {
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+
     let html = [];
 
     html.push('<h2>');
@@ -3584,7 +3591,7 @@ function showRankTableTitle(key) {
     } else {
         html.push('USA');
     }
-    html.push('</h2><h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', genderStr, '</h3>');
+    html.push('</h2>');
 
     return html.join('');
 }
@@ -3592,7 +3599,6 @@ function showRankTableTitle(key) {
 async function showRankTable(data, key) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let [from, to] = decodeAgeKey(ageKey);
-    let meetDate = localStorage.getItem('meetDate');
     let standards = [];
     for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
         let [short, f, t] = (localStorage.getItem('meetStds' + i) || '||').split('|');
@@ -3618,17 +3624,14 @@ async function showRankTable(data, key) {
     }
 
     html.push('<table class="fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
+    let meetDate = getMeetDate();
     let index = 0;
     let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
     for (let row of data.values) {
 
         let range = await _birthdayDictionary.load(row[idx.pkey]);
-        if (range && meetDate) {
-            let bday = new Date(range[1]);
-            bday.setUTCFullYear(bday.getUTCFullYear() + to + 1);
-            if (bday <= new Date(meetDate)) {
-                continue;
-            }
+        if (await filterOutSwimmer(meetDate, to, range)) {
+            continue;
         }
 
         let timeInt = timeToInt(row[idx.time]);
@@ -3666,7 +3669,18 @@ async function showRankTable(data, key) {
     return html.join('');
 }
 
-function createAgeGenderSelect(key, custom) {
+async function filterOutSwimmer(meetDate, maxAge, range) {
+    if (range && meetDate) {
+        let bday = new Date(range[1]);
+        bday.setUTCFullYear(bday.getUTCFullYear() + maxAge + 1);
+        if (bday <= new Date(meetDate)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function createAgeGenderSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let values = [];
     for (let g of ['Female', 'Male']) {
@@ -3676,12 +3690,12 @@ function createAgeGenderSelect(key, custom) {
             values.push([ag + ' ' + g, value]);
         }
     }
-    let select = new Select('age-gender-select', values, key, (v) => go('rank', v));
+    let select = new Select('age-gender-select', values, key, onchange);
     select.class = custom ? '' : 'big';
     return select.render(custom);
 }
 
-function createCourseSelect(key, custom) {
+function createCourseSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let values = [];
     let [dist, style, course] = _eventList[event].split(' ');
@@ -3691,12 +3705,12 @@ function createCourseSelect(key, custom) {
         values.push([newCourse, getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, clubName)]);
     }
 
-    let select = new Select('course-select', values, key, (v) => go('rank', v));
+    let select = new Select('course-select', values, key, onchange);
     select.class = custom ? '' : 'big';
     return select.render(custom);
 }
 
-async function buildClubSelect(key, custom) {
+async function buildClubSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let values = [];
 
@@ -3725,7 +3739,7 @@ async function buildClubSelect(key, custom) {
         }
     }
 
-    let select = new Select('club-select', values, key, (v) => go('rank', v));
+    let select = new Select('club-select', values, key, onchange);
     select.class = custom ? '' : 'big';
     select.valueEqualtoSelection = (val, ops) => {
         let [genderStrVal, ageKeyVal, eventVal, zoneVal, lscVal, clubVal] = decodeRankMapKey(val);
@@ -3734,6 +3748,216 @@ async function buildClubSelect(key, custom) {
     };
 
     return select.render(custom);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// relay functions
+
+async function relay(key) {
+    let data = await loadRelay(key);
+
+    await showRelay(data, key);
+}
+
+async function loadRelay(key) {
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    let events = [10, 13, 16, 0].map(evt => evt + (parseInt(event) || 1));
+    let data = [];
+    for (let evt of events) {
+        let rankData = await loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName));
+        if (!rankData) {
+            return;
+        }
+        let idx = rankData.values.idx;
+        rankData.values = rankData.values.slice(0, 40);
+        rankData.values.idx = idx;
+        data.push(rankData);
+    }
+    return data;
+}
+
+async function showRelay(data, key) {
+    let page = 'relay';
+    let loadingHash = page + '/' + encodeURIComponent(key);
+
+    let html = [];
+    let oldBrowser = isOldBrowser();
+    let meetDate = getMeetDate();
+    let onchange = v => go(page, v);
+
+    html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Age Group:</p>', createAgeGenderSelect(key, true, onchange),
+        '<p style="margin:0 5px 0 20px">Course:</p>', createCourseSelect(key, true, onchange),
+        '<p style="margin:0 5px 0 20px">Club:</p>', await buildClubSelect(key, true, onchange), '</div>');
+
+    html.push('<div class="center-row top-margin"><p style="margin:0 5px 0 0">Meet date:</p>');
+    if (oldBrowser) {
+        html.push(`<input id="datepicker" value="${meetDate}">`);
+    } else {
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}','${page}')">`);
+    }
+    html.push('<p style="margin:0 5px 0 20px">Distance:</p>', createDistanceSelect(key, true, onchange), '</div>');
+
+    html.push(showRankTableMainTitle(key),
+        '<div class="top-margin"><div class="col"><h4>Medley Relay</h4><div id="medley-relay-table"></div></div>',
+        '<div class="col"><h4>Free Relay</h4><div id="free-relay-table"></div></div></div>');
+
+    updateContent(html.join(''), loadingHash);
+
+    if (oldBrowser) {
+        await initDatepicker(key, page);
+    }
+
+    if (data) {
+        await updateRelayTables(key, data);
+    }
+}
+
+async function updateRelayTables(key, data) {
+    data = data || await loadRelay(key);
+
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    let [from, to] = decodeAgeKey(ageKey);
+    let meetDate = getMeetDate();
+
+    data = await filterDataByMeetDate(data, meetDate, to);
+
+    let idx = data[0].values.idx;
+    let relays = calculateRelay(data, idx);
+    updateRelayTable(relays, idx, 'medley');
+
+    relays = [];
+    freeValues = data[3].values;
+    for (let i = 0; i + 4 <= freeValues.length; i += 4) {
+        let relay = freeValues.slice(i, i + 4);
+        let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
+        relays.push([time, relay]);
+    }
+    updateRelayTable(relays, idx, 'free');
+}
+
+async function filterDataByMeetDate(data, meetDate, maxAge) {
+    for (let leg of data) {
+        let idx = leg.values.idx;
+        let values = [];
+        for (let row of leg.values) {
+            let range = await _birthdayDictionary.load(row[idx.pkey]);
+            if (await filterOutSwimmer(meetDate, maxAge, range)) {
+                continue;
+            }
+            values.push(row);
+        }
+        values.idx = idx;
+        leg.values = values;
+    }
+    return data;
+}
+
+async function initDatepicker(key, table) {
+    let root = location.protocol === 'file:' ? '' : '/files/';
+    loadCSS(`${root}datepicker.material.css`);
+    await loadScript(`${root}datepicker.js`);
+    new Datepicker('#datepicker', {
+        serialize: (date) => {
+            let str = typeof date === 'string' ? date : date.toJSON().substring(0, 10);
+            let part = str.split('-');
+            return part[1] + '/' + part[2] + '/' + part[0];
+        },
+        onChange: date => onMeetDateChange(date.toJSON().substring(0, 10), key, table)
+    });
+}
+
+function createDistanceSelect(key, custom, onchange) {
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    let values = [];
+    let selected;
+    for (let [dist, evt] of [[50, 1], [100, 2], [200, 3]]) {
+        let relayKey = getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName);
+        values.push([`4x${dist}`, relayKey]);
+        if (evt == event) {
+            selected = relayKey;
+        }
+    }
+
+    let select = new Select('dist-select', values, selected, onchange);
+    select.class = custom ? '' : 'big';
+    return select.render(custom);
+}
+
+function updateRelayTable(relays, idx, type) {
+    let html = [];
+    for (let relay of relays) {
+        html.push('<p class="relay-time">', formatTime(relay[0]), '</p><table class="fill"><tbody>');
+        for (let row of relay[1]) {
+            html.push('<tr>');
+            html.push('<td class="left">', row[idx.name], '</td><td>', row[idx.time], '</td>');
+            html.push('</tr>');
+        }
+        html.push('</tbody></table>');
+    }
+
+    document.getElementById(type + '-relay-table').innerHTML = html.join('');
+}
+
+function calculateRelay(rankings, idx) {
+    let picked = new Set();
+    let relays = [];
+    for (; ;) {
+        let relay = calculateRelayGroup(rankings, picked, idx);
+        if (relay.length == 1) {
+            break;
+        }
+        relays.push(relay);
+        for (let row of relay[1]) {
+            picked.add(row[idx.pkey]);
+        }
+    }
+
+    return relays;
+}
+
+function calculateRelayGroup(rankings, picked, idx) {
+    let top4 = [];
+    for (let leg of rankings) {
+        let top = [];
+        for (let row of leg.values) {
+            let pkey = row[idx.pkey];
+            if (!picked.has(pkey)) {
+                top.push(row);
+                if (top.length == 4) {
+                    break;
+                }
+            }
+        }
+        top4.push(top);
+    }
+
+    let relay = [Infinity];
+    dfsSearch(top4, idx, picked, [], relay);
+    return relay;
+}
+
+function dfsSearch(tops, idx, picked, relay, bestRelay) {
+    if (tops.length == relay.length) {
+        let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
+        if (time < bestRelay[0]) {
+            bestRelay[0] = time;
+            bestRelay[1] = [...relay];
+        }
+        return;
+    }
+
+    let leg = tops[relay.length];
+
+    for (let row of leg) {
+        let pkey = row[idx.pkey];
+        if (!picked.has(pkey)) {
+            picked.add(pkey);
+            relay.push(row);
+            dfsSearch(tops, idx, picked, relay, bestRelay);
+            relay.pop();
+            picked.delete(pkey);
+        }
+    }
 }
 
 function fixDistance(eventStr) {
