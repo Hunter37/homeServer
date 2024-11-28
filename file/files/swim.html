@@ -560,6 +560,8 @@
         cursor: default;
     }
 
+    .search.all:hover,
+    .search.drop:hover,
     .checkbox-wrapper input:checked:hover,
     .double-range>input[type="range"]:hover::-webkit-slider-thumb,
     .select-text:hover,
@@ -845,15 +847,37 @@
     .relay-time {
         margin: 20px 0 7px 7px;
     }
+
+    /* search dropdown */
+    .search.main {
+        margin-right: 0;
+        border-radius: 5px 0 0 5px;
+    }
+
+    #main-search {
+        vertical-align: top;
+    }
+
+    .search.drop {
+        height: 39px;
+        width: 30px;
+        text-align: center;
+        display: flex;
+        border-radius: 0 5px 5px 0;
+        cursor: pointer;
+    }
+
+    .search.drop>div {
+        margin: auto;
+    }
+
+    .search.all {
+        width: 150px;
+    }
 </style>
 
 <body>
-    <div class="row">
-        <input id="input" autofocus class="big" />
-        <button onclick="onSearch()" class="big search">SEARCH</button>
-        <button onclick="onSearchAll()" class="big search">19&OVER</button>
-    </div>
-    <div id="content" class="container"></div>
+    #<!-- Do not remove this character; otherwise, the HTML minifier will strip out the HTMLBodyElement. -->
 </body>
 <script src="swim.js"></script>
 

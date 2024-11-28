@@ -452,130 +452,6 @@ class BirthdayDictionary {
 let _birthdayDictionary = new BirthdayDictionary();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// usa swimming data fetch utility functions
-
-function useProxy(yes) {
-    if (typeof yes === 'boolean') {
-        localStorage.setItem('use-proxy', yes);
-    }
-
-    return (localStorage.getItem('use-proxy') || 'true') == 'true';
-}
-
-async function fetchSwimValues(bodyObj, type) {
-    let map = {
-        swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
-        event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
-        meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
-    }
-
-    let headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
-    };
-
-    let url = map[type || 'swimmer'];
-
-    if (useProxy()) {
-        url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
-
-        let ttl = localStorage.getItem('cache-ttl') || 0;
-        if (ttl) {
-            headers['X-Cache-TTL'] = ttl;
-        }
-    }
-
-    let response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        signal: AbortSignal.timeout(10_000),
-        body: JSON.stringify(bodyObj)
-    });
-
-    if (!response.ok) {
-        return;
-    }
-
-    let data = await response.json();
-    if (data.error || !data.values) {
-        return;
-    }
-
-    let idx = {};
-    for (let i = 0; i < data.headers.length; ++i) {
-        idx[data.headers[i]] = i;
-    }
-    data.values.idx = idx;
-    let cacheTime = response.headers.get("X-Cache-Date");
-    data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
-
-    return data.values;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-// navigation and routing functions
-
-function go(action, value) {
-    window.location.hash = '#' + action + '/' + encodeURIComponent(value);
-}
-
-function updateContent(html, loadingHash) {
-    if (window.location.hash.substring(1) == loadingHash) {
-        document.getElementById('content').innerHTML = html;
-    } else {
-        console.log('Content is outdated:', loadingHash);
-    }
-}
-
-window.addEventListener('hashchange', loadContent);
-window.addEventListener('load', loadContent);
-
-async function loadContent() {
-    _backgroundActions.length = 0;
-
-    let loadingHash = window.location.hash.substring(1);
-    if (!loadingHash) {
-        updateContent(`Please enter the swimmer's name or the club name in the search box.`, loadingHash);
-        return;
-    }
-
-    updateContent('Loading....', loadingHash);
-
-    let [action, value] = loadingHash.split('/');
-    value = decodeURIComponent(value);
-
-    let func = window[action];
-    if (func) {
-        try {
-            await func(value);
-        } catch (e) {
-            updateContent(e, loadingHash);
-        }
-    } else {
-        window.location.replace('');
-    }
-}
-
-const _backgroundActions = [];
-async function backgroundRunner() {
-    while (true) {
-        if (_backgroundActions.length > 0) {
-            let [action, value] = _backgroundActions.shift();
-            try {
-                await action(value);
-            } catch (e) {
-                console.error(e, value);
-            }
-        } else {
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-    }
-}
-for (let i = 0; i < 1; i++) {
-    backgroundRunner().catch(console.error);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
 // tab view
 
 class TabView {
@@ -626,73 +502,7 @@ class TabView {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// config page
-
-async function config(params) {
-    let tabView = new TabView('configTabView');
-
-    tabView.addTab('<p>General</p>', buildGeneralConfig());
-    tabView.addTab('<p>Cache</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
-    tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
-    tabView.addTab('<p>About</p>', '--about--');
-
-    updateContent(tabView.render(), 'config');
-}
-
-function buildGeneralConfig() {
-    return ['<div class="top-margin">',
-        createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
-        '</div><div class="top-margin">',
-        createCheckbox('use-proxy-checkbox',
-            `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
-            useProxy(), 'useProxy(this.checked)'),
-        '</div>'].join('');
-}
-
-async function clearCache(elem) {
-    if (!elem) {
-        let key = document.getElementById('cache-key').value;
-        let list = await new Promise(resolve => ldb.list(resolve));
-        if (key.startsWith('!')) {
-            key = key.substring(1);
-            for (let k of list) {
-                if (!k.startsWith(key)) {
-                    await new Promise(resolve => ldb.delete(k, resolve));
-                }
-            }
-            alert('Cache key not started with ' + key + ' is cleared.');
-        } else {
-            for (let k of list) {
-                if (k.startsWith(key)) {
-                    await new Promise(resolve => ldb.delete(k, resolve));
-                }
-            }
-            alert('Cache key started with ' + key + ' is cleared.');
-        }
-    }
-
-    let list = await new Promise(resolve => ldb.list(resolve));
-    let text = '';
-    for (let k of list) {
-        text += k + '\n';
-    }
-    document.getElementById('cache-info').innerText = text;
-    //window.location.reload();
-}
-
-function buildAdvancedConfig() {
-
-    let dropDown = new Dropdown('testid',
-        '<div style="background-color:blue;">hello</div>',
-        '<div style="background-color:red;">world</div>');
-
-    let select = new Select('my-select', [['', null], ['one', 1], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8]], 4, (value) => {
-        console.log(value);
-    });
-
-    return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + '</div>';
-}
-
+// dropdown class
 class Dropdown {
     #id;
     #triggerElem;
@@ -744,6 +554,8 @@ class Dropdown {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+// select class
 class Select {
     #id;
     #values;
@@ -873,6 +685,9 @@ class Select {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////
+// double range class
+
 class DoubleRange {
 
     static #items = new Map();
@@ -952,6 +767,248 @@ class DoubleRange {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+// usa swimming data fetch utility functions
+
+function useProxy(yes) {
+    if (typeof yes === 'boolean') {
+        localStorage.setItem('use-proxy', yes);
+    }
+
+    return (localStorage.getItem('use-proxy') || 'true') == 'true';
+}
+
+async function fetchSwimValues(bodyObj, type) {
+    let map = {
+        swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
+        event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
+        meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
+    }
+
+    let headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+    };
+
+    let url = map[type || 'swimmer'];
+
+    if (useProxy()) {
+        url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
+
+        let ttl = localStorage.getItem('cache-ttl') || 0;
+        if (ttl) {
+            headers['X-Cache-TTL'] = ttl;
+        }
+    }
+
+    let response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        signal: AbortSignal.timeout(10_000),
+        body: JSON.stringify(bodyObj)
+    });
+
+    if (!response.ok) {
+        return;
+    }
+
+    let data = await response.json();
+    if (data.error || !data.values) {
+        return;
+    }
+
+    let idx = {};
+    for (let i = 0; i < data.headers.length; ++i) {
+        idx[data.headers[i]] = i;
+    }
+    data.values.idx = idx;
+    let cacheTime = response.headers.get("X-Cache-Date");
+    data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
+
+    return data.values;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// initial page
+
+(() => {
+    let drop = new Dropdown('main-search',
+        '<div class="search drop"><div>▽</div></div>',
+        `<button onclick="onSearchAll();Dropdown.get('main-search').close();" class="search all">SEARCH 19&OVER</button>`);
+
+    let html = ['<div class="row">',
+        '<input id="input" autofocus class="big" />',
+        '<button onclick="onSearch()" class="big search main">SEARCH</button>',
+        drop.render(),
+        '<button id="rank-button" onclick="TopButton.onRank()" class="big search hide">RANK</button>',
+        '<button id="relay-button" onclick="TopButton.onRelay()" class="big search hide">RELAY</button>',
+        '</div>',
+        '<div id="content" class="container"></div>'
+    ];
+
+    document.body.innerHTML = html.join('');
+})();
+
+class TopButton {
+    static #params;
+    static onRelay() {
+        go('relay', TopButton.#params);
+    }
+    static onRank() {
+        go('rank', TopButton.#params);
+    }
+    static showRelay(show, params) {
+        TopButton.show(show, params, 'relay-button');
+    }
+    static showRank(show, params) {
+        TopButton.show(show, params, 'rank-button');
+    }
+    static show(show, params, id) {
+        if (show) {
+            TopButton.#params = params;
+            document.getElementById(id).classList.remove('hide');
+        } else {
+            document.getElementById(id).classList.add('hide');
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// navigation and routing functions
+
+function go(action, value) {
+    window.location.hash = '#' + action + '/' + encodeURIComponent(value);
+}
+
+function updateContent(html, loadingHash) {
+    if (window.location.hash.substring(1) == loadingHash) {
+        document.getElementById('content').innerHTML = html;
+    } else {
+        console.log('Content is outdated:', loadingHash);
+    }
+}
+
+window.addEventListener('hashchange', loadContent);
+window.addEventListener('load', loadContent);
+
+async function loadContent() {
+    _backgroundActions.length = 0;
+
+    let loadingHash = window.location.hash.substring(1);
+    if (!loadingHash) {
+        updateContent(`Please enter the swimmer's name or the club name in the search box.`, loadingHash);
+        return;
+    }
+
+    TopButton.showRelay(false);
+    TopButton.showRank(false);
+    updateContent('Loading....', loadingHash);
+
+    let [action, value] = loadingHash.split('/');
+    value = decodeURIComponent(value);
+
+    let func = window[action];
+    if (func) {
+        try {
+            await func(value);
+        } catch (e) {
+            updateContent(e, loadingHash);
+        }
+    } else {
+        window.location.replace('');
+    }
+}
+
+const _backgroundActions = [];
+(() => {
+    async function backgroundRunner() {
+        while (true) {
+            if (_backgroundActions.length > 0) {
+                let [action, value] = _backgroundActions.shift();
+                try {
+                    await action(value);
+                } catch (e) {
+                    console.error(e, value);
+                }
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+    }
+
+    for (let i = 0; i < 1; i++) {
+        backgroundRunner().catch(console.error);
+    }
+})();
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// config page
+
+async function config(params) {
+    let tabView = new TabView('configTabView');
+
+    tabView.addTab('<p>General</p>', buildGeneralConfig());
+    tabView.addTab('<p>Cache</p>', '<div class="row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
+    tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
+    tabView.addTab('<p>About</p>', '--about--');
+
+    updateContent(tabView.render(), 'config');
+}
+
+function buildGeneralConfig() {
+    return ['<div class="top-margin">',
+        createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
+        '</div><div class="top-margin">',
+        createCheckbox('use-proxy-checkbox',
+            `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
+            useProxy(), 'useProxy(this.checked)'),
+        '</div>'].join('');
+}
+
+async function clearCache(elem) {
+    if (!elem) {
+        let key = document.getElementById('cache-key').value;
+        let list = await new Promise(resolve => ldb.list(resolve));
+        if (key.startsWith('!')) {
+            key = key.substring(1);
+            for (let k of list) {
+                if (!k.startsWith(key)) {
+                    await new Promise(resolve => ldb.delete(k, resolve));
+                }
+            }
+            alert('Cache key not started with ' + key + ' is cleared.');
+        } else {
+            for (let k of list) {
+                if (k.startsWith(key)) {
+                    await new Promise(resolve => ldb.delete(k, resolve));
+                }
+            }
+            alert('Cache key started with ' + key + ' is cleared.');
+        }
+    }
+
+    let list = await new Promise(resolve => ldb.list(resolve));
+    let text = '';
+    for (let k of list) {
+        text += k + '\n';
+    }
+    document.getElementById('cache-info').innerText = text;
+    //window.location.reload();
+}
+
+function buildAdvancedConfig() {
+
+    let dropDown = new Dropdown('testid',
+        '<div style="background-color:blue;">hello</div>',
+        '<div style="background-color:red;">world</div>');
+
+    let select = new Select('my-select', [['', null], ['one', 1], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8]], 4, (value) => {
+        console.log(value);
+    });
+
+    return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + '</div>';
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 // search functions
 
 const _inputElem = document.getElementById('input');
@@ -967,6 +1024,7 @@ async function onSearch() {
 
 async function onSearchAll() {
     go('searchAll', _inputElem.value);
+
 }
 
 async function search(name, all) {
@@ -1223,7 +1281,14 @@ async function swimmer(pkey) {
         window.location.replace('');
         return;
     }
+
     let data = await loadDetails(Number(pkey));
+
+    let swimmer = data.swimmer;
+    let params = getRankDataKey(convetToGenderString(swimmer.gender), 1,
+        getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
+    TopButton.showRank(true, params);
+
     await showDetails(data, 'swimmer/' + pkey);
 }
 
@@ -1878,6 +1943,12 @@ function updateGraphTitle(config) {
         selected.classList.remove('selected');
     }
     document.querySelector('button.evt.d' + dist + '.' + stroke).classList.add('selected');
+
+    // update rank button
+    let swimmer = config.swimmerList[0].swimmer;
+    let params = getRankDataKey(convetToGenderString(swimmer.gender), config.event,
+        getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
+    TopButton.showRank(true, params);
 }
 
 async function wheelGraph(canvas, e) {
@@ -2930,9 +3001,9 @@ function countEventTypeByStroke(eventList) {
 // rank functions
 
 async function rank(key) {
+    TopButton.showRelay(true, key);
+
     let data = await loadRank(key);
-    // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
-    // 0        1     2     3     4          5     6        7     8         9     10
 
     await showRank(data, key);
 }
@@ -3698,9 +3769,9 @@ function createAgeGenderSelect(key, custom, onchange) {
 function createCourseSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let values = [];
-    let [dist, style, course] = _eventList[event].split(' ');
+    let [dist, stroke, course] = _eventList[event].split(' ');
     for (let newCourse of _courseOrder) {
-        let newEvent = fixDistance([dist, style, newCourse].join(' '));
+        let newEvent = fixDistance([dist, stroke, newCourse].join(' '));
         let newEventCode = _eventIndexMap.get(newEvent);
         values.push([newCourse, getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, clubName)]);
     }
@@ -3754,6 +3825,16 @@ async function buildClubSelect(key, custom, onchange) {
 // relay functions
 
 async function relay(key) {
+
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    let [dist, stroke, course] = _eventList[event].split(' ');
+    if (Number(dist) > 200) {
+        event = _eventIndexMap.get([50, stroke, course].join(' '));
+        window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
+    }
+
+    TopButton.showRank(true, key);
+
     let data = await loadRelay(key);
 
     await showRelay(data, key);
@@ -3761,7 +3842,12 @@ async function relay(key) {
 
 async function loadRelay(key) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
-    let events = [10, 13, 16, 0].map(evt => evt + (parseInt(event) || 1));
+
+    let [dist, stroke, course] = _eventList[event].split(' ');
+    let eventDelta = course == 'LCM' ? 55 : course == 'SCM' ? 28 : 1;
+    eventDelta += (dist == '200' ? 2 : dist == '100' ? 1 : 0);
+
+    let events = [10, 13, 16, 0].map(evt => evt + (parseInt(eventDelta) || 1));
     let data = [];
     for (let evt of events) {
         let rankData = await loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName));
@@ -3868,12 +3954,16 @@ async function initDatepicker(key, table) {
 
 function createDistanceSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    let [dist, stroke, course] = _eventList[event].split(' ');
+    dist = Number(dist) > 200 ? '50' : dist;
+    let selections = course == 'LCM' ? [[50, 55], [100, 56], [200, 57]] :
+        course == 'SCM' ? [[50, 28], [100, 29], [200, 30]] : [[50, 1], [100, 2], [200, 3]];
     let values = [];
     let selected;
-    for (let [dist, evt] of [[50, 1], [100, 2], [200, 3]]) {
+    for (let [dis, evt] of selections) {
         let relayKey = getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName);
-        values.push([`4x${dist}`, relayKey]);
-        if (evt == event) {
+        values.push([`4x${dis}`, relayKey]);
+        if (dis == Number(dist)) {
             selected = relayKey;
         }
     }
