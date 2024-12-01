@@ -64,6 +64,7 @@
     }
 
     .search {
+        height: 40px;
         background-color: #7DF;
         width: 100px;
     }
@@ -95,15 +96,6 @@
     .left,
     .left * {
         text-align: left;
-    }
-
-    .row {
-        white-space: nowrap;
-    }
-
-    .row>* {
-        margin: auto 2px;
-        display: inline-block;
     }
 
     .container {
@@ -783,6 +775,18 @@
         align-items: center;
     }
 
+    .child-space>* {
+        margin: 0 5px;
+    }
+
+    .p-space>p:not(:first-child) {
+        margin: 0 5px 0 20px;
+    }
+
+    .p-space>p:first-child {
+        margin: 0 5px 0 0;
+    }
+
     /* double range */
     .double-range {
         position: relative;
@@ -850,16 +854,17 @@
 
     /* search dropdown */
     .search.main {
-        margin-right: 0;
+        margin: 0;
         border-radius: 5px 0 0 5px;
     }
 
     #main-search {
         vertical-align: top;
+        margin: 0;
     }
 
     .search.drop {
-        height: 39px;
+        height: 40px;
         width: 30px;
         text-align: center;
         display: flex;
