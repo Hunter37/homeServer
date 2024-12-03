@@ -502,6 +502,45 @@ class TabView {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+// expander class
+
+class Expander {
+    #id;
+    #expand;
+    #fold;
+    #content;
+
+    static #expander = new Map();
+    static get(id) {
+        return Expander.#expander.get(id);
+    }
+
+    constructor(id, expand, fold, content) {
+        this.#id = id;
+        this.#expand = expand;
+        this.#fold = fold;
+        this.#content = content;
+
+        Expander.#expander.set(id, this);
+    }
+
+    render() {
+        return `<div class="expander" id="${this.#id}"><div class="expand" onclick="Expander.get('${this.#id}').expand()">${this.#expand}</div>` +
+            `<div class="fold hide" onclick="Expander.get('${this.#id}').fold()">${this.#fold}</div><div class="content hide">${this.#content}</div></div>`;
+    }
+
+    expand() {
+        document.querySelector(`#${this.#id}>.expand`).classList.add("hide");
+        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.content`).forEach(e => e.classList.remove("hide"));
+    }
+
+    fold() {
+        document.querySelector(`#${this.#id}>.expand`).classList.remove("hide");
+        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.content`).forEach(e => e.classList.add("hide"));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 // dropdown class
 class Dropdown {
     #id;
@@ -682,6 +721,57 @@ class Select {
 
     onselect(value) {
         this.#onchange(value);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// loading spinner
+class Loading {
+    static #items = new Map();
+    static get(id) {
+        return Loading.#items.get(id);
+    }
+
+    #id;
+    #content;
+    #loadFunc;
+    #status;
+    constructor(id, content, loadFunc) {
+        this.#id = id;
+        this.#content = content;
+        this.#loadFunc = loadFunc;
+        this.#status = 'init';
+        Loading.#items.set(id, this);
+    }
+
+    render() {
+        return `<div id="${this.#id}" class="clickable no-dec" onclick="Loading.get('${this.#id}').loading()">${this.#content}</div>`;
+    }
+
+    loading() {
+        if (this.#status == 'init') {
+            this.#status = 'loading';
+            this.#loadFunc(this.#id);
+            document.getElementById(this.#id).innerHTML = '<div class="loader"></div>';
+        }
+    }
+
+    done(content) {
+        if (this.#status != 'done') {
+            this.#status = 'done';
+            let elem = document.getElementById(this.#id);
+            elem.innerHTML = content;
+            elem.classList.remove('clickable');
+        }
+    }
+
+    failed() {
+        if (this.#status == 'loading') {
+            this.#status = 'init';
+            let elem = document.getElementById(this.#id);
+            elem.innerHTML = this.#content;
+            elem.classList.add('clickable');
+        }
     }
 }
 
@@ -911,7 +1001,11 @@ async function loadContent() {
         try {
             await func(value);
         } catch (e) {
-            updateContent(e, loadingHash);
+            let message = e.stack;
+            if (e.name == 'TimeoutError') {
+                message = 'Please refresh the page.<br/><br/>' + message;
+            }
+            updateContent(message, loadingHash);
         }
     } else {
         window.location.replace('');
@@ -1005,7 +1099,9 @@ function buildAdvancedConfig() {
         console.log(value);
     });
 
-    return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + '</div>';
+    let x = new Expander('test-expanders', 'expand', 'fold', '<div>content</div>');
+
+    return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + x.render() + '</div>';
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1284,6 +1380,7 @@ async function swimmer(pkey) {
 
     let data = await loadDetails(Number(pkey));
 
+    // show the rank button, need some info for the rank href
     let swimmer = data.swimmer;
     let params = getRankDataKey(convetToGenderString(swimmer.gender), 1,
         getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
@@ -3483,7 +3580,7 @@ async function showRank(data, key) {
     if (oldBrowser) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
-        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}','${page}')">`);
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
     html.push('<p>Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
     html.push('<div id="rank-table" class="top-margin"></div>');
@@ -3493,11 +3590,14 @@ async function showRank(data, key) {
     updateContent(html.join(''), loadingHash);
 
     if (oldBrowser) {
-        await initDatepicker(key, page);
+        await initDatepicker(page);
     }
 
     if (data) {
-        await updateRankTable(key, data);
+        let table = document.getElementById('rank-table');
+        table.data = data;
+        table.key = key;
+        await updateRankTable();
     }
 }
 
@@ -3582,7 +3682,7 @@ function buildStandardSelects(key, custom) {
 
         let select = new Select('standard' + i, values, standard, async (value) => {
             localStorage.setItem('meetStds' + i, value);
-            await updateRankTable(key);
+            await updateRankTable();
         });
         select.class = cls;
         html.push(select.render(custom));
@@ -3591,13 +3691,13 @@ function buildStandardSelects(key, custom) {
     return html.join('');
 }
 
-async function onMeetDateChange(value, key, table) {
+async function onMeetDateChange(value, table) {
     localStorage.setItem('meetDate', value);
 
     if (table == 'rank') {
-        await updateRankTable(key);
+        await updateRankTable();
     } else if (table == 'relay') {
-        await updateRelayTables(key);
+        await updateRelayTables();
     }
 }
 
@@ -3605,16 +3705,9 @@ function getMeetDate() {
     return localStorage.getItem('meetDate') || '';
 }
 
-async function onStandardChange(index, value, key) {
-    localStorage.setItem('meetStds' + index, value);
-
-    await updateRankTable(key);
-}
-
-async function updateRankTable(key, data) {
+async function updateRankTable() {
     let table = document.getElementById('rank-table');
-    data = data || await loadRank(key);
-    table.innerHTML = await showRankTable(data, key);
+    table.innerHTML = await showRankTable(table.data, table.key);
 }
 
 function showEventButtons(key) {
@@ -3699,8 +3792,8 @@ async function showRankTable(data, key) {
     let index = 0;
     let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
     for (let row of data.values) {
-
-        let range = await _birthdayDictionary.load(row[idx.pkey]);
+        let pkey = row[idx.pkey];
+        let range = await _birthdayDictionary.load(pkey);
         if (await filterOutSwimmer(meetDate, to, range)) {
             continue;
         }
@@ -3729,9 +3822,12 @@ async function showRankTable(data, key) {
         let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], row[idx.clubName]) : '';
         let rowlscRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], '') : '';
 
+        let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
+            (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
+
         html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
             '</td><td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
-            '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left">', BirthdayDictionary.format(range),
+            '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left full">', loading.render(),
             `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(row[idx.clubName], `go('rank','${rowTeamRankKey}')`) : row[idx.clubName],
             `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(row[idx.lsc], `go('rank','${rowlscRankKey}')`) : row[idx.lsc],
             '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
@@ -3851,15 +3947,18 @@ async function loadRelay(key) {
     let data = [];
     for (let evt of events) {
         let rankData = await loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName));
-        if (!rankData) {
-            return;
+        if (rankData) {
+            let idx = rankData.values.idx;
+            rankData.values = rankData.values.slice(0, 40);
+            rankData.values.idx = idx;
         }
-        let idx = rankData.values.idx;
-        rankData.values = rankData.values.slice(0, 40);
-        rankData.values.idx = idx;
         data.push(rankData);
     }
     return data;
+}
+
+function isNarrowWindow() {
+    return window.innerWidth <= 1000;
 }
 
 async function showRelay(data, key) {
@@ -3879,50 +3978,180 @@ async function showRelay(data, key) {
     if (oldBrowser) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
-        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${key}','${page}')">`);
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
     html.push('<p>Distance:</p>', createDistanceSelect(key, true, onchange), '</div>');
 
-    html.push(showRankTableMainTitle(key),
-        '<div class="top-margin"><div class="col"><h4>Medley Relay</h4><div id="medley-relay-table"></div></div>',
-        '<div class="col"><h4>Free Relay</h4><div id="free-relay-table"></div></div></div>');
+    html.push(showRankTableMainTitle(key));
+
+    let expander = new Expander('relay-table', 'Customization 🔽', 'Customization 🔼 &nbsp; &nbsp; (Click the TIME to deselect it from the relay selection)', await createSwimmerSelctionTable(data));
+
+    if (isNarrowWindow()) {
+        html.push('<div class="top-margin">', expander.render(), '</div>');
+        html.push(
+            '<div class="top-margin one-row"><div class="col"><h4>Medley Relay</h4><div id="medley-relay-table"></div></div>',
+            '<div class="col"><h4>Free Relay</h4><div id="free-relay-table"></div></div></div>');
+    } else {
+        html.push(
+            '<div class="top-margin one-row"><div class="col"><h4>Medley Relay</h4><div id="medley-relay-table"></div></div>',
+            '<div class="col"><h4>Free Relay</h4><div id="free-relay-table"></div></div><div class="col">', expander.render(), '</div></div>');
+    }
 
     updateContent(html.join(''), loadingHash);
 
     if (oldBrowser) {
-        await initDatepicker(key, page);
+        await initDatepicker(page);
     }
 
     if (data) {
-        await updateRelayTables(key, data);
+        let table = document.getElementById('relay-table');
+        table.data = data;
+        table.key = key;
+        await updateRelayTables();
     }
 }
 
-async function updateRelayTables(key, data) {
-    data = data || await loadRelay(key);
+async function createSwimmerSelctionTable(data) {
+    let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Birthday</th></tr>'];
+
+    let tableData = mergeRelayData(data);
+    for (let swimmer of tableData) {
+        let loading = new Loading('bday-' + swimmer.pkey,
+            BirthdayDictionary.format(await _birthdayDictionary.load(swimmer.pkey)),
+            (id) => { _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateRelayTables]]); });
+
+        html.push('<tr><td class="left full">', createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`),
+            `</td><td class="${swimmer.BK ? 'leg-time' : ''}" onclick="deselect(this,0,${swimmer.pkey})">`, swimmer.BK,
+            `</td><td class="${swimmer.BR ? 'leg-time' : ''}" onclick="deselect(this,1,${swimmer.pkey})">`, swimmer.BR,
+            `</td><td class="${swimmer.FL ? 'leg-time' : ''}" onclick="deselect(this,2,${swimmer.pkey})">`, swimmer.FL,
+            `</td><td class="${swimmer.FR ? 'leg-time' : ''}" onclick="deselect(this,3,${swimmer.pkey})">`, swimmer.FR,
+            '</td><td class="left full">', loading.render(), '</td></tr>');
+    }
+
+    html.push('</tbody></table>');
+
+    return html.join('');
+}
+
+async function loadBirthday(params) {
+    let [pkey, elemId, callback] = params;
+    let data = await loadDetails(pkey);
+    if (data) {
+        Loading.get(elemId).done(BirthdayDictionary.format(data.swimmer.birthday));
+        if (callback) {
+            callback();
+        }
+    } else {
+        Loading.get(elemId).failed();
+    }
+}
+
+function deselect(elememt, legIndex, pkey) {
+    elememt.classList.toggle('deselected');
+    let table = document.getElementById('relay-table');
+    let exclude = table.excludeData = table.excludeData || [new Set(), new Set(), new Set(), new Set()];
+    if (exclude[legIndex].has(pkey)) {
+        exclude[legIndex].delete(pkey);
+    } else {
+        exclude[legIndex].add(pkey);
+    }
+
+    updateRelayTables();
+}
+
+function mergeRelayData(data) {
+    let merged = [];
+    let pkey2swimmer = new Map();
+    for (let i = 3; i >= 0; --i) {
+        let leg = data[i];
+        if (!leg) {
+            continue;
+        }
+        let idx = leg.values.idx;
+        for (let row of leg.values) {
+            let pkey = row[idx.pkey];
+            let swimmer = pkey2swimmer.get(pkey);
+            if (!swimmer) {
+                swimmer = { pkey: row[idx.pkey], name: row[idx.name] };
+                merged.push(swimmer);
+                pkey2swimmer.set(pkey, swimmer);
+            }
+            swimmer[_relayOrder[i]] = row[idx.time];
+        }
+    }
+
+    return merged;
+}
+
+function clone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+
+async function updateRelayTables() {
+    let table = document.getElementById('relay-table');
+    let data = clone(table.data);
+    let key = table.key;
+    let exclude = table.excludeData;
+
+    // fix the missing idx from clone
+    for (let i = 0; i < 4; ++i) {
+        data[i].values.idx = table.data[i].values.idx;
+    }
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let [from, to] = decodeAgeKey(ageKey);
     let meetDate = getMeetDate();
 
     data = await filterDataByMeetDate(data, meetDate, to);
+    data = filterByExclusion(data, exclude);
 
-    let idx = data[0].values.idx;
-    let relays = calculateRelay(data, idx);
-    updateRelayTable(relays, idx, 'medley');
-
-    relays = [];
-    freeValues = data[3].values;
-    for (let i = 0; i + 4 <= freeValues.length; i += 4) {
-        let relay = freeValues.slice(i, i + 4);
-        let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
-        relays.push([time, relay]);
+    if (data.filter(d => d).length == 4) {
+        let idx = data[0].values.idx;
+        let relays = calculateRelay(data, idx);
+        updateRelayTable(relays, idx, 'medley');
     }
-    updateRelayTable(relays, idx, 'free');
+
+    if (data[3]) {
+        let idx = data[3].values.idx;
+        let relays = [];
+        freeValues = data[3].values;
+        for (let i = 0; i + 4 <= freeValues.length; i += 4) {
+            let relay = freeValues.slice(i, i + 4);
+            let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
+            relays.push([time, relay]);
+        }
+        updateRelayTable(relays, idx, 'free');
+    }
+}
+
+function filterByExclusion(data, exclude) {
+    if (!exclude) {
+        return data;
+    }
+    for (let i = 0; i < 4; ++i) {
+        let leg = data[i];
+        if (!leg) {
+            continue;
+        }
+        let idx = leg.values.idx;
+        let values = [];
+        for (let row of leg.values) {
+            let pkey = row[idx.pkey];
+            if (!exclude[i].has(pkey)) {
+                values.push(row);
+            }
+        }
+        values.idx = idx;
+        data[i].values = values;
+    }
+    return data;
 }
 
 async function filterDataByMeetDate(data, meetDate, maxAge) {
     for (let leg of data) {
+        if (!leg) {
+            continue;
+        }
         let idx = leg.values.idx;
         let values = [];
         for (let row of leg.values) {
@@ -3938,7 +4167,7 @@ async function filterDataByMeetDate(data, meetDate, maxAge) {
     return data;
 }
 
-async function initDatepicker(key, table) {
+async function initDatepicker(table) {
     let root = location.protocol === 'file:' ? '' : '/files/';
     loadCSS(`${root}datepicker.material.css`);
     await loadScript(`${root}datepicker.js`);
@@ -3948,7 +4177,7 @@ async function initDatepicker(key, table) {
             let part = str.split('-');
             return part[1] + '/' + part[2] + '/' + part[0];
         },
-        onChange: date => onMeetDateChange(date.toJSON().substring(0, 10), key, table)
+        onChange: date => onMeetDateChange(date.toJSON().substring(0, 10), table)
     });
 }
 
@@ -3973,8 +4202,8 @@ function createDistanceSelect(key, custom, onchange) {
     return select.render(custom);
 }
 
+const _relayOrder = ['BK', 'BR', 'FL', 'FR'];
 function updateRelayTable(relays, idx, type) {
-    const relayOrder = ['BK', 'BR', 'FL', 'FR'];
     let html = [];
     for (let relay of relays) {
         html.push('<p class="relay-time">', formatTime(relay[0]), '</p><table class="fill"><tbody>');
@@ -3983,7 +4212,7 @@ function updateRelayTable(relays, idx, type) {
             html.push('<td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
                 '</td><td>', row[idx.time], '</td>');
             if (type == 'medley') {
-                html.push('<td>', relayOrder[i], '</td>');
+                html.push('<td>', _relayOrder[i], '</td>');
             }
             html.push('</tr>');
         }

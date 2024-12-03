@@ -552,6 +552,9 @@
         cursor: default;
     }
 
+    .leg-time:hover,
+    .expander>.fold:hover,
+    .expander>.expand:hover,
     .search.all:hover,
     .search.drop:hover,
     .checkbox-wrapper input:checked:hover,
@@ -571,7 +574,7 @@
     #adding-list tr:hover {
         background-color: #57E;
         color: #FFF;
-        text-decoration: none;
+        /* text-decoration: none; */
         cursor: pointer;
     }
 
@@ -841,10 +844,16 @@
         margin: 0 50px;
     }
 
+    .one-row {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+
     .col {
         display: inline-block;
         vertical-align: top;
-        padding: 0 20px 20px 20px;
+        padding: 20px;
         border: 1px solid #7DF;
     }
 
@@ -878,6 +887,35 @@
 
     .search.all {
         width: 150px;
+    }
+
+    /* expander */
+    .expander {
+        width: max-content;
+    }
+
+    .expander>.fold,
+    .expander>.expand {
+        padding: 10px;
+        background-color: #7DF;
+        border-radius: 5px;
+    }
+
+    .expander>.fold {
+        border-radius: 5px 5px 0 0;
+    }
+
+    /* relay selection */
+    .deselected {
+        text-decoration: line-through;
+    }
+
+    .full>.clickable.no-dec {
+        text-decoration: none;
+    }
+
+    .full>.no-dec {
+        padding: 0 5px;
     }
 </style>
 
