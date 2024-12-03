@@ -1840,6 +1840,7 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
         let [dist, stroke, course] = eventStr.split(' ');
 
         if (rowInfo[i].length == 2 && i > 0) {
+            // html.push('<tr><td colspan="100" style="background:#FFF"></td></tr>')
             html.push(header);
         }
 
@@ -2531,6 +2532,8 @@ function mergeConfig(config, newConfig) {
 
 async function defaultConfig(pkey) {
     let swimmer = await loadDetails(pkey);
+    let event = swimmer.events[swimmer.events.length - 1][swimmer.events.idx.event];
+    event = event > 54 ? event - 54 : event > 27 ? event - 27 : event;
     return {
         pkey: pkey,
         swimmerList: [swimmer],
@@ -2543,9 +2546,9 @@ async function defaultConfig(pkey) {
         xZoomFactor: parseFloat(localStorage.getItem('xZoomFactor')) || 1,
         yZoomFactor: parseFloat(localStorage.getItem('yZoomFactor')) || 1,
         meetDict: swimmer.meetDict,
-        event: swimmer.events[swimmer.events.length - 1][swimmer.events.idx.event],
+        event: event,
         idx: swimmer.events.idx
-    }
+    };
 }
 
 async function showGraph(canvas, config) {  //, pkey, event, mouseX, mouseY) {
@@ -3924,8 +3927,9 @@ async function relay(key) {
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let [dist, stroke, course] = _eventList[event].split(' ');
-    if (Number(dist) > 200) {
-        event = _eventIndexMap.get([50, stroke, course].join(' '));
+    let newDist = getRelayDistance(event);
+    if (newDist != dist) {
+        event = _eventIndexMap.get([newDist, stroke, course].join(' '));
         window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
     }
 
@@ -3983,6 +3987,9 @@ async function showRelay(data, key) {
     html.push('<p>Distance:</p>', createDistanceSelect(key, true, onchange), '</div>');
 
     html.push(showRankTableMainTitle(key));
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    html.push(`<h3>${genderStr} ${ageKey} 4x${getRelayDistance(event)} Relay</h3>`);
+
 
     let expander = new Expander('relay-table', 'Customization 🔽', 'Customization 🔼 &nbsp; &nbsp; (Click the TIME to deselect it from the relay selection)', await createSwimmerSelctionTable(data));
 
@@ -4095,7 +4102,10 @@ async function updateRelayTables() {
 
     // fix the missing idx from clone
     for (let i = 0; i < 4; ++i) {
-        data[i].values.idx = table.data[i].values.idx;
+        let leg = data[i];
+        if (leg) {
+            leg.values.idx = table.data[i].values.idx;
+        }
     }
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
@@ -4184,7 +4194,7 @@ async function initDatepicker(table) {
 function createDistanceSelect(key, custom, onchange) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let [dist, stroke, course] = _eventList[event].split(' ');
-    dist = Number(dist) > 200 ? '50' : dist;
+    dist = getRelayDistance(event);
     let selections = course == 'LCM' ? [[50, 55], [100, 56], [200, 57]] :
         course == 'SCM' ? [[50, 28], [100, 29], [200, 30]] : [[50, 1], [100, 2], [200, 3]];
     let values = [];
@@ -4200,6 +4210,12 @@ function createDistanceSelect(key, custom, onchange) {
     let select = new Select('dist-select', values, selected, onchange);
     select.class = custom ? '' : 'big';
     return select.render(custom);
+}
+
+function getRelayDistance(event) {
+    let [dist, stroke, course] = _eventList[event].split(' ');
+    dist = Number(dist);
+    return dist > 200 || dist < 50 ? '50' : dist;
 }
 
 const _relayOrder = ['BK', 'BR', 'FL', 'FR'];
