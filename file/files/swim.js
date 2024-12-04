@@ -961,11 +961,17 @@ class TopButton {
         TopButton.show(show, params, 'rank-button');
     }
     static show(show, params, id) {
+        let classList = document.getElementById(id).classList;
         if (show) {
-            TopButton.#params = params;
-            document.getElementById(id).classList.remove('hide');
+            if (params) {
+                TopButton.#params = params;
+                classList.remove('disabled');
+            } else {
+                classList.add('disabled');
+            }
+            classList.remove('hide');
         } else {
-            document.getElementById(id).classList.add('hide');
+            classList.add('hide');
         }
     }
 }
@@ -1392,6 +1398,7 @@ async function swimmer(pkey) {
     let swimmer = data.swimmer;
     let params = getRankDataKey(convetToGenderString(swimmer.gender), 1,
         getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
+    TopButton.showRelay(true, params);
     TopButton.showRank(true, params);
 
     await showDetails(data, 'swimmer/' + pkey);
@@ -2055,6 +2062,7 @@ function updateGraphTitle(config) {
     let params = getRankDataKey(convetToGenderString(swimmer.gender), config.event,
         getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
     TopButton.showRank(true, params);
+    TopButton.showRelay(true, params);
 }
 
 async function wheelGraph(canvas, e) {
@@ -3110,6 +3118,7 @@ function countEventTypeByStroke(eventList) {
 
 async function rank(key) {
     TopButton.showRelay(true, key);
+    TopButton.showRank(true);
 
     let data = await loadRank(key);
 
@@ -3577,12 +3586,13 @@ async function showRank(data, key) {
     let loadingHash = page + '/' + encodeURIComponent(key);
     let html = [];
     let oldBrowser = isOldBrowser();
+    let narrowWindow = isNarrowWindow();
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, oldBrowser, onchange),
-        '<p>Course:</p>', createCourseSelect(key, oldBrowser, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, oldBrowser, onchange), '</div>');
+    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, !narrowWindow, onchange),
+        '<p>Course:</p>', createCourseSelect(key, !narrowWindow, onchange),
+        '<p>Club:</p>', await buildClubSelect(key, !narrowWindow, onchange), '</div>');
 
     html.push(showEventButtons(key));
     html.push(showRankTableTitle(key));
@@ -3593,7 +3603,7 @@ async function showRank(data, key) {
     } else {
         html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
-    html.push('<p>Meet cut:</p>', buildStandardSelects(key, oldBrowser), '</div>');
+    html.push('<p>Meet cut:</p>', buildStandardSelects(key, !narrowWindow), '</div>');
     html.push('<div id="rank-table" class="top-margin"></div>');
 
     html.push(addHide25Botton());
@@ -3941,6 +3951,7 @@ async function relay(key) {
         window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
     }
 
+    TopButton.showRelay(true);
     TopButton.showRank(true, key);
 
     let data = await loadRelay(key);
@@ -3979,12 +3990,13 @@ async function showRelay(data, key) {
 
     let html = [];
     let oldBrowser = isOldBrowser();
+    let narrowWindow = isNarrowWindow();
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, true, onchange),
-        '<p>Course:</p>', createCourseSelect(key, true, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, true, onchange), '</div>');
+    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, !narrowWindow, onchange),
+        '<p>Course:</p>', createCourseSelect(key, !narrowWindow, onchange),
+        '<p>Club:</p>', await buildClubSelect(key, !narrowWindow, onchange), '</div>');
 
     html.push('<div class="center-row p-space top-margin"><p>Meet date:</p>');
     if (oldBrowser) {
@@ -3992,7 +4004,7 @@ async function showRelay(data, key) {
     } else {
         html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
-    html.push('<p>Distance:</p>', createDistanceSelect(key, true, onchange), '</div>');
+    html.push('<p>Distance:</p>', createDistanceSelect(key, !narrowWindow, onchange), '</div>');
 
     html.push(showRankTableMainTitle(key));
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);

@@ -63,12 +63,6 @@
         max-width: 300px;
     }
 
-    .search {
-        height: 40px;
-        background-color: #7DF;
-        width: 100px;
-    }
-
     #content {
         margin: 10px;
     }
@@ -567,7 +561,7 @@
     .tabs>.selected:hover,
     .tab:hover,
     .match-size button:hover,
-    button.big:hover,
+    .search:hover,
     .add-search button:hover,
     .dropdown .option:hover,
     .resize:hover,
@@ -862,15 +856,28 @@
         margin: 20px 0 7px 7px;
     }
 
+    /* top buttons*/
+    .search {
+        height: 40px;
+        background-color: #7DF;
+        width: 90px;
+    }
+
+    .search.disabled {
+        background-color: #DDD;
+        color: #333;
+        cursor: default;
+    }
+
     /* search dropdown */
     .search.main {
-        margin: 0;
+        margin-right: 0;
         border-radius: 5px 0 0 5px;
     }
 
     #main-search {
         vertical-align: top;
-        margin: 0;
+        margin: 0 5px 0 0;
     }
 
     .search.drop {
