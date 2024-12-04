@@ -119,7 +119,7 @@ function convertToGenderCode(genderStr) {
 // local caches
 
 class LocalCache {
-    static currentVersion = 2;
+    static currentVersion = 3;
 
     static enable(yes) {
         if (typeof yes === 'boolean') {
@@ -211,6 +211,14 @@ class ClubDictinary {
                         datatype: 'text',
                     },
                     {
+                        dim: "[UsasSwimTime.SwimEventKey]",
+                        datatype: 'numeric',
+                        filter: {
+                            equals: 1
+                        },
+                        panel: 'scope'
+                    },
+                    {
                         dim: '[OrgUnit.Level3Code]',
                         datatype: 'text',
                         filter: {
@@ -223,7 +231,7 @@ class ClubDictinary {
             };
 
             return await fetchSwimValues(bodyObj, 'event');
-        }, _1WeekInSec, 2);
+        }, _1WeekInSec, 3);
     }
 
     async loadClubMap(lsc) {
@@ -3895,7 +3903,7 @@ async function buildClubSelect(key, custom, onchange) {
         values.push([zone + ' Zone']);
         for (let [lscCode, [lscName, zoneCode]] of lscMap) {
             if (zoneCode == zone) {
-                values.push([lscName + ' (' + lscCode + ')', getRankDataKey(genderStr, event, ageKey, zone, lscCode)]);
+                values.push([lscCode + ' - ' + lscName, getRankDataKey(genderStr, event, ageKey, zone, lscCode)]);
             }
         }
     }
@@ -3905,7 +3913,7 @@ async function buildClubSelect(key, custom, onchange) {
 
         values.push([getLSCName(lsc) + ' (' + lsc + ')']);
         for (let [clubName, clubCode] of clubDict) {
-            values.push([clubName + ' (' + clubCode + ')', getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)]);
+            values.push([clubCode + ' - ' + clubName, getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)]);
         }
     }
 
