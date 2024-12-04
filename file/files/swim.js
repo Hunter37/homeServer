@@ -937,8 +937,9 @@ async function fetchSwimValues(bodyObj, type) {
         '<input id="input" autofocus class="big" />',
         '<button onclick="onSearch()" class="big search main">SEARCH</button>',
         drop.render(),
-        '<button id="rank-button" onclick="TopButton.onRank()" class="big search hide">RANK</button>',
-        '<button id="relay-button" onclick="TopButton.onRelay()" class="big search hide">RELAY</button>',
+        `<button id="rank-button" onclick="TopButton.onClick('rank')" class="big search hide">RANK</button>`,
+        `<button id="relay-button" onclick="TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
+        `<button id="config-button" onclick="TopButton.onClick('config')" class="big search" style="font-size:26px;padding:0;width:40px">⚙</button>`,
         '</div>',
         '<div id="content" class="container"></div>'
     ];
@@ -948,23 +949,21 @@ async function fetchSwimValues(bodyObj, type) {
 
 class TopButton {
     static #params;
-    static onRelay() {
-        go('relay', TopButton.#params);
+    static onClick(button) {
+        if (['relay', 'rank'].includes(button)) {
+            go(button, TopButton.#params);
+        } else {
+            go(button);
+        }
     }
-    static onRank() {
-        go('rank', TopButton.#params);
-    }
-    static showRelay(show, params) {
-        TopButton.show(show, params, 'relay-button');
-    }
-    static showRank(show, params) {
-        TopButton.show(show, params, 'rank-button');
-    }
-    static show(show, params, id) {
+    static show(button, show, params) {
+        let id = button + '-button';
         let classList = document.getElementById(id).classList;
         if (show) {
             if (params) {
-                TopButton.#params = params;
+                if (typeof params != 'boolean') {
+                    TopButton.#params = params;
+                }
                 classList.remove('disabled');
             } else {
                 classList.add('disabled');
@@ -980,7 +979,8 @@ class TopButton {
 // navigation and routing functions
 
 function go(action, value) {
-    window.location.hash = '#' + action + '/' + encodeURIComponent(value);
+    value = value ? '/' + encodeURIComponent(value) : '';
+    window.location.hash = '#' + action + value;
 }
 
 function updateContent(html, loadingHash) {
@@ -1003,8 +1003,9 @@ async function loadContent() {
         return;
     }
 
-    TopButton.showRelay(false);
-    TopButton.showRank(false);
+    TopButton.show('relay', false);
+    TopButton.show('rank', false);
+    TopButton.show('config', true, true);
     updateContent('Loading....', loadingHash);
 
     let [action, value] = loadingHash.split('/');
@@ -1052,6 +1053,99 @@ const _backgroundActions = [];
 // config page
 
 async function config(params) {
+    TopButton.show('config', true, false);
+
+    let tabView = new TabView('configTabView');
+
+    tabView.addTab('<p>CONFIG</p>', buildConfigPage());
+    tabView.addTab('<p>ABOUT</p>', buildAboutPage());
+    updateContent(tabView.render(), 'config');
+}
+
+function buildAboutPage() {
+    return ['<div style="margin:30px" style="max-width:800px">',
+
+        '<h3>About</h3>',
+        '<p>Welcome to our website, a non-profit project dedicated to supporting swimmers and coaches.</p>',
+        `<p>Our platform makes it easy to check swimmers' event results, track progress, and plan for future meets.</p>`,
+        '<p>All swimmer data is sourced from official public records to ensure accuracy and accessibility.</p>',
+        '<p>We value your feedback! If you encounter any issues, please report them to us at ',
+        '<a href="mailto:swim.ajzxhub@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
+        `<p>Have suggestions? We'd love to hear them at `,
+        '<a href="mailto:swim.ajzxhub@gmail.com?subject=Suggestion">Suggestion</a>.',
+        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub@gmail.com">swim.ajzxhub@gmail.com</a>.</p>',
+        '<p>Thank you for visiting, and we hope our site helps you achieve your goals in the pool!</p>',
+
+        '<h3 style="margin-top:80px">Privacy Statement</h3>',
+        '<p>We are committed to protecting your privacy. Our service does not collect or store any user information.</p>',
+        '<p>All usage data and caches are stored locally in your browser, ensuring your data stays private and secure.</p>',
+
+        '</div>'].join('');
+}
+
+function buildConfigPage() {
+    let html = ['<div style="margin:30px" style="max-width:800px">'];
+    let hide25 = localStorage.getItem('hide25');
+
+    html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', !hide25, 'toggle25()'), '<br/>&nbsp;</p>');
+    html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'toggleCustomSelect()'));
+    html.push('<span style="margin:0 20px;float: right;width: 500px;">(On certain browsers, the default select control may not function correctly. Enable this option to ensure proper functionality.)</span><br/>&nbsp;</p>');
+    html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'toggleCustomDatePicker()'));
+    html.push('<span style="margin:0 20px;float: right;width: 500px;">(On certain browsers, the default date picker control may not function correctly. Enable this option to ensure proper functionality.)</span><br/>&nbsp;</p>');
+
+    html.push('</div>');
+    return html.join('');
+}
+
+function toggle25() {
+    let hide25 = localStorage.getItem('hide25');
+    if (hide25) {
+        localStorage.removeItem('hide25');
+    } else {
+        localStorage.setItem('hide25', '1');
+    }
+}
+
+function useCustomSelect() {
+    let value = localStorage.getItem('custom-select');
+    if (value) {
+        return value == '1';
+    } else {
+        return !isNarrowWindow();
+    }
+}
+
+function toggleCustomSelect() {
+    localStorage.setItem('custom-select', useCustomSelect() ? '0' : '1');
+}
+
+function isNarrowWindow() {
+    return window.innerWidth <= 1000;
+}
+
+function useCustomDatePicker() {
+    let value = localStorage.getItem('custom-date-picker');
+    if (value) {
+        return value == '1';
+    } else {
+        return isOldBrowser();
+    }
+}
+
+function toggleCustomDatePicker() {
+    localStorage.setItem('custom-date-picker', useCustomDatePicker() ? '0' : '1');
+}
+
+function isOldBrowser() {
+    let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
+    //oldBrowser = true;
+    return oldBrowser;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// test page
+
+async function test(params) {
     let tabView = new TabView('configTabView');
 
     tabView.addTab('<p>General</p>', buildGeneralConfig());
@@ -1059,7 +1153,7 @@ async function config(params) {
     tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
     tabView.addTab('<p>About</p>', '--about--');
 
-    updateContent(tabView.render(), 'config');
+    updateContent(tabView.render(), 'test');
 }
 
 function buildGeneralConfig() {
@@ -1398,8 +1492,8 @@ async function swimmer(pkey) {
     let swimmer = data.swimmer;
     let params = getRankDataKey(convetToGenderString(swimmer.gender), 1,
         getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
-    TopButton.showRelay(true, params);
-    TopButton.showRank(true, params);
+    TopButton.show('relay', true, params);
+    TopButton.show('rank', true, params);
 
     await showDetails(data, 'swimmer/' + pkey);
 }
@@ -1657,8 +1751,6 @@ async function showDetails(data, loadingHash) {
     // tabView.addTab('<p>Ranking</p>', await createRankingTable(data, fastRowList, rowInfo));
     html.push(tabView.render());
 
-    html.push(addHide25Botton());
-
     updateContent(html.join(''), loadingHash);
 }
 
@@ -1698,21 +1790,6 @@ function createDetailsPageTitle(data) {
         BirthdayDictionary.format(data.swimmer.birthday), '</span><span>Total Event: ', data.events.length, '</span></div>');
 
     return html.join('');
-}
-
-function addHide25Botton() {
-    let hide25 = localStorage.getItem('hide25');
-    return ['<div style="height:20px;margin:5px"><button onclick="toggle25()" style="position:absolute;right:0">', hide25 ? 'Show 25 Events' : 'Hide 25 Events', '</button></div>'].join('');
-}
-
-function toggle25() {
-    let hide25 = localStorage.getItem('hide25');
-    if (hide25) {
-        localStorage.removeItem('hide25');
-    } else {
-        localStorage.setItem('hide25', '1');
-    }
-    loadContent();
 }
 
 function getFastRowByEvent(events) {
@@ -2061,8 +2138,8 @@ function updateGraphTitle(config) {
     let swimmer = config.swimmerList[0].swimmer;
     let params = getRankDataKey(convetToGenderString(swimmer.gender), config.event,
         getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
-    TopButton.showRank(true, params);
-    TopButton.showRelay(true, params);
+    TopButton.show('rank', true, params);
+    TopButton.show('relay', true, params);
 }
 
 async function wheelGraph(canvas, e) {
@@ -3117,8 +3194,8 @@ function countEventTypeByStroke(eventList) {
 // rank functions
 
 async function rank(key) {
-    TopButton.showRelay(true, key);
-    TopButton.showRank(true);
+    TopButton.show('relay', true, key);
+    TopButton.show('rank', true);
 
     let data = await loadRank(key);
 
@@ -3575,50 +3652,42 @@ async function filterByAge(values, ageKey) {
     return result;
 }
 
-function isOldBrowser() {
-    let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
-    //oldBrowser = true;
-    return oldBrowser;
-}
-
 async function showRank(data, key) {
     let page = 'rank';
     let loadingHash = page + '/' + encodeURIComponent(key);
     let html = [];
-    let oldBrowser = isOldBrowser();
-    let narrowWindow = isNarrowWindow();
+    let customDatePicker = useCustomDatePicker();
+    let customSelect = useCustomSelect();
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, !narrowWindow, onchange),
-        '<p>Course:</p>', createCourseSelect(key, !narrowWindow, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, !narrowWindow, onchange), '</div>');
+    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
+        '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
+        '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     html.push(showEventButtons(key));
     html.push(showRankTableTitle(key));
 
     html.push('<div class="center-row p-space top-margin"><p>Meet date:</p>');
-    if (oldBrowser) {
+    if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
         html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
-    html.push('<p>Meet cut:</p>', buildStandardSelects(key, !narrowWindow), '</div>');
+    html.push('<p>Meet cut:</p>', buildStandardSelects(key, customSelect), '</div>');
     html.push('<div id="rank-table" class="top-margin"></div>');
 
-    html.push(addHide25Botton());
-
     updateContent(html.join(''), loadingHash);
-
-    if (oldBrowser) {
-        await initDatepicker(page);
-    }
 
     if (data) {
         let table = document.getElementById('rank-table');
         table.data = data;
         table.key = key;
         await updateRankTable();
+    }
+
+    if (customDatePicker) {
+        await initDatepicker(page);
     }
 }
 
@@ -3951,8 +4020,8 @@ async function relay(key) {
         window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
     }
 
-    TopButton.showRelay(true);
-    TopButton.showRank(true, key);
+    TopButton.show('relay', true);
+    TopButton.show('rank', true, key);
 
     let data = await loadRelay(key);
 
@@ -3980,31 +4049,27 @@ async function loadRelay(key) {
     return data;
 }
 
-function isNarrowWindow() {
-    return window.innerWidth <= 1000;
-}
-
 async function showRelay(data, key) {
     let page = 'relay';
     let loadingHash = page + '/' + encodeURIComponent(key);
 
     let html = [];
-    let oldBrowser = isOldBrowser();
-    let narrowWindow = isNarrowWindow();
+    let customDatePicker = useCustomDatePicker();
+    let customSelect = useCustomSelect();
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, !narrowWindow, onchange),
-        '<p>Course:</p>', createCourseSelect(key, !narrowWindow, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, !narrowWindow, onchange), '</div>');
+    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
+        '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
+        '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     html.push('<div class="center-row p-space top-margin"><p>Meet date:</p>');
-    if (oldBrowser) {
+    if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
         html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
     }
-    html.push('<p>Distance:</p>', createDistanceSelect(key, !narrowWindow, onchange), '</div>');
+    html.push('<p>Distance:</p>', createDistanceSelect(key, customSelect, onchange), '</div>');
 
     html.push(showRankTableMainTitle(key));
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
@@ -4026,15 +4091,15 @@ async function showRelay(data, key) {
 
     updateContent(html.join(''), loadingHash);
 
-    if (oldBrowser) {
-        await initDatepicker(page);
-    }
-
     if (data) {
         let table = document.getElementById('relay-table');
         table.data = data;
         table.key = key;
         await updateRelayTables();
+    }
+
+    if (customDatePicker) {
+        await initDatepicker(page);
     }
 }
 
@@ -4207,7 +4272,10 @@ async function initDatepicker(table) {
             let part = str.split('-');
             return part[1] + '/' + part[2] + '/' + part[0];
         },
-        onChange: date => onMeetDateChange(date.toJSON().substring(0, 10), table)
+        onChange: date => {
+            date = date || new Date();
+            onMeetDateChange(date.toJSON().substring(0, 10), table);
+        }
     });
 }
 
