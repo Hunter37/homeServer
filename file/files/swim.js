@@ -1070,10 +1070,10 @@ function buildAboutPage() {
         `<p>Our platform makes it easy to check swimmers' event results, track progress, and plan for future meets.</p>`,
         '<p>All swimmer data is sourced from official public records to ensure accuracy and accessibility.</p>',
         '<p>We value your feedback! If you encounter any issues, please report them to us at ',
-        '<a href="mailto:swim.ajzxhub@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
+        '<a href="mailto:swim.ajzxhub.net@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
         `<p>Have suggestions? We'd love to hear them at `,
-        '<a href="mailto:swim.ajzxhub@gmail.com?subject=Suggestion">Suggestion</a>.',
-        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub@gmail.com">swim.ajzxhub@gmail.com</a>.</p>',
+        '<a href="mailto:swim.ajzxhub.net@gmail.com?subject=Suggestion">Suggestion</a>.',
+        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub.net@gmail.com">swim.ajzxhub.net@gmail.com</a>.</p>',
         '<p>Thank you for visiting, and we hope our site helps you achieve your goals in the pool!</p>',
 
         '<h3 style="margin-top:80px">Privacy Statement</h3>',
