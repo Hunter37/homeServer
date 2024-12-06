@@ -52,6 +52,9 @@ _eventList.forEach((item, index) => {
     _eventIndexMap.set(item, index);
 });
 
+const starSVG = '<svg viewBox="-1 0 19 19"><path d="m12.673 10.779.798 4.02c.221 1.11-.407 1.566-1.395 1.013L8.5 13.81l-3.576 2.002c-.988.553-1.616.097-1.395-1.013l.397-2.001.401-2.02-1.51-1.397-1.498-1.385c-.832-.769-.592-1.507.532-1.64l2.026-.24 2.044-.242 1.717-3.722c.474-1.028 1.25-1.028 1.724 0l1.717 3.722 2.044.242 2.026.24c1.124.133 1.364.871.533 1.64L14.184 9.38z"></path></svg>';
+const gearSVG = '<svg viewBox="0 0 49 49" stroke-width="2.5" stroke-linejoin="round"><path d="M47,27V21H41.51a18.09,18.09,0,0,0-2.76-6.68l3.88-3.87L37.55,5.37,33.68,9.25A18.09,18.09,0,0,0,27,6.49V1H21V6.49a18.09,18.09,0,0,0-6.68,2.76L10.45,5.37,5.37,10.45l3.88,3.87A18.09,18.09,0,0,0,6.49,21H1v6H6.49a18.09,18.09,0,0,0,2.76,6.68L5.37,37.55l5.08,5.08,3.87-3.88A18.09,18.09,0,0,0,21,41.51V47h6V41.51a18.09,18.09,0,0,0,6.68-2.76l3.87,3.88,5.08-5.08-3.88-3.87A18.09,18.09,0,0,0,41.51,27Z"></path><circle cx="24" cy="24" r="9"></circle></svg>';
+
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // page utility functions
 
@@ -939,8 +942,8 @@ async function fetchSwimValues(bodyObj, type) {
         drop.render(),
         `<button id="rank-button" onclick="TopButton.onClick('rank')" class="big search hide">RANK</button>`,
         `<button id="relay-button" onclick="TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
-        `<button id="favirite-button" onclick="TopButton.onClick('favirite')" class="search sq-btn" style="color:#F77">❤</button>`,
-        `<button id="config-button" onclick="TopButton.onClick('config')" class="search sq-btn">🔧</button>`,
+        `<button id="favirite-button" onclick="TopButton.onClick('favirite')" class="search sq-btn">${starSVG}</button>`,
+        `<button id="config-button" onclick="TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
         '</div>',
         '<div id="content" class="container"></div>'
     ];
@@ -1053,7 +1056,7 @@ const _backgroundActions = [];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // favirite swimmer page
-//🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠
+//🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠★
 
 async function favirite() {
     TopButton.show('favirite', true, false);
@@ -1066,7 +1069,8 @@ async function favirite() {
     html.push('<h2>Favirites</h2>')
 
     if (values.size == 0) {
-        html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="color:#CCC">❤</span> next to a swimmer\'s name to add.</p>');
+        html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="display:inline-block;fill:#CCC;width:24px;transform:translateY(7px)">',
+            starSVG, '</span> next to a swimmer\'s name to add.</p>');
     } else {
         html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Club</th><th>LSC</th></tr>');
         for (let [pkey, obj] of values.entries()) {
@@ -1082,7 +1086,7 @@ async function favirite() {
 class Favorite {
     static createButton(pkey, name, clubName, lsc) {
         let cls = Favorite.has(pkey) ? ' selected' : '';
-        return createPopup(`<span class="add-fav${cls}" onclick="Favorite.click(this, ${pkey},'${name}','${clubName}','${lsc}')">❤</span>`, 'Add to Favorite');
+        return createPopup(`<div class="add-fav${cls}" onclick="Favorite.click(this, ${pkey},'${name}','${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
     }
 
     static click(elem, pkey, name, clubName, lsc) {
@@ -3731,14 +3735,14 @@ async function showRank(data, key) {
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
+    html.push('<div class="center-row p-l-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
         '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
         '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     html.push(showEventButtons(key));
     html.push(showRankTableTitle(key));
 
-    html.push('<div class="center-row p-space top-margin"><p>Meet date:</p>');
+    html.push('<div class="center-row p-l-space top-margin"><p>Meet date:</p>');
     if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
@@ -4127,11 +4131,11 @@ async function showRelay(data, key) {
     let meetDate = getMeetDate();
     let onchange = v => go(page, v);
 
-    html.push('<div class="center-row p-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
+    html.push('<div class="center-row p-l-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
         '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
         '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
-    html.push('<div class="center-row p-space top-margin"><p>Meet date:</p>');
+    html.push('<div class="center-row p-l-space top-margin"><p>Meet date:</p>');
     if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {

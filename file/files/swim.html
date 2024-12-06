@@ -574,6 +574,7 @@
     #adding-list tr:hover {
         background-color: #57E;
         color: #FFF;
+        stroke: #FFF;
         /* text-decoration: none; */
         cursor: pointer;
     }
@@ -783,13 +784,13 @@
         margin: 0 5px;
     }
 
-    /* .p-space>p:not(:first-child) {
+    .p-l-space>p:not(:first-child) {
         margin: 0 5px 0 20px;
     }
 
-    .p-space>p:first-child {
+    .p-l-space>p:first-child {
         margin: 0 5px 0 0;
-    } */
+    }
 
     .p-space>p:last-child {
         margin: 0 5px 0 0;
@@ -912,10 +913,11 @@
     }
 
     .sq-btn {
-        font-size: 26px;
-        padding: 0;
         width: 40px;
         min-width: 40px;
+        padding: 7px;
+        fill: none;
+        stroke: #000;
     }
 
     /* expander */
@@ -949,12 +951,13 @@
 
     /* fav button */
     .add-fav {
-        color: #CCC;
-        font-size: 22px;
+        width: 24px;
+        height: 24px;
+        fill: #CCC;
     }
 
     .add-fav.selected {
-        color: #F33 !important;
+        fill: #777 !important;
     }
 </style>
 
