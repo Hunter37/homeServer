@@ -991,7 +991,7 @@ function updateContent(html, loadingHash) {
     if (window.location.hash.substring(1) == loadingHash) {
         document.getElementById('content').innerHTML = html;
     } else {
-        console.log('Content is outdated:', loadingHash);
+        console.warn('Content is outdated:', loadingHash);
     }
 }
 
@@ -1014,7 +1014,7 @@ async function loadContent() {
     updateContent('Loading....', loadingHash);
 
     let [action, value] = loadingHash.split('/');
-    value = decodeURIComponent(value);
+    value = value && decodeURIComponent(value);
 
     let func = window[action];
     if (func) {
