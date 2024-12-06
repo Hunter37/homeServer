@@ -36,4 +36,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2N
 
 ###
 
-GET https://www.google.com
+POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
+Content-Type: application/json
+
+{"sessionId":1473706,"deviceId":3203989818,"hostId":"MjkzMDA0NzIx","requestUrl":"/datahub/usas/meetsearch/meetsummary"}
+

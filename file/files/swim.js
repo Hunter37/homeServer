@@ -939,7 +939,8 @@ async function fetchSwimValues(bodyObj, type) {
         drop.render(),
         `<button id="rank-button" onclick="TopButton.onClick('rank')" class="big search hide">RANK</button>`,
         `<button id="relay-button" onclick="TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
-        `<button id="config-button" onclick="TopButton.onClick('config')" class="big search" style="font-size:26px;padding:0;width:40px">⚙</button>`,
+        `<button id="favirite-button" onclick="TopButton.onClick('favirite')" class="search sq-btn" style="color:#F77">❤</button>`,
+        `<button id="config-button" onclick="TopButton.onClick('config')" class="search sq-btn">🔧</button>`,
         '</div>',
         '<div id="content" class="container"></div>'
     ];
@@ -1005,6 +1006,7 @@ async function loadContent() {
 
     TopButton.show('relay', false);
     TopButton.show('rank', false);
+    TopButton.show('favirite', true, true);
     TopButton.show('config', true, true);
     updateContent('Loading....', loadingHash);
 
@@ -1050,6 +1052,61 @@ const _backgroundActions = [];
 })();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
+// favirite swimmer page
+//🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠
+
+async function favirite() {
+    TopButton.show('favirite', true, false);
+
+    let loadingHash = 'favirite';
+    let values = Favorite.get();
+
+    let html = [];
+
+    html.push('<h2>Favirites</h2>')
+
+    if (values.size == 0) {
+        html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="color:#CCC">❤</span> next to a swimmer\'s name to add.</p>');
+    } else {
+        html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Club</th><th>LSC</th></tr>');
+        for (let [pkey, obj] of values.entries()) {
+            html.push(`<tr onclick="go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.club, obj.lsc),
+                '</td><td class="left">', obj.name, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
+        }
+        html.push('</tbody></table>');
+    }
+
+    updateContent(html.join(''), loadingHash);
+}
+
+class Favorite {
+    static createButton(pkey, name, clubName, lsc) {
+        let cls = Favorite.has(pkey) ? ' selected' : '';
+        return createPopup(`<span class="add-fav${cls}" onclick="Favorite.click(this, ${pkey},'${name}','${clubName}','${lsc}')">❤</span>`, 'Add to Favorite');
+    }
+
+    static click(elem, pkey, name, clubName, lsc) {
+        elem.classList.toggle('selected');
+        let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
+        if (favorites.has(pkey)) {
+            favorites.delete(pkey);
+        } else {
+            favorites.set(pkey, { name: name, club: clubName, lsc: lsc });
+        }
+        localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.entries())));
+    }
+
+    static has(pkey) {
+        let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
+        return favorites.has(pkey);
+    }
+
+    static get() {
+        return new Map(JSON.parse(localStorage.getItem('favorites')));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
 // config page
 
 async function config(params) {
@@ -1063,7 +1120,7 @@ async function config(params) {
 }
 
 function buildAboutPage() {
-    return ['<div style="margin:30px" style="max-width:800px">',
+    return ['<div style="padding:30px" style="max-width:800px">',
 
         '<h3>About</h3>',
         '<p>Welcome to our website, a non-profit project dedicated to supporting swimmers and coaches.</p>',
@@ -1084,14 +1141,14 @@ function buildAboutPage() {
 }
 
 function buildConfigPage() {
-    let html = ['<div style="margin:30px" style="max-width:800px">'];
+    let html = ['<div style="padding:30px 10px;max-width:800px">'];
     let hide25 = localStorage.getItem('hide25');
 
     html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', !hide25, 'toggle25()'), '<br/>&nbsp;</p>');
     html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'toggleCustomSelect()'));
-    html.push('<span style="margin:0 20px;float: right;width: 500px;">(On certain browsers, the default select control may not function correctly. Enable this option to ensure proper functionality.)</span><br/>&nbsp;</p>');
+    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve select control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
     html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'toggleCustomDatePicker()'));
-    html.push('<span style="margin:0 20px;float: right;width: 500px;">(On certain browsers, the default date picker control may not function correctly. Enable this option to ensure proper functionality.)</span><br/>&nbsp;</p>');
+    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve date-picker control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
 
     html.push('</div>');
     return html.join('');
@@ -1785,9 +1842,11 @@ function createDetailsPageTitle(data) {
 
     console.log(JSON.stringify(data.swimmer));
 
-    html.push('<div class="match-size header"><span>', data.swimmer.alias, ' ', data.swimmer.lastName, '</span><span>',
-        convetToGenderString(data.swimmer.gender), '</span><span>', data.swimmer.age, '</span><span>', data.swimmer.clubName, '</span><span>Birthday: ',
-        BirthdayDictionary.format(data.swimmer.birthday), '</span><span>Total Event: ', data.events.length, '</span></div>');
+    let swimmer = data.swimmer;
+    let name = swimmer.alias + ' ' + swimmer.lastName;
+    html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
+        convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ',
+        BirthdayDictionary.format(swimmer.birthday), '</p><p>Total Event: ', data.events.length, '</p></div>');
 
     return html.join('');
 }
@@ -1900,16 +1959,20 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
     let html = ['<div class="content"><h2>Personal Best</h2>',
         '<div class="center-row">',
         '<style id="show-rk-style"></style>',
-        createCheckbox('show-rk', 'show rankings', true, `document.getElementById('show-rk-style').innerText = this.checked ? '' : '.rk{display:none}'`)];
+        createCheckbox('show-rk', 'show rankings', true, `document.getElementById('show-rk-style').innerText = this.checked ? '' : '.rk{display:none}'`),
+        createHSpace(20)
+    ];
 
     if (data.swimmer.age < 19) {
         if (data.swimmer.age > 9) {
             html.push('<style id="show-smt-style">.smt{display:none}</style>',
-                createCheckbox('show-smt', 'single age times', false, `document.getElementById('show-smt-style').innerText = this.checked ? '' : '.smt{display:none}'`))
+                createCheckbox('show-smt', 'single age times', false, `document.getElementById('show-smt-style').innerText = this.checked ? '' : '.smt{display:none}'`),
+                createHSpace(20))
         }
 
         html.push('<style id="show-mt-style"></style>',
-            createCheckbox('show-mt', 'motivation times', true, `document.getElementById('show-mt-style').innerText = this.checked ? '' : '.mt{display:none}'`))
+            createCheckbox('show-mt', 'motivation times', true, `document.getElementById('show-mt-style').innerText = this.checked ? '' : '.mt{display:none}'`),
+            createHSpace(20))
     }
 
     html.push('<style id="show-mc-style"></style>',
@@ -2030,7 +2093,7 @@ function createProgressGraph(pkey, events) {
 
     html.push('<div class="top-margin">');
     for (let c of _courseOrder) {
-        html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `showGraph(null,{${c}:this.checked})`));
+        html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `showGraph(null,{${c}:this.checked})`), createHSpace(10));
     }
     html.push('<span style="display:inline-block"><span id="swimmer-list" class="center-row"></span></span></div>');
 
@@ -2780,13 +2843,20 @@ async function updateSwimmerList(config) {
     for (let swimmer of config.swimmerList) {
         let id = 's_' + swimmer.swimmer.pkey;
         let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
-        html.push(createCheckbox(id, name, !swimmer.hide, `checkSwimmer(this,${swimmer.swimmer.pkey})`),
+        html.push(createHSpace(20), createCheckbox(id, name, !swimmer.hide, `checkSwimmer(this,${swimmer.swimmer.pkey})`),
             `<button class="xbutton" onclick="removeSwimmer(${swimmer.swimmer.pkey})">❌</button>`);
     }
 
     document.getElementById('swimmer-list').innerHTML = html.join('');
     await showGraph();
 }
+
+function createHSpace(px) {
+    return `<div style="width:${px}px;display:inline-block"></div>`;
+}
+// function createVSpace(px) {
+//     return `<div style="height:${px}px"></div>`;
+// }
 
 function formatTime(time) {
     let min = Math.floor(time / 6000);
@@ -2991,7 +3061,7 @@ function createMeetTableByCourse(course, events, pkey, meetDict) {
     // time, age, std, lsc, club, date, event, meet, gender
     // 0     1    2    3    4     5     6      7     8
     let idx = events.idx;
-    let html = ['<div class="match-size"><span>', course, ' Event Count: ', events.length,
+    let html = ['<div class="header"><span>', course, ' Event Count: ', events.length,
         '</span></div><table class="fill"><tbody>'];
 
     // remove dup event in one meet
@@ -3866,8 +3936,6 @@ async function showRankTable(data, key) {
     }
     standards.sort((a, b) => a[0][1] - b[0][1]);
 
-    // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
-    // 0        1     2     3     4          5         6    7         8      9     10
     let idx = data.values.idx;
     let meetDict = data.meetDict;
     let html = [];

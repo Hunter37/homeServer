@@ -6,6 +6,10 @@
     <title>Swim Info</title>
 </head>
 <style>
+    * {
+        box-sizing: border-box;
+    }
+
     h1,
     h2,
     h3,
@@ -321,10 +325,10 @@
         border: 5px solid #BBB;
         border-top: 5px solid #39D;
         border-radius: 50%;
-        width: 4px;
-        height: 4px;
+        width: 16px;
+        height: 16px;
         animation: spin 2s linear infinite;
-        margin: 0;
+        /* margin: 0; */
         float: right;
     }
 
@@ -351,6 +355,7 @@
         border-radius: 8px;
         border: 1px solid #000;
         white-space: nowrap;
+        color: #57E;
 
         /* Position the tooltip */
         position: absolute;
@@ -371,7 +376,7 @@
         justify-content: center;
         align-items: center;
         padding: 10px 5px;
-        box-sizing: border-box;
+        /* box-sizing: border-box; */
     }
 
     /* clibable table cell */
@@ -546,6 +551,7 @@
         cursor: default;
     }
 
+    .add-fav:hover,
     .leg-time:hover,
     .expander>.fold:hover,
     .expander>.expand:hover,
@@ -580,7 +586,7 @@
     .checkbox-wrapper {
         display: flex;
         align-items: center;
-        margin: 0 0 0 20px;
+        /* margin: 0 0 0 20px; */
         border-radius: 72px;
     }
 
@@ -670,7 +676,7 @@
     .fill {
         border-collapse: collapse;
         height: 1px;
-        box-sizing: border-box;
+        /* box-sizing: border-box; */
     }
 
     .fill tr {
@@ -777,12 +783,20 @@
         margin: 0 5px;
     }
 
-    .p-space>p:not(:first-child) {
+    /* .p-space>p:not(:first-child) {
         margin: 0 5px 0 20px;
     }
 
     .p-space>p:first-child {
         margin: 0 5px 0 0;
+    } */
+
+    .p-space>p:last-child {
+        margin: 0 5px 0 0;
+    }
+
+    .p-space>p {
+        margin: 0 20px 0 5px;
     }
 
     /* double range */
@@ -897,6 +911,13 @@
         width: 150px;
     }
 
+    .sq-btn {
+        font-size: 26px;
+        padding: 0;
+        width: 40px;
+        min-width: 40px;
+    }
+
     /* expander */
     .expander {
         width: max-content;
@@ -924,6 +945,16 @@
 
     .full>.no-dec {
         padding: 0 5px;
+    }
+
+    /* fav button */
+    .add-fav {
+        color: #CCC;
+        font-size: 22px;
+    }
+
+    .add-fav.selected {
+        color: #F33 !important;
     }
 </style>
 
