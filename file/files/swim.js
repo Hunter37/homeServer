@@ -1074,10 +1074,10 @@ async function favirite() {
         html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="display:inline-block;fill:#CCC;width:24px;transform:translateY(7px)">',
             starSVG, '</span> next to a swimmer\'s name to add.</p>');
     } else {
-        html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Club</th><th>LSC</th></tr>');
+        html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
         for (let [pkey, obj] of values.entries()) {
-            html.push(`<tr onclick="go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.club, obj.lsc),
-                '</td><td class="left">', obj.name, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
+            html.push(`<tr onclick="go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
+                '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
     }
@@ -1086,19 +1086,25 @@ async function favirite() {
 }
 
 class Favorite {
-    static createButton(pkey, name, clubName, lsc) {
+    static createButton(pkey, name, age, clubName, lsc) {
         let cls = Favorite.has(pkey) ? ' selected' : '';
-        return createPopup(`<div class="add-fav${cls}" onclick="Favorite.click(this, ${pkey},'${name}','${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+        return createPopup(`<div class="add-fav${cls}" onclick="Favorite.click(this,${pkey},'${name}',${age},'${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
     }
 
-    static click(elem, pkey, name, clubName, lsc) {
+    static click(elem, pkey, name, age, clubName, lsc) {
         elem.classList.toggle('selected');
         let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
         if (favorites.has(pkey)) {
             favorites.delete(pkey);
         } else {
-            favorites.set(pkey, { name: name, club: clubName, lsc: lsc });
+            favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
         }
+        localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.entries())));
+    }
+
+    static set(pkey, name, age, clubName, lsc) {
+        let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
+        favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
         localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.entries())));
     }
 
@@ -1850,9 +1856,16 @@ function createDetailsPageTitle(data) {
 
     let swimmer = data.swimmer;
     let name = swimmer.alias + ' ' + swimmer.lastName;
-    html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
+    html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
         convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ',
         BirthdayDictionary.format(swimmer.birthday), '</p><p>Total Event: ', data.events.length, '</p></div>');
+
+    _backgroundActions.push([params => {
+        let [pkey, name, age, clubName, lsc] = params;
+        if (Favorite.has(pkey)) {
+            Favorite.set(pkey, name, age, clubName, lsc);
+        }
+    }, [swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc]]);
 
     return html.join('');
 }
