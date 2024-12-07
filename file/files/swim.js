@@ -54,6 +54,8 @@ _eventList.forEach((item, index) => {
 
 const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"/></svg>';
 const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"/><circle cx="9" cy="9" r="3"/></svg>';
+// const starSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
+// const gearSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // page utility functions
@@ -1056,7 +1058,7 @@ const _backgroundActions = [];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // favirite swimmer page
-//🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠★
+//🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠★⛓‍💥❌🔽🔼△▽
 
 async function favirite() {
     TopButton.show('favirite', true, false);
@@ -2899,10 +2901,12 @@ async function getRank(params) {
     let [mapKey, timeInt, pkey, id] = params;
 
     let data;
+    let empty = '';
     try {
         data = await loadRank(mapKey);
     } catch (e) {
-        console.log(e, 'load rank failed', mapKey);
+        empty = '⛓‍💥';
+        console.warn(e, 'load rank failed', mapKey);
     }
 
     const element = document.getElementById(id);
@@ -2911,7 +2915,7 @@ async function getRank(params) {
         return;
     }
 
-    let rank = data ? calculateRank(data.values, pkey, timeInt) : '⛓‍💥';
+    let rank = data ? calculateRank(data.values, pkey, timeInt) : empty;
 
     element.innerHTML = createClickableDiv(rank, `go('rank', '${mapKey}')`);
 }
@@ -4088,6 +4092,7 @@ async function relay(key) {
     let [dist, stroke, course] = _eventList[event].split(' ');
     let newDist = getRelayDistance(event);
     if (newDist != dist) {
+        stroke = stroke == 'IM' ? 'FR' : stroke;
         event = _eventIndexMap.get([newDist, stroke, course].join(' '));
         window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
     }
@@ -4145,10 +4150,11 @@ async function showRelay(data, key) {
 
     html.push(showRankTableMainTitle(key));
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
-    html.push(`<h3>${genderStr} ${ageKey} 4x${getRelayDistance(event)} Relay</h3>`);
+    let [dist, stroke, course] = _eventList[event].split(' ');
 
+    html.push(`<h3>${genderStr} ${ageKey} ${course} 4x${getRelayDistance(event)} Relay</h3>`);
 
-    let expander = new Expander('relay-table', 'Customization 🔽', 'Customization 🔼 &nbsp; &nbsp; (Click the TIME to deselect it from the relay selection)', await createSwimmerSelctionTable(data));
+    let expander = new Expander('relay-table', 'Customization ▽', 'Customization △ &nbsp; &nbsp; (Click the TIME to deselect it from the relay selection)', await createSwimmerSelctionTable(data));
 
     if (isNarrowWindow()) {
         html.push('<div class="top-margin">', expander.render(), '</div>');
