@@ -1194,12 +1194,12 @@ function buildAboutPage() {
         '<a href="mailto:swim.ajzxhub.net@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
         `<p>Have suggestions? We'd love to hear them at `,
         '<a href="mailto:swim.ajzxhub.net@gmail.com?subject=Suggestion">Suggestion</a>.',
-        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub.net@gmail.com">swim.ajzxhub.net@gmail.com</a>.</p>',
+        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub.net@gmail.com?subject=Questions">Contact us</a>.</p>',
         '<p>Thank you for visiting, and we hope our site helps you achieve your goals in the pool!</p>',
 
         '<h3 style="margin-top:80px">Privacy Statement</h3>',
         '<p>We are committed to protecting your privacy. Our service does not collect or store any user information.</p>',
-        '<p>All usage data and caches are stored locally in your browser, ensuring your data stays private and secure.</p>',
+        '<p>All usage data and favorites are stored locally in your browser, keeping your information private and secure.</p>',
 
         '</div>'].join('');
 }
@@ -4235,7 +4235,7 @@ function createNameToPkeyMap(data) {
 
 async function updateSelectionTable() {
     let exclude = document.getElementById('relay-table').excludeData;
-    let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Birthday</th></tr>'];
+    let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
 
     let tableData = buildSelectionTableData();
     for (let swimmer of tableData) {
@@ -4247,6 +4247,8 @@ async function updateSelectionTable() {
             let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
             html.push(`</td><td class="${swimmer[stroke] ? 'leg-time' : ''}${deselected}" onclick="deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
         }
+
+        html.push('</td><td>', swimmer.age);
 
         if (realSwimmer) {
             let loading = new Loading('bday-' + swimmer.pkey,
@@ -4348,7 +4350,7 @@ function buildSelectionTableData() {
             let pkey = row[idx.pkey];
             let swimmer = pkey2swimmer.get(pkey);
             if (!swimmer) {
-                swimmer = { pkey: row[idx.pkey], name: row[idx.name] };
+                swimmer = { pkey: row[idx.pkey], name: row[idx.name], age: row[idx.age] };
                 merged.push(swimmer);
                 pkey2swimmer.set(pkey, swimmer);
             }
