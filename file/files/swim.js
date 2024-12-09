@@ -482,19 +482,20 @@ class TabView {
         this.#views.push(view);
     }
 
-    render() {
+    render(index) {
+        index = index || 0;
         let html = [];
 
         html.push(`<div class="tabview" id="${this.#id}">`);
 
         html.push('<div class="tabs">');
         for (let i = 0; i < this.#tabs.length; ++i) {
-            html.push(`<div class="tab${i == 0 ? ' selected' : ''}" onclick="TabView.tab('${this.#id}', ${i})">${this.#tabs[i]}</div>`);
+            html.push(`<div class="tab${i == index ? ' selected' : ''}" onclick="TabView.tab('${this.#id}', ${i})">${this.#tabs[i]}</div>`);
         }
         html.push('</div>');
 
         for (let i = 0; i < this.#views.length; ++i) {
-            html.push(`<div class="view ${i == 0 ? '' : 'hide'}">${this.#views[i]}</div>`);
+            html.push(`<div class="view ${i == index ? '' : 'hide'}">${this.#views[i]}</div>`);
         }
 
         html.push('</div>');
@@ -1122,117 +1123,33 @@ class Favorite {
 // config page
 
 async function config(params) {
+    let loadingHash = 'config' + (params ? '/' + params : '');
     TopButton.show('config', true, false);
+    let index = { about: 1, cache: 2 }[params] || 0;
 
     let tabView = new TabView('configTabView');
 
     tabView.addTab('<p>CONFIG</p>', buildConfigPage());
     tabView.addTab('<p>ABOUT</p>', buildAboutPage());
-    updateContent(tabView.render(), 'config');
-}
 
-function buildAboutPage() {
-    return ['<div style="padding:30px" style="max-width:800px">',
-
-        '<h3>About</h3>',
-        '<p>Welcome to our website, a non-profit project dedicated to supporting swimmers and coaches.</p>',
-        `<p>Our platform makes it easy to check swimmers' event results, track progress, and plan for future meets.</p>`,
-        '<p>All swimmer data is sourced from official public records to ensure accuracy and accessibility.</p>',
-        '<p>We value your feedback! If you encounter any issues, please report them to us at ',
-        '<a href="mailto:swim.ajzxhub.net@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
-        `<p>Have suggestions? We'd love to hear them at `,
-        '<a href="mailto:swim.ajzxhub.net@gmail.com?subject=Suggestion">Suggestion</a>.',
-        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub.net@gmail.com">swim.ajzxhub.net@gmail.com</a>.</p>',
-        '<p>Thank you for visiting, and we hope our site helps you achieve your goals in the pool!</p>',
-
-        '<h3 style="margin-top:80px">Privacy Statement</h3>',
-        '<p>We are committed to protecting your privacy. Our service does not collect or store any user information.</p>',
-        '<p>All usage data and caches are stored locally in your browser, ensuring your data stays private and secure.</p>',
-
-        '</div>'].join('');
-}
-
-function buildConfigPage() {
-    let html = ['<div style="padding:30px 10px;max-width:800px">'];
-    let hide25 = localStorage.getItem('hide25');
-
-    html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', !hide25, 'toggle25()'), '<br/>&nbsp;</p>');
-    html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'toggleCustomSelect()'));
-    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve select control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
-    html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'toggleCustomDatePicker()'));
-    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve date-picker control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
-
-    html.push('</div>');
-    return html.join('');
-}
-
-function toggle25() {
-    let hide25 = localStorage.getItem('hide25');
-    if (hide25) {
-        localStorage.removeItem('hide25');
-    } else {
-        localStorage.setItem('hide25', '1');
+    if (params == 'cache') {
+        tabView.addTab('<p>CACHE</p>', buildCachePage());
     }
+
+    updateContent(tabView.render(index), loadingHash);
 }
 
-function useCustomSelect() {
-    let value = localStorage.getItem('custom-select');
-    if (value) {
-        return value == '1';
-    } else {
-        return !isNarrowWindow();
-    }
-}
-
-function toggleCustomSelect() {
-    localStorage.setItem('custom-select', useCustomSelect() ? '0' : '1');
-}
-
-function isNarrowWindow() {
-    return window.innerWidth <= 1000;
-}
-
-function useCustomDatePicker() {
-    let value = localStorage.getItem('custom-date-picker');
-    if (value) {
-        return value == '1';
-    } else {
-        return isOldBrowser();
-    }
-}
-
-function toggleCustomDatePicker() {
-    localStorage.setItem('custom-date-picker', useCustomDatePicker() ? '0' : '1');
-}
-
-function isOldBrowser() {
-    let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
-    //oldBrowser = true;
-    return oldBrowser;
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////
-// test page
-
-async function test(params) {
-    let tabView = new TabView('configTabView');
-
-    tabView.addTab('<p>General</p>', buildGeneralConfig());
-    tabView.addTab('<p>Cache</p>', '<div class="center-row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>');
-    tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
-    tabView.addTab('<p>About</p>', '--about--');
-
-    updateContent(tabView.render(), 'test');
-}
-
-function buildGeneralConfig() {
-    return ['<div class="top-margin">',
+function buildCachePage() {
+    let html = ['<div class="top-margin">',
         createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
         '</div><div class="top-margin">',
         createCheckbox('use-proxy-checkbox',
             `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
             useProxy(), 'useProxy(this.checked)'),
-        '</div>'].join('');
+        '</div>',
+        '<div class="center-row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'];
+
+    return html.join('');
 }
 
 async function clearCache(elem) {
@@ -1264,6 +1181,97 @@ async function clearCache(elem) {
     }
     document.getElementById('cache-info').innerText = text;
     //window.location.reload();
+}
+
+function buildAboutPage() {
+    return ['<div style="padding:30px" style="max-width:800px">',
+
+        '<h3>About</h3>',
+        '<p>Welcome to our website, a non-profit project dedicated to supporting swimmers and coaches.</p>',
+        `<p>Our platform makes it easy to check swimmers' event results, track progress, and plan for future meets.</p>`,
+        '<p>All swimmer data is sourced from official public records to ensure accuracy and accessibility.</p>',
+        '<p>We value your feedback! If you encounter any issues, please report them to us at ',
+        '<a href="mailto:swim.ajzxhub.net@gmail.com?body=Bug&subject=Bug Report">Bug Report</a>.</p>',
+        `<p>Have suggestions? We'd love to hear them at `,
+        '<a href="mailto:swim.ajzxhub.net@gmail.com?subject=Suggestion">Suggestion</a>.',
+        '<p>For general inquiries, contact us at <a href="mailto:swim.ajzxhub.net@gmail.com">swim.ajzxhub.net@gmail.com</a>.</p>',
+        '<p>Thank you for visiting, and we hope our site helps you achieve your goals in the pool!</p>',
+
+        '<h3 style="margin-top:80px">Privacy Statement</h3>',
+        '<p>We are committed to protecting your privacy. Our service does not collect or store any user information.</p>',
+        '<p>All usage data and caches are stored locally in your browser, ensuring your data stays private and secure.</p>',
+
+        '</div>'].join('');
+}
+
+function buildConfigPage() {
+    let html = ['<div style="padding:30px 10px;max-width:800px">'];
+    let hide25 = localStorage.getItem('hide25');
+
+    html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', !hide25, 'show25(this.checked)'), '<br/>&nbsp;</p>');
+    html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'showCustomSelect(this.checked)'));
+    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve select control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
+    html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'showCustomDatePicker(this.checked)'));
+    html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve date-picker control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
+
+    html.push('</div>');
+    return html.join('');
+}
+
+function show25(show) {
+    if (show) {
+        localStorage.removeItem('hide25');
+    } else {
+        localStorage.setItem('hide25', '1');
+    }
+}
+
+function useCustomSelect() {
+    let value = localStorage.getItem('custom-select');
+    if (value) {
+        return value == '1';
+    } else {
+        return !isNarrowWindow();
+    }
+}
+
+function showCustomSelect(show) {
+    localStorage.setItem('custom-select', show ? '1' : '0');
+}
+
+function isNarrowWindow() {
+    return window.innerWidth <= 1000;
+}
+
+function useCustomDatePicker() {
+    let value = localStorage.getItem('custom-date-picker');
+    if (value) {
+        return value == '1';
+    } else {
+        return isOldBrowser();
+    }
+}
+
+function showCustomDatePicker(show) {
+    localStorage.setItem('custom-date-picker', show ? '1' : '0');
+}
+
+function isOldBrowser() {
+    let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
+    //oldBrowser = true;
+    return oldBrowser;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// test page
+
+async function test(params) {
+    let tabView = new TabView('configTabView');
+
+    tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
+    tabView.addTab('<p>About</p>', '--about--');
+
+    updateContent(tabView.render(), 'test');
 }
 
 function buildAdvancedConfig() {

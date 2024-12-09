@@ -41,3 +41,66 @@ Content-Type: application/json
 
 {"sessionId":1473706,"deviceId":3203989818,"hostId":"MjkzMDA0NzIx","requestUrl":"/datahub/usas/meetsearch/meetsummary"}
 
+###
+
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M
+
+{
+  "metadata": [
+    {
+      "title": "meet",
+      "dim": "[UsasSwimTime.MeetKey]",
+      "datatype": "numeric",
+      "filter": {
+        "members": [
+          263665,
+          263575,
+          261024,
+          263503,
+          263588,
+          262383,
+          260319,
+          264769,
+          262395,
+          255126,
+          255343,
+          261897,
+          264748,
+          264013,
+          263502,
+          257602,
+          254091,
+          248711,
+          254161,
+          250138,
+          257328,
+          254582,
+          254580,
+          257089,
+          248894,
+          263811,
+          249208,
+          262456,
+          254938,
+          260044,
+          249185
+        ]
+      }
+    },
+    {
+      "title": "date",
+      "dim": "[SeasonCalendar.CalendarDate (Calendar)]",
+      "datatype": "datetime",
+      "level": "days",
+      "sort": "asc"
+    },
+    {
+      "title": "meetName",
+      "dim": "[Meet.MeetName]",
+      "datatype": "text"
+    }
+  ],
+  "count": 155
+}
