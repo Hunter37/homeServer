@@ -1240,7 +1240,7 @@ function showCustomSelect(show) {
 }
 
 function isNarrowWindow() {
-    return window.innerWidth <= 1000;
+    return window.innerWidth < 1000;
 }
 
 function useCustomDatePicker() {
@@ -4134,15 +4134,21 @@ async function loadRelay(key) {
     eventDelta += (dist == '200' ? 2 : dist == '100' ? 1 : 0);
 
     let events = [10, 13, 16, 0].map(evt => evt + (parseInt(eventDelta) || 1));
-    let data = [];
+    let promises = [];
     for (let evt of events) {
-        let rankData = await loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName));
-        if (rankData) {
-            let idx = rankData.values.idx;
-            rankData.values = rankData.values.slice(0, 40);
-            rankData.values.idx = idx;
+        promises.push(loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName)));
+    }
+
+    let results = await Promise.all(promises);
+
+    let data = [];
+    for (let result of results) {
+        if (result) {
+            let idx = result.values.idx;
+            result.values = result.values.slice(0, 40);
+            result.values.idx = idx;
         }
-        data.push(rankData);
+        data.push(result);
     }
     return data;
 }
@@ -4175,7 +4181,14 @@ async function showRelay(data, key) {
 
     html.push(`<h3>${genderStr} ${ageKey} ${course} 4x${getRelayDistance(event)} Relay</h3>`);
 
-    let expander = new Expander('relay-table', 'Customization ▽', 'Customization △ &nbsp; &nbsp; (Click the TIME to deselect it from the relay selection)', await createSwimmerSelctionTable(data));
+    let expanderViewHtml = [`<textarea style="width:600px;height:100px" oninput="textChange(this.value)" `,
+        `placeholder="Add/Edit swimmers' times in this textbox using the following format:&#10;`,
+        '  {Swimmer Name} {Back Time} {Breast Time} {Fly Time} {Free Time}&#10;Use 0 to skip updating a stroke.&#10;',
+        'Example:&#10;  Michael Phelps 45.50 53.41 45.40 41.93&#10;  Caeleb Dressel 0 0 42.80 39.90&#10;"></textarea>',
+        '<p>Click the TIME in the following table to remove it from the relay selection.</p>',
+        '<div id="selection-table"></div>'];
+
+    let expander = new Expander('relay-table', 'Customization ▽', 'Customization △', expanderViewHtml.join(''));
 
     if (isNarrowWindow()) {
         html.push('<div class="top-margin">', expander.render(), '</div>');
@@ -4193,7 +4206,11 @@ async function showRelay(data, key) {
     if (data) {
         let table = document.getElementById('relay-table');
         table.data = data;
+        table.nameToPkeyMap = createNameToPkeyMap(data);
         table.key = key;
+        table.excludeData = [new Set(), new Set(), new Set(), new Set()];
+        table.patchData = [];
+        await updateSelectionTable();
         await updateRelayTables();
     }
 
@@ -4202,26 +4219,89 @@ async function showRelay(data, key) {
     }
 }
 
-async function createSwimmerSelctionTable(data) {
+function createNameToPkeyMap(data) {
+    let map = new Map();
+    for (let leg of data) {
+        if (!leg) {
+            continue;
+        }
+        let idx = leg.values.idx;
+        for (let row of leg.values) {
+            map.set(row[idx.name].toLowerCase(), row[idx.pkey]);
+        }
+    }
+    return map;
+}
+
+async function updateSelectionTable() {
+    let exclude = document.getElementById('relay-table').excludeData;
     let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Birthday</th></tr>'];
 
-    let tableData = mergeRelayData(data);
+    let tableData = buildSelectionTableData();
     for (let swimmer of tableData) {
-        let loading = new Loading('bday-' + swimmer.pkey,
-            BirthdayDictionary.format(await _birthdayDictionary.load(swimmer.pkey)),
-            (id) => { _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateRelayTables]]); });
+        let realSwimmer = typeof swimmer.pkey == 'number';
 
-        html.push('<tr><td class="left full">', createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`),
-            `</td><td class="${swimmer.BK ? 'leg-time' : ''}" onclick="deselect(this,0,${swimmer.pkey})">`, swimmer.BK,
-            `</td><td class="${swimmer.BR ? 'leg-time' : ''}" onclick="deselect(this,1,${swimmer.pkey})">`, swimmer.BR,
-            `</td><td class="${swimmer.FL ? 'leg-time' : ''}" onclick="deselect(this,2,${swimmer.pkey})">`, swimmer.FL,
-            `</td><td class="${swimmer.FR ? 'leg-time' : ''}" onclick="deselect(this,3,${swimmer.pkey})">`, swimmer.FR,
-            '</td><td class="left full">', loading.render(), '</td></tr>');
+        html.push(`<tr><td class="left${realSwimmer ? ' full' : ''}">`,
+            realSwimmer ? createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`) : swimmer.name);
+        for (let [i, stroke] of _relayOrder.entries()) {
+            let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
+            html.push(`</td><td class="${swimmer[stroke] ? 'leg-time' : ''}${deselected}" onclick="deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
+        }
+
+        if (realSwimmer) {
+            let loading = new Loading('bday-' + swimmer.pkey,
+                BirthdayDictionary.format(await _birthdayDictionary.load(swimmer.pkey)),
+                (id) => { _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateRelayTables]]); });
+
+            html.push('</td><td class="left full">', loading.render(), '</td></tr>');
+        } else {
+            html.push('</td><td></td></tr>');
+        }
     }
 
     html.push('</tbody></table>');
 
-    return html.join('');
+    let table = document.getElementById('selection-table');
+    table.innerHTML = html.join('');
+}
+
+async function textChange(value) {
+    let findIndexOfFirstNumber = (str) => {
+        for (let i = 0; i < str.length; i++) {
+            if (!isNaN(parseInt(str[i]))) {
+                return i;
+            }
+        }
+        return -1; // Return -1 if no number is found
+    };
+
+    let table = document.getElementById('relay-table');
+    let patch = table.patchData = [];
+    let pkey2swimmer = table.nameToPkeyMap;
+
+    for (let line of value.split('\n')) {
+        line = line.trim().replace(/\t/g, ' ').replace(/ +/g, ' ');
+        let index = findIndexOfFirstNumber(line);
+        if (index <= 0 || line[index - 1] != ' ') {
+            continue;
+        }
+        let hasTime = false;
+        let times = line.substring(index).split(' ');
+        for (let i = 0; i < times.length; ++i) {
+            times[i] = timeToInt(times[i]);
+            hasTime = hasTime || times[i] > 0;
+        }
+        if (!hasTime) {
+            continue;
+        }
+
+        let name = line.substring(0, index - 1);
+        let pkey = pkey2swimmer.get(name.toLowerCase()) || name.toLowerCase();
+        patch.push({ pkey: pkey, name: name, times: times });
+    }
+
+    await updateSelectionTable();
+    await updateRelayTables();
 }
 
 async function loadBirthday(params) {
@@ -4238,9 +4318,9 @@ async function loadBirthday(params) {
 }
 
 function deselect(elememt, legIndex, pkey) {
+    pkey = parseInt(pkey) || pkey;
     elememt.classList.toggle('deselected');
-    let table = document.getElementById('relay-table');
-    let exclude = table.excludeData = table.excludeData || [new Set(), new Set(), new Set(), new Set()];
+    let exclude = document.getElementById('relay-table').excludeData;
     if (exclude[legIndex].has(pkey)) {
         exclude[legIndex].delete(pkey);
     } else {
@@ -4250,9 +4330,14 @@ function deselect(elememt, legIndex, pkey) {
     updateRelayTables();
 }
 
-function mergeRelayData(data) {
+function buildSelectionTableData() {
+    let table = document.getElementById('relay-table');
+    let data = table.data;
+    let patch = table.patchData;
+
     let merged = [];
     let pkey2swimmer = new Map();
+
     for (let i = 3; i >= 0; --i) {
         let leg = data[i];
         if (!leg) {
@@ -4271,94 +4356,135 @@ function mergeRelayData(data) {
         }
     }
 
-    return merged;
-}
+    for (let patchRow of patch.reverse()) {
+        let pkey = patchRow.pkey;
+        let swimmer = pkey2swimmer.get(pkey);
+        if (!swimmer) {
+            swimmer = { pkey: pkey, name: patchRow.name };
+            merged.unshift(swimmer);
+            pkey2swimmer.set(pkey, swimmer);
+        }
+        for (let [i, stroke] of _relayOrder.entries()) {
+            let time = patchRow.times[i];
+            if (time) {
+                swimmer[stroke] = formatTime(time);
+            }
+        }
+    }
 
-function clone(obj) {
-    return JSON.parse(JSON.stringify(obj));
+    return merged;
 }
 
 async function updateRelayTables() {
     let table = document.getElementById('relay-table');
-    let data = clone(table.data);
+    let data = table.data;
     let key = table.key;
+    let patch = table.patchData;
     let exclude = table.excludeData;
-
-    // fix the missing idx from clone
-    for (let i = 0; i < 4; ++i) {
-        let leg = data[i];
-        if (leg) {
-            leg.values.idx = table.data[i].values.idx;
-        }
-    }
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     let [from, to] = decodeAgeKey(ageKey);
     let meetDate = getMeetDate();
 
-    data = await filterDataByMeetDate(data, meetDate, to);
-    data = filterByExclusion(data, exclude);
-
-    if (data.filter(d => d).length == 4) {
-        let idx = data[0].values.idx;
-        let relays = calculateRelay(data, idx);
-        updateRelayTable(relays, idx, 'medley');
+    // build rankings dat for relay calculation
+    let rankings = [];
+    for (let s of data) {
+        let leg = [];
+        rankings.push(leg);
+        if (!s) {
+            continue;
+        }
+        let idx = s.values.idx;
+        for (let row of s.values) {
+            let time = row[idx.time];
+            let swimmer = { pkey: row[idx.pkey], name: row[idx.name], time: time, timeInt: timeToInt(time) };
+            leg.push(swimmer);
+        }
     }
 
-    if (data[3]) {
-        let idx = data[3].values.idx;
+    rankings = addPatchData(rankings, patch);
+
+    rankings = await filterDataByMeetDate(rankings, meetDate, to);
+
+    rankings = filterByExclusion(rankings, exclude);
+
+    if (rankings.filter(d => d.length).length == 4) {
+        let relays = calculateRelay(rankings);
+        updateRelayTable(relays, 'medley');
+    }
+
+    let swimmers = rankings[3];
+    if (swimmers) {
         let relays = [];
-        freeValues = data[3].values;
-        for (let i = 0; i + 4 <= freeValues.length; i += 4) {
-            let relay = freeValues.slice(i, i + 4);
-            let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
+        for (let i = 0; i + 4 <= swimmers.length; i += 4) {
+            let relay = swimmers.slice(i, i + 4);
+            let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
             relays.push([time, relay]);
         }
-        updateRelayTable(relays, idx, 'free');
+        updateRelayTable(relays, 'free');
     }
 }
 
-function filterByExclusion(data, exclude) {
-    if (!exclude) {
-        return data;
-    }
-    for (let i = 0; i < 4; ++i) {
-        let leg = data[i];
-        if (!leg) {
-            continue;
-        }
-        let idx = leg.values.idx;
-        let values = [];
-        for (let row of leg.values) {
-            let pkey = row[idx.pkey];
-            if (!exclude[i].has(pkey)) {
-                values.push(row);
+function addPatchData(rankings, patch) {
+    for (let patchRow of patch) {
+        let pkey = patchRow.pkey;
+        for (let [i, time] of patchRow.times.entries()) {
+            if (time) {
+                let swimmer = { pkey: pkey, name: patchRow.name };
+                for (let s of rankings[i]) {
+                    if (s.pkey == pkey) {
+                        swimmer = s;
+                        break;
+                    }
+                }
+                if (!swimmer.time) {
+                    rankings[i].push(swimmer);
+                }
+                swimmer.time = formatTime(time)
+                swimmer.timeInt = time;
             }
         }
-        values.idx = idx;
-        data[i].values = values;
     }
-    return data;
+
+    for (let leg of rankings) {
+        leg.sort((a, b) => a.timeInt - b.timeInt);
+    }
+
+    return rankings;
 }
 
-async function filterDataByMeetDate(data, meetDate, maxAge) {
-    for (let leg of data) {
-        if (!leg) {
-            continue;
-        }
-        let idx = leg.values.idx;
+function filterByExclusion(relays, exclude) {
+    if (!exclude) {
+        return relays;
+    }
+    let filtered = [];
+    for (let [i, leg] of relays.entries()) {
+        let ex = exclude[i];
         let values = [];
-        for (let row of leg.values) {
-            let range = await _birthdayDictionary.load(row[idx.pkey]);
+        filtered.push(values);
+        for (let swimmer of leg) {
+            if (!ex.has(swimmer.pkey)) {
+                values.push(swimmer);
+            }
+        }
+    }
+    return filtered;
+}
+
+async function filterDataByMeetDate(relays, meetDate, maxAge) {
+    let filtered = [];
+    for (let leg of relays) {
+        let values = [];
+        filtered.push(values);
+        for (let swimmer of leg) {
+            let range = await _birthdayDictionary.load(swimmer.pkey);
             if (await filterOutSwimmer(meetDate, maxAge, range)) {
                 continue;
             }
-            values.push(row);
+            values.push(swimmer);
         }
-        values.idx = idx;
-        leg.values = values;
     }
-    return data;
+    return filtered;
 }
 
 async function initDatepicker(table) {
@@ -4406,14 +4532,14 @@ function getRelayDistance(event) {
 }
 
 const _relayOrder = ['BK', 'BR', 'FL', 'FR'];
-function updateRelayTable(relays, idx, type) {
+function updateRelayTable(relays, type) {
     let html = [];
-    for (let relay of relays) {
-        html.push('<p class="relay-time">', formatTime(relay[0]), '</p><table class="fill"><tbody>');
-        for (let [i, row] of relay[1].entries()) {
+    for (let [time, swimmers] of relays) {
+        html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill"><tbody>');
+        for (let [i, swimmer] of swimmers.entries()) {
             html.push('<tr>');
-            html.push('<td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
-                '</td><td>', row[idx.time], '</td>');
+            html.push('<td class="left full">', createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`),
+                '</td><td>', swimmer.time, '</td>');
             if (type == 'medley') {
                 html.push('<td>', _relayOrder[i], '</td>');
             }
@@ -4425,47 +4551,46 @@ function updateRelayTable(relays, idx, type) {
     document.getElementById(type + '-relay-table').innerHTML = html.join('');
 }
 
-function calculateRelay(rankings, idx) {
+function calculateRelay(rankings) {
     let picked = new Set();
     let relays = [];
     for (; ;) {
-        let relay = calculateRelayGroup(rankings, picked, idx);
+        let relay = calculateRelayGroup(rankings, picked);
         if (relay.length == 1) {
             break;
         }
         relays.push(relay);
-        for (let row of relay[1]) {
-            picked.add(row[idx.pkey]);
+        for (let swimmer of relay[1]) {
+            picked.add(swimmer.pkey);
         }
     }
 
     return relays;
 }
 
-function calculateRelayGroup(rankings, picked, idx) {
+function calculateRelayGroup(rankings, picked) {
     let top4 = [];
     for (let leg of rankings) {
         let top = [];
-        for (let row of leg.values) {
-            let pkey = row[idx.pkey];
-            if (!picked.has(pkey)) {
-                top.push(row);
+        top4.push(top);
+        for (let swimmer of leg) {
+            if (!picked.has(swimmer.pkey)) {
+                top.push(swimmer);
                 if (top.length == 4) {
                     break;
                 }
             }
         }
-        top4.push(top);
     }
 
-    let relay = [Infinity];
-    dfsSearch(top4, idx, picked, [], relay);
+    let relay = [Infinity]; // [time, [pkey1, pkey2, pkey3, pkey4]]
+    dfsSearch(top4, picked, [], relay);
     return relay;
 }
 
-function dfsSearch(tops, idx, picked, relay, bestRelay) {
+function dfsSearch(tops, picked, relay, bestRelay) {
     if (tops.length == relay.length) {
-        let time = relay.reduce((acc, row) => acc + timeToInt(row[idx.time]), 0);
+        let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
         if (time < bestRelay[0]) {
             bestRelay[0] = time;
             bestRelay[1] = [...relay];
@@ -4475,12 +4600,12 @@ function dfsSearch(tops, idx, picked, relay, bestRelay) {
 
     let leg = tops[relay.length];
 
-    for (let row of leg) {
-        let pkey = row[idx.pkey];
+    for (let swimmer of leg) {
+        let pkey = swimmer.pkey;
         if (!picked.has(pkey)) {
             picked.add(pkey);
-            relay.push(row);
-            dfsSearch(tops, idx, picked, relay, bestRelay);
+            relay.push(swimmer);
+            dfsSearch(tops, picked, relay, bestRelay);
             relay.pop();
             picked.delete(pkey);
         }
@@ -4510,7 +4635,7 @@ function timeToInt(stime) {
             result = parseInt(parts[0]) * 6000;
             parts[0] = parts[1];
         }
-        parts = parts[0].split('.');
+        parts = (parts[0] + '.00').split('.');
         result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
     }
     return result;
