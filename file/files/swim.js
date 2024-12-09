@@ -3325,7 +3325,7 @@ async function loadRank(key) {
             // 0        1     2     3     4          5     6        7     8         9     10
         }
 
-        if (!values || values.length == 0) {
+        if (!values) {
             return;
         }
 
@@ -3512,7 +3512,7 @@ async function loadRankDataByClub(key) {
     }
 
     let list = await fetchSwimValues(bodyObj, 'event');
-    if (!list || list.length == 0) {
+    if (!list) {
         return;
     }
 
@@ -3520,15 +3520,17 @@ async function loadRankDataByClub(key) {
     let pkeyToAgeMap = new Map(swimmerList);
 
     // Filter to get the first(fast) time of each swimmer & append the age to the end of each row of list
-    list.idx.age = list[0].length;
     let values = [];
-    for (let row of list) {
-        let pkey = row[list.idx.pkey];
-        let age = pkeyToAgeMap.get(pkey);
-        if (age) {
-            row.push(age);
-            values.push(row);
-            pkeyToAgeMap.delete(pkey);
+    if (list.length > 0) {
+        list.idx.age = list[0].length;
+        for (let row of list) {
+            let pkey = row[list.idx.pkey];
+            let age = pkeyToAgeMap.get(pkey);
+            if (age) {
+                row.push(age);
+                values.push(row);
+                pkeyToAgeMap.delete(pkey);
+            }
         }
     }
 
