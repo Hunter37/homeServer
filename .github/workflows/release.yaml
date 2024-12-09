@@ -31,6 +31,7 @@ jobs:
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'data' -s 'data' --pattern '*.json'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'swim-html' -s 'swim/html' --pattern '*.html'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-html' -s 'file/html' --pattern '*.html'
+          az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-html' -s 'file/html' --pattern '*.json'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-files' -s 'file/files'
 
     - name: Deploy web app
