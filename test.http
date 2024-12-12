@@ -224,3 +224,20 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
   "count": 20000,
 }
 
+
+###
+# get token
+
+POST https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken
+Content-Type: application/json
+
+{"toxonomies":[],"appName":"Data","deviceId":0}
+
+
+###
+# get sisense token
+
+POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
+Content-Type: application/json
+
+{"sessionId":1927809,"deviceId":0,"hostId":"MzIzMjIzNTUyMQ=="}

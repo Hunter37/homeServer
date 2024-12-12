@@ -29,6 +29,7 @@ const _meetShortNames = {
     "Olympic Trials Wave I": "OT1",
     "Olympic Trials Wave II": "OT2",
 };
+const _1HourInSec = 60 * 60;
 const _1DayInSec = 24 * 60 * 60;
 const _1WeekInSec = 7 * _1DayInSec;
 const _10YearsInSec = 10 * 365 * _1DayInSec;
@@ -885,13 +886,15 @@ async function fetchSwimValues(bodyObj, type) {
     let map = {
         swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
         event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
-        meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
+        // meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
     }
 
     let headers = {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+        // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
     };
+
+    headers['Authorization'] = 'Bearer ' + await fetchToken();
 
     let url = map[type || 'swimmer'];
 
@@ -929,6 +932,40 @@ async function fetchSwimValues(bodyObj, type) {
     data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
 
     return data.values;
+}
+
+async function fetchToken() {
+    let call = async (url, bodyObj) => {
+        url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
+
+        let response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Cache-TTL': 60,
+            },
+            signal: AbortSignal.timeout(5_000),
+            body: JSON.stringify(bodyObj)
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        return await response.json();
+    };
+
+    return await LocalCache.func('token', async () => {
+        let data = await call('https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken',
+            { toxonomies: [], appName: 'Data', deviceId: 0 });
+
+        let requestId = parseInt(data?.requestId);
+
+        data = await call('https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken',
+            { sessionId: requestId * 13, deviceId: 0, hostId: "MzIzMjIzNTUyMQ==" });
+
+        return data?.accessToken;
+    }, _1HourInSec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
