@@ -40,7 +40,7 @@ const _1DayInMilliSeconds = _1DayInSec * 1000;
 const _eventList = ['0 _ _',
     '50 FR SCY', '100 FR SCY', '200 FR SCY', '500 FR SCY', '1000 FR SCY', '1650 FR SCY', '_ _ _', '_ _ _', '_ _ _', '_ _ _',
     '50 BK SCY', '100 BK SCY', '200 BK SCY', '50 BR SCY', '100 BR SCY', '200 BR SCY', '50 FL SCY', '100 FL SCY', '200 FL SCY', '100 IM SCY',
-    '200 IM SCY', '400 IM SCY', '23 _ _', '24 _ _', '25 _ _', '26 _ _', '27 _ _', '50 FR SCM', '100 FR SCM', '200 FR SCM',
+    '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '26 _ _', '27 _ _', '50 FR SCM', '100 FR SCM', '200 FR SCM',
     '400 FR SCM', '800 FR SCM', '1500 FR SCM', '34 _ _', '35 _ _', '36 _ _', '37 _ _', '50 BK SCM', '100 BK SCM', '200 BK SCM',
     '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM', '50 _ _',
     '51 _ _', '52 _ _', '53 _ _', '54 _ _', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM', '1500 FR LCM',
@@ -540,17 +540,17 @@ class Expander {
 
     render() {
         return `<div class="expander" id="${this.#id}"><div class="expand" onclick="Expander.get('${this.#id}').expand()">${this.#expand}</div>` +
-            `<div class="fold hide" onclick="Expander.get('${this.#id}').fold()">${this.#fold}</div><div class="content hide">${this.#content}</div></div>`;
+            `<div class="fold hide" onclick="Expander.get('${this.#id}').fold()">${this.#fold}</div><div class="exp-content hide">${this.#content}</div></div>`;
     }
 
     expand() {
         document.querySelector(`#${this.#id}>.expand`).classList.add("hide");
-        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.content`).forEach(e => e.classList.remove("hide"));
+        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.exp-content`).forEach(e => e.classList.remove("hide"));
     }
 
     fold() {
         document.querySelector(`#${this.#id}>.expand`).classList.remove("hide");
-        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.content`).forEach(e => e.classList.add("hide"));
+        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.exp-content`).forEach(e => e.classList.add("hide"));
     }
 }
 
@@ -1001,12 +1001,18 @@ function updateContent(html, loadingHash) {
 window.addEventListener('hashchange', loadContent);
 window.addEventListener('load', loadContent);
 
+function createDefaultPage() {
+    return [`<div>Please enter the swimmer's name or the club name in the search box.</div>`,
+        // `<div style="margin:12px -18px;height:900px;position:relative;"><img src="https://img.goodfon.com/original/1920x1200/6/81/swimming-pool-water-underwater-olympic-swimming-pool-swimmin.jpg" style="object-fit:cover;width:100%;height:100%;"></div>'
+    ].join('');
+}
+
 async function loadContent() {
     _backgroundActions.length = 0;
 
     let loadingHash = window.location.hash.substring(1);
     if (!loadingHash) {
-        updateContent(`Please enter the swimmer's name or the club name in the search box.`, loadingHash);
+        updateContent(createDefaultPage(), loadingHash);
         return;
     }
 
@@ -2093,22 +2099,9 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
 }
 
 function createProgressGraph(pkey, events) {
-    let html = [];
-    let hide25 = localStorage.getItem('hide25');
-
-    html.push('<div class="content">');
-
-    html.push('<div class="match-size top-margin">');
-    for (let i = 1; i < _eventList.length; ++i) {
-        let [d, s, c] = _eventList[i].split(' ');
-        if (c == 'SCY' && d != '_' && (d != '25' || !hide25)) {
-            html.push(`<button class="evt d${d} ${s}" style="border:1px solid;width:45px;"`,
-                ` onclick="showGraph(null,{pkey:${pkey},event:${i}})">${s}<br>${d}</button>`);
-        }
-    }
-    html.push('</div>');
-
-    html.push('<h2 id="graph-title"></h2>');
+    let html = ['<div class="content">',
+        showEventButtons(1, (event) => `showGraph(null,{pkey:${pkey},event:${event}})`),
+        '<h2 id="graph-title"></h2>'];
 
     let searchDropdown = new Dropdown('add-search',
         '<div class="center-row" onclick="event.stopPropagation()"><input id="add-input" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">Search</button><button onclick="addSearch(null, true)">19&Over</button></div>',
@@ -3766,7 +3759,9 @@ async function showRank(data, key) {
         '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
         '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
-    html.push(showEventButtons(key));
+    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+    html.push(showEventButtons(event, (event) => `go('rank', '${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}')`));
+
     html.push(showRankTableTitle(key));
 
     html.push('<div class="center-row p-l-space top-margin"><p>Meet date:</p>');
@@ -3901,26 +3896,20 @@ async function updateRankTable() {
     table.innerHTML = await showRankTable(table.data, table.key);
 }
 
-function showEventButtons(key) {
-    let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
-
-    // sortkey, name, date, time, eventName, clubName, lsc, meetName, event, pkey, (age)
-    // 0        1     2     3     4          5         6    7         8      9     10
+function showEventButtons(selectedEvent, onclick) {
     let html = [];
-    let course = getEventCourse(event);
+    let course = getEventCourse(selectedEvent);
     let hide25 = localStorage.getItem('hide25');
 
     html.push('<div class="match-size top-margin">');
-
     for (let i = 1; i < _eventList.length; ++i) {
         let [d, s, c] = _eventList[i].split(' ');
-        if (c == course && d != '_' && (d != '25' || !hide25)) {
-            let seleted = i == event ? ' selected' : '';
+        if (c == course && d != '_' && s.indexOf('-R') < 0 && (d != '25' || !hide25)) {
+            let seleted = i == selectedEvent ? ' selected' : '';
             html.push(`<button class="evt d${d} ${s}${seleted}" style="border:1px solid;width:45px;"`,
-                ` onclick="go('rank', '${getRankDataKey(genderStr, i, ageKey, zone, lsc, clubName)}')">${s}<br>${d}</button>`);
+                ` onclick="${onclick(i)}">${s}<br>${d}</button>`);
         }
     }
-
     html.push('</div>');
     return html.join('');
 }
@@ -4010,6 +3999,8 @@ async function showRankTable(data, key) {
         let rowZone = getLSCZone(row[idx.lsc]);
         let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], row[idx.clubName]) : '';
         let rowlscRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], '') : '';
+        rowTeamRankKey = rowTeamRankKey == key ? '' : rowTeamRankKey;
+        rowlscRankKey = rowlscRankKey == key ? '' : rowlscRankKey;
 
         let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
             (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
@@ -4017,8 +4008,8 @@ async function showRankTable(data, key) {
         html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
             '</td><td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
             '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left full">', loading.render(),
-            `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(row[idx.clubName], `go('rank','${rowTeamRankKey}')`) : row[idx.clubName],
-            `</td><td class="left${rowZone ? ' full' : ''}">`, rowZone ? createClickableDiv(row[idx.lsc], `go('rank','${rowlscRankKey}')`) : row[idx.lsc],
+            `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `go('rank','${rowTeamRankKey}')`) : row[idx.clubName],
+            `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `go('rank','${rowlscRankKey}')`) : row[idx.lsc],
             '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
     }
     html.push('</tbody></table>');

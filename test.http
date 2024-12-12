@@ -104,3 +104,123 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2N
   ],
   "count": 155
 }
+
+
+###
+# list of meets by date range
+
+POST https://usaswimming.sisense.com/api/datasources/Meets/jaql
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMTFjZGJiMjMtYWJjYS01MzllLWRmNDMtMzQ0NzIyOWU2ZTdhIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0dl_S6Y4DclB0n_HHx8DSBhoZcZjV0AVEACVFA_uUMQ
+
+{
+  "metadata": [
+    {
+      "title": "MeetName",
+      "dim": "[Meet.MeetName]",
+      "datatype": "text"
+    },
+    {
+      "title": "MeetType",
+      "dim": "[Meet.MeetType]",
+      "datatype": "text"
+    },
+    {
+      "title": "HostLSC",
+      "dim": "[OrgUnit.Level3Code]",
+      "datatype": "text"
+    },
+    {
+      "title": "HostTeam",
+      "dim": "[OrgUnit.Level4Name]",
+      "datatype": "text"
+    },
+    {
+      "title": "StartDate",
+      "dim": "[Meet.StartDate (Calendar)]",
+      "datatype": "datetime",
+      "level": "days",
+      "sort": "asc",
+      "filter": {
+        #"from": "1900-01-01T00:00:00",
+        #"to": "1980-01-01T00:00:00"
+        #"from": "1980-01-01T00:00:00",
+        #"to": "2000-01-01T00:00:00"
+        "from": "2023-01-01T00:00:00",
+        "to": "2024-01-01T00:00:00"
+      }
+    },
+    {
+      "title": "EndDate",
+      "dim": "[Meet.EndDate (Calendar)]",
+      "datatype": "datetime",
+      "level": "days"
+    },
+    {
+      "title": "MeetKey",
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric"
+    },
+    {
+      "title": "MeetKey",
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric"
+    }
+  ],
+  "count": 50000
+}
+
+###
+# get meet type by meet key
+
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMTFjZGJiMjMtYWJjYS01MzllLWRmNDMtMzQ0NzIyOWU2ZTdhIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0dl_S6Y4DclB0n_HHx8DSBhoZcZjV0AVEACVFA_uUMQ
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZmNlMDFiODMtZWRkNC03OGY3LWIxYzAtYzMzY2U1ZDE3NGFmIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.OGIjb7730B_GbHflNtnq0xfQqjitTcbm0Znx-VII2mY
+
+{
+  "metadata": [
+    {
+      "title": "SCY",
+      "dim": "[Meet.SCY]",
+      "datatype": "text"
+    },
+    {
+      "title": "SCM",
+      "dim": "[Meet.SCM]",
+      "datatype": "text"
+    },
+    {
+      "title": "LCM",
+      "dim": "[Meet.LCM]",
+      "datatype": "text"
+    },
+    {
+      "title": "Final",
+      "dim": "[Meet.Final]",
+      "datatype": "numeric"
+    },
+    {
+      "title": "Semi",
+      "dim": "[Meet.Semi]",
+      "datatype": "numeric"
+    },
+    {
+      "title": "Prelim",
+      "dim": "[Meet.Prelim]",
+      "datatype": "numeric"
+    },
+    {
+      "title": "MeetKey",
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric",
+      "filter": {
+        "equals": 252874
+      },
+      "panel": "scope",
+      
+    }
+  ],
+  "count": 20000,
+}
+
