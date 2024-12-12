@@ -173,7 +173,7 @@ class LocalCache {
         try {
             data = await func();
         } catch (e) {
-            console.error(e, key);
+            console.error(e.stack, key);
 
             // try to use old data if network is down
             data = await LocalCache.get(key, _10YearsInSec, minVersion);
@@ -891,10 +891,9 @@ async function fetchSwimValues(bodyObj, type) {
 
     let headers = {
         'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
         // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
     };
-
-    headers['Authorization'] = 'Bearer ' + await fetchToken();
 
     let url = map[type || 'swimmer'];
 
@@ -935,7 +934,7 @@ async function fetchSwimValues(bodyObj, type) {
 }
 
 async function fetchToken() {
-    let call = async (url, bodyObj) => {
+    let tokenCall = async (url, bodyObj) => {
         url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
         let response = await fetch(url, {
@@ -955,17 +954,95 @@ async function fetchToken() {
         return await response.json();
     };
 
+    let getIpAddress = async () => {
+        // for (let url of ['https://icanhazip.com', 'https://api.ipify.org', 'https://ifconfig.me/ip']) {
+        for (let url of ['https://api.ipify.org', 'https://ipv4.icanhazip.com']) {
+            try {
+                let response = await fetch(url);
+                if (response.ok) {
+                    return await response.text();
+                }
+            } catch (_) { }
+        }
+        return '169.254.130.1';
+    };
+
+    let MurmurHash = a => {
+        const t = a.length & 3
+            , s = a.length - t
+            , n = 3432918353
+            , o = 461845907;
+        let r, i, l;
+        for (let m = 0; m < s; m++)
+            l = a.charCodeAt(m) & 255 | (a.charCodeAt(++m) & 255) << 8 | (a.charCodeAt(++m) & 255) << 16 | (a.charCodeAt(++m) & 255) << 24,
+                ++m,
+                l = (l & 65535) * n + (((l >>> 16) * n & 65535) << 16) & 4294967295,
+                l = l << 15 | l >>> 17,
+                l = (l & 65535) * o + (((l >>> 16) * o & 65535) << 16) & 4294967295,
+                r ^= l,
+                r = r << 13 | r >>> 19,
+                i = (r & 65535) * 5 + (((r >>> 16) * 5 & 65535) << 16) & 4294967295,
+                r = (i & 65535) + 27492 + (((i >>> 16) + 58964 & 65535) << 16);
+        const d = s - 1;
+        switch (l = 0, t) {
+            case 3:
+                {
+                    l ^= (a.charCodeAt(d + 2) & 255) << 16;
+                    break
+                }
+            case 2:
+                {
+                    l ^= (a.charCodeAt(d + 1) & 255) << 8;
+                    break
+                }
+            case 1:
+                {
+                    l ^= a.charCodeAt(d) & 255;
+                    break
+                }
+        }
+        return l = (l & 65535) * n + (((l >>> 16) * n & 65535) << 16) & 4294967295,
+            l = l << 15 | l >>> 17,
+            l = (l & 65535) * o + (((l >>> 16) * o & 65535) << 16) & 4294967295,
+            r ^= l,
+            r ^= a.length,
+            r ^= r >>> 16,
+            r = (r & 65535) * 2246822507 + (((r >>> 16) * 2246822507 & 65535) << 16) & 4294967295,
+            r ^= r >>> 13,
+            r = (r & 65535) * 3266489909 + (((r >>> 16) * 3266489909 & 65535) << 16) & 4294967295,
+            r ^= r >>> 16,
+            r >>> 0
+    };
+
+    let ip2dec = ip => ip.split('.').reduce((s, i) => (s << 8) + parseInt(i), 0) >>> 0;
+
     return await LocalCache.func('token', async () => {
-        let data = await call('https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken',
-            { toxonomies: [], appName: 'Data', deviceId: 0 });
+        let ip = (await getIpAddress()).trim();
+        let deviceId = MurmurHash(ip + location.toString() + navigator.userAgent);
+        let hostId = btoa(ip2dec(ip));
+
+        let data = await tokenCall('https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken',
+            { toxonomies: [], appName: 'Data', deviceId: deviceId, uIProjectName: 'times-microsite-ui', hostId: hostId, bustCache: false, scope: 'Project' });
 
         let requestId = parseInt(data?.requestId);
 
-        data = await call('https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken',
-            { sessionId: requestId * 13, deviceId: 0, hostId: "MzIzMjIzNTUyMQ==" });
+        data = await tokenCall('https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken',
+            { sessionId: requestId * 13, deviceId: deviceId, hostId: hostId, requestUrl: '/datahub' });
 
         return data?.accessToken;
     }, _1HourInSec);
+}
+
+let token;
+async function ensureToken() {
+    try {
+        token = await fetchToken();
+        if (location.pathname.endsWith('/swim.html')) {
+            console.log(token);
+        }
+    } catch (e) {
+        token = localStorage.getItem('test-token');
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1065,6 +1142,7 @@ async function loadContent() {
     let func = window[action];
     if (func) {
         try {
+            await ensureToken();
             await func(value);
         } catch (e) {
             let message = e.stack;
@@ -1168,7 +1246,7 @@ class Favorite {
 async function config(params) {
     let loadingHash = 'config' + (params ? '/' + params : '');
     TopButton.show('config', true, false);
-    let index = { about: 1, cache: 2 }[params] || 0;
+    let index = { about: 1, cache: 2, token: 2 }[params] || 0;
 
     let tabView = new TabView('configTabView');
 
@@ -1179,20 +1257,32 @@ async function config(params) {
         tabView.addTab('<p>CACHE</p>', buildCachePage());
     }
 
+    if (params == 'token') {
+        tabView.addTab('<p>TOKEN</p>', buildTokenPage());
+    }
+
     updateContent(tabView.render(index), loadingHash);
 }
 
+function buildTokenPage() {
+    return [
+        '<div class="top-margin">',
+        `<textarea style="width:100%;height:200px" oninput="localStorage.setItem('test-token', this.value.trim())">`, token, '</textarea>',  
+        '</div>',
+    ].join('');
+}
+
 function buildCachePage() {
-    let html = ['<div class="top-margin">',
+    return [
+        '<div class="top-margin">',
         createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
         '</div><div class="top-margin">',
         createCheckbox('use-proxy-checkbox',
             `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
             useProxy(), 'useProxy(this.checked)'),
         '</div>',
-        '<div class="center-row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'];
-
-    return html.join('');
+        '<div class="center-row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'
+    ].join('');
 }
 
 async function clearCache(elem) {
