@@ -226,7 +226,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 
 
 ###
-# get token
+# get request id json.requestId
 
 POST https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken
 Content-Type: application/json
@@ -236,8 +236,11 @@ Content-Type: application/json
 
 ###
 # get sisense token
+# sessionId: ^response.requestId * 13
+# deviceId: equals to ^request.deviceId
+# hostId: base64(dec(ip address))   // example: base64(dec("0.0.0.0")) = "MA=="
 
 POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
 Content-Type: application/json
 
-{"sessionId":1927809,"deviceId":0,"hostId":"MzIzMjIzNTUyMQ=="}
+{"sessionId":1945034,"deviceId":0,"hostId":"MA=="}
