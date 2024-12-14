@@ -1062,7 +1062,8 @@ async function ensureToken() {
         `<button id="favirite-button" onclick="TopButton.onClick('favirite')" class="search sq-btn">${starSVG}</button>`,
         `<button id="config-button" onclick="TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
         '</div>',
-        '<div id="content" class="container"></div>'
+        '<div id="content" class="container"></div>',
+        '<div id="mloading" class="mback hide"><span class="mloader">Loading</span></div>'
     ];
 
     document.body.innerHTML = html.join('');
@@ -1107,6 +1108,7 @@ function go(action, value) {
 function updateContent(html, loadingHash) {
     if (window.location.hash.substring(1) == loadingHash) {
         document.getElementById('content').innerHTML = html;
+        document.getElementById('mloading').classList.add('hide');
     } else {
         console.warn('Content is outdated:', loadingHash);
     }
@@ -1134,7 +1136,7 @@ async function loadContent() {
     TopButton.show('rank', false);
     TopButton.show('favirite', true, true);
     TopButton.show('config', true, true);
-    updateContent('Loading....', loadingHash);
+    document.getElementById('mloading').classList.remove('hide');
 
     let [action, value] = loadingHash.split('/');
     value = value && decodeURIComponent(value);
@@ -1142,7 +1144,6 @@ async function loadContent() {
     let func = window[action];
     if (func) {
         try {
-            await ensureToken();
             await func(value);
         } catch (e) {
             let message = e.stack;
@@ -1267,7 +1268,7 @@ async function config(params) {
 function buildTokenPage() {
     return [
         '<div class="top-margin">',
-        `<textarea style="width:100%;height:200px" oninput="localStorage.setItem('test-token', this.value.trim())">`, token, '</textarea>',  
+        `<textarea style="width:100%;height:200px" oninput="localStorage.setItem('test-token', this.value.trim())">`, token, '</textarea>',
         '</div>',
     ].join('');
 }
@@ -1447,6 +1448,7 @@ async function search(name, all) {
         return;
     }
 
+    await ensureToken();
     let values = await loadSearch(name, all);
 
     showSearch(values, `search${all ? 'All' : ''}/` + encodeURIComponent(name));
@@ -1696,6 +1698,7 @@ async function swimmer(pkey) {
         return;
     }
 
+    await ensureToken();
     let data = await loadDetails(Number(pkey));
 
     // show the rank button, need some info for the rank href
@@ -3416,6 +3419,7 @@ async function rank(key) {
     TopButton.show('relay', true, key);
     TopButton.show('rank', true);
 
+    await ensureToken();
     let data = await loadRank(key);
 
     await showRank(data, key);
@@ -4241,6 +4245,7 @@ async function relay(key) {
     TopButton.show('relay', true);
     TopButton.show('rank', true, key);
 
+    await ensureToken();
     let data = await loadRelay(key);
 
     await showRelay(data, key);
