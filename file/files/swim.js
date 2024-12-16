@@ -1269,6 +1269,7 @@ function buildTokenPage() {
     return [
         '<div class="top-margin">',
         `<textarea style="width:100%;height:200px" oninput="localStorage.setItem('test-token', this.value.trim())">`, token, '</textarea>',
+        `<button onclick="let t=document.querySelector('textarea');t.select();navigator.clipboard.writeText(t.value);">Copy Token</button>`,
         '</div>',
     ].join('');
 }
@@ -6350,3 +6351,24 @@ meet: OT : 2024 U.S. Olympic Team Trials (6/21/2024)
         return times.filter(x => x.age[0] <= age && age <= x.age[1]);
     };
 })();
+
+// let global = {};
+
+// (()=>{
+//     class Hello {
+//         constructor() {
+//             this.message = 'Hello World!';
+//         }
+//     }
+    
+//     function callme() {
+//         console.log('callme');
+//     }
+
+//     global.Hello = Hello;
+
+//     global.hello = new global.Hello();
+
+//     console.log(global.hello.message);
+//     console.log(callme);
+// })()

@@ -141,6 +141,9 @@ func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte)
 	}
 	req.Header = reqHeader
 
+	req.Header.Del("Host")
+	req.Header.Set("Origin", "https://data.usaswimming.org")
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if resp != nil && resp.Body != nil {

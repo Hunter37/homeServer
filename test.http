@@ -1,3 +1,26 @@
+###
+# get request id json.requestId
+
+POST https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken
+Content-Type: application/json
+
+{"toxonomies":[],"appName":"Data","deviceId":0}
+
+
+###
+# get sisense token
+# sessionId: ^response.requestId * 13
+# deviceId: equals to ^request.deviceId
+# hostId: base64(dec(ip address))   // example: base64(dec("0.0.0.0")) = "MA=="
+
+POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
+Content-Type: application/json
+
+{"sessionId":1993628,"deviceId":0,"hostId":"MA=="}
+
+
+###
+
 POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M
@@ -111,7 +134,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2N
 
 POST https://usaswimming.sisense.com/api/datasources/Meets/jaql
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMTFjZGJiMjMtYWJjYS01MzllLWRmNDMtMzQ0NzIyOWU2ZTdhIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0dl_S6Y4DclB0n_HHx8DSBhoZcZjV0AVEACVFA_uUMQ
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
 
 {
   "metadata": [
@@ -132,7 +155,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
     },
     {
       "title": "HostTeam",
-      "dim": "[OrgUnit.Level4Name]",
+      "dim": "[OrgUnit.Level3Name]",
       "datatype": "text"
     },
     {
@@ -146,8 +169,8 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
         #"to": "1980-01-01T00:00:00"
         #"from": "1980-01-01T00:00:00",
         #"to": "2000-01-01T00:00:00"
-        "from": "2023-01-01T00:00:00",
-        "to": "2024-01-01T00:00:00"
+        "from": "2024-12-01T00:00:00",
+        "to": "2024-12-10T00:00:00"
       }
     },
     {
@@ -171,12 +194,26 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 }
 
 ###
+POST https://usaswimming.sisense.com/api/datasources/Meets/jaql
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
+
+{
+  "metadata": [
+    {
+      "dim": "[OrgUnit.Level4Name]",
+      "datatype": "text"
+    }
+  ],
+  "count": 500
+}
+
+###
 # get meet type by meet key
 
 POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
-# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMTFjZGJiMjMtYWJjYS01MzllLWRmNDMtMzQ0NzIyOWU2ZTdhIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0dl_S6Y4DclB0n_HHx8DSBhoZcZjV0AVEACVFA_uUMQ
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZmNlMDFiODMtZWRkNC03OGY3LWIxYzAtYzMzY2U1ZDE3NGFmIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.OGIjb7730B_GbHflNtnq0xfQqjitTcbm0Znx-VII2mY
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
 
 {
   "metadata": [
@@ -218,7 +255,6 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
         "equals": 252874
       },
       "panel": "scope",
-      
     }
   ],
   "count": 20000,
@@ -226,21 +262,40 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 
 
 ###
-# get request id json.requestId
 
-POST https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
 
-{"toxonomies":[],"appName":"Data","deviceId":0}
-
-
-###
-# get sisense token
-# sessionId: ^response.requestId * 13
-# deviceId: equals to ^request.deviceId
-# hostId: base64(dec(ip address))   // example: base64(dec("0.0.0.0")) = "MA=="
-
-POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
-Content-Type: application/json
-
-{"sessionId":1945034,"deviceId":0,"hostId":"MA=="}
+{
+  "metadata": [
+    {
+      "dim": "[UsasSwimTime.UsasSwimTimeKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[UsasSwimTime.PersonKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric",
+      "filter": {
+        "equals": 264503
+      }
+    },
+    {
+      "dim": "[UsasSwimTime.SwimEventKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[UsasSwimTime.OrgUnitKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[EventCompetitionCategory.TypeName]",
+      "datatype": "text"
+    }
+  ],
+  "count": 200,
+}
