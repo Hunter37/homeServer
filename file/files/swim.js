@@ -1,3 +1,6 @@
+let G = {};
+(() => {
+
 Date.prototype.toDateInputValue = (function () {
     let local = new Date(this);
     local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
@@ -29,7 +32,6 @@ const _meetShortNames = {
     "Olympic Trials Wave I": "OT1",
     "Olympic Trials Wave II": "OT2",
 };
-const _1HourInSec = 60 * 60;
 const _1DayInSec = 24 * 60 * 60;
 const _1WeekInSec = 7 * _1DayInSec;
 const _10YearsInSec = 10 * 365 * _1DayInSec;
@@ -190,17 +192,17 @@ class LocalCache {
         return data;
     }
 }
+G.LocalCache = LocalCache;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // club dictionary
 
 class ClubDictinary {
-    #dict;
     constructor() {
-        this.#dict = new Map();
+        this.dict = new Map();
     }
 
-    static async #load(lsc) {
+    static async _load(lsc) {
         return await LocalCache.func('clubs/' + lsc, async () => {
             let bodyObj = {
                 metadata: [
@@ -239,14 +241,14 @@ class ClubDictinary {
     }
 
     async loadClubMap(lsc) {
-        let map = this.#dict.get(lsc);
+        let map = this.dict.get(lsc);
         if (!map) {
 
-            let data = await ClubDictinary.#load(lsc);
+            let data = await ClubDictinary._load(lsc);
             if (data) {
                 map = new Map(data);
 
-                this.#dict.set(lsc, map);
+                this.dict.set(lsc, map);
             }
         }
 
@@ -269,13 +271,12 @@ let _clubDictinary = new ClubDictinary();
 // meet dictionary
 
 class MeetDictionary {
-    #dict;
     constructor() {
-        this.#dict = new Map();
-        this.#dict.idx = { date: 0, name: 1 };
+        this.dict = new Map();
+        this.dict.idx = { date: 0, name: 1 };
     }
 
-    static async #load(meets) {
+    static async _load(meets) {
         let bodyObj = {
             metadata: [
                 {
@@ -324,7 +325,7 @@ class MeetDictionary {
         return result;
     }
 
-    static async #loadCached(meets) {
+    static async _loadCached(meets) {
         let result = [];
         for (let meet of meets) {
             let key = 'meet/' + meet;
@@ -340,7 +341,7 @@ class MeetDictionary {
             return result;
         }
 
-        let data = await MeetDictionary.#load(meets);
+        let data = await MeetDictionary._load(meets);
         if (data) {
             let idx = data.idx;
             for (let row of data) {
@@ -358,19 +359,19 @@ class MeetDictionary {
     async loadMeets(meets) {
         let meetsToLoad = new Set();
         for (let meet of meets) {
-            if (!this.#dict.has(meet)) {
+            if (!this.dict.has(meet)) {
                 meetsToLoad.add(meet);
             }
         }
 
-        let data = await MeetDictionary.#loadCached(meetsToLoad);
+        let data = await MeetDictionary._loadCached(meetsToLoad);
         if (data) {
             for (let [meet, date, meetName] of data) {
-                this.#dict.set(meet, [date, meetName]);
+                this.dict.set(meet, [date, meetName]);
             }
         }
 
-        return this.#dict;
+        return this.dict;
     }
 }
 
@@ -380,20 +381,19 @@ let _meetDictinary = new MeetDictionary();
 // birthday dictionary
 
 class BirthdayDictionary {
-    #dict;
     constructor() {
-        this.#dict = new Map();
+        this.dict = new Map();
     }
 
     async load(pkey) {
-        let data = this.#dict.get(pkey);
+        let data = this.dict.get(pkey);
         if (data) {
             return data;
         }
 
         data = await LocalCache.get('bday/' + pkey, _10YearsInSec);
         if (data) {
-            this.#dict.set(pkey, data);
+            this.dict.set(pkey, data);
             return data;
         }
     }
@@ -434,7 +434,7 @@ class BirthdayDictionary {
 
         let range = [left, right];
         LocalCache.set('bday/' + pkey, range);
-        this.#dict.set(pkey, range);
+        this.dict.set(pkey, range);
 
         return range;
     }
@@ -467,34 +467,31 @@ let _birthdayDictionary = new BirthdayDictionary();
 // tab view
 
 class TabView {
-    #id;
-    #tabs;
-    #views;
     constructor(id) {
-        this.#id = id;
-        this.#tabs = [];
-        this.#views = [];
+        this.id = id;
+        this.tabs = [];
+        this.views = [];
     }
 
     addTab(name, view) {
-        this.#tabs.push(name);
-        this.#views.push(view);
+        this.tabs.push(name);
+        this.views.push(view);
     }
 
     render(index) {
         index = index || 0;
         let html = [];
 
-        html.push(`<div class="tabview" id="${this.#id}">`);
+        html.push(`<div class="tabview" id="${this.id}">`);
 
         html.push('<div class="tabs">');
-        for (let i = 0; i < this.#tabs.length; ++i) {
-            html.push(`<div class="tab${i == index ? ' selected' : ''}" onclick="TabView.tab('${this.#id}', ${i})">${this.#tabs[i]}</div>`);
+        for (let i = 0; i < this.tabs.length; ++i) {
+            html.push(`<div class="tab${i == index ? ' selected' : ''}" onclick="G.TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
         }
         html.push('</div>');
 
-        for (let i = 0; i < this.#views.length; ++i) {
-            html.push(`<div class="view ${i == index ? '' : 'hide'}">${this.#views[i]}</div>`);
+        for (let i = 0; i < this.views.length; ++i) {
+            html.push(`<div class="view ${i == index ? '' : 'hide'}">${this.views[i]}</div>`);
         }
 
         html.push('</div>');
@@ -513,73 +510,67 @@ class TabView {
         }
     }
 }
+G.TabView = TabView;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // expander class
 
 class Expander {
-    #id;
-    #expand;
-    #fold;
-    #content;
-
-    static #expander = new Map();
+    static expanders = new Map();
     static get(id) {
-        return Expander.#expander.get(id);
+        return Expander.expanders.get(id);
     }
 
     constructor(id, expand, fold, content) {
-        this.#id = id;
-        this.#expand = expand;
-        this.#fold = fold;
-        this.#content = content;
+        this.id = id;
+        this.expandHeader = expand;
+        this.foldHeader = fold;
+        this.content = content;
 
-        Expander.#expander.set(id, this);
+        Expander.expanders.set(id, this);
     }
 
     render() {
-        return `<div class="expander" id="${this.#id}"><div class="expand" onclick="Expander.get('${this.#id}').expand()">${this.#expand}</div>` +
-            `<div class="fold hide" onclick="Expander.get('${this.#id}').fold()">${this.#fold}</div><div class="exp-content hide">${this.#content}</div></div>`;
+        return `<div class="expander" id="${this.id}"><div class="expand" onclick="G.Expander.get('${this.id}').expand()">${this.expandHeader}</div>` +
+            `<div class="fold hide" onclick="G.Expander.get('${this.id}').fold()">${this.foldHeader}</div><div class="exp-content hide">${this.content}</div></div>`;
     }
 
     expand() {
-        document.querySelector(`#${this.#id}>.expand`).classList.add("hide");
-        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.exp-content`).forEach(e => e.classList.remove("hide"));
+        document.querySelector(`#${this.id}>.expand`).classList.add("hide");
+        document.querySelectorAll(`#${this.id}>.fold,#${this.id}>.exp-content`).forEach(e => e.classList.remove("hide"));
     }
 
     fold() {
-        document.querySelector(`#${this.#id}>.expand`).classList.remove("hide");
-        document.querySelectorAll(`#${this.#id}>.fold,#${this.#id}>.exp-content`).forEach(e => e.classList.add("hide"));
+        document.querySelector(`#${this.id}>.expand`).classList.remove("hide");
+        document.querySelectorAll(`#${this.id}>.fold,#${this.id}>.exp-content`).forEach(e => e.classList.add("hide"));
     }
 }
+G.Expander = Expander;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // dropdown class
 class Dropdown {
-    #id;
-    #triggerElem;
-    #content;
-    static #dropdowns = new Map();
+    static dropdowns = new Map();
     static get(id) {
-        return Dropdown.#dropdowns.get(id);
+        return Dropdown.dropdowns.get(id);
     }
 
     constructor(id, triggerElem, content) {
-        this.#id = id;
-        this.#triggerElem = triggerElem;
-        this.#content = content;
+        this.id = id;
+        this.triggerElem = triggerElem;
+        this.content = content;
         this.onopen = null;
 
-        Dropdown.#dropdowns.set(id, this);
+        Dropdown.dropdowns.set(id, this);
     }
 
     render() {
-        return `<table id="${this.#id}" class="fill drop-layout"><tbody><tr><td onclick="Dropdown.get('${this.#id}').click()">${this.#triggerElem}</td></tr>`
-            + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.#content}</div></div></td></tr></tbody></table>`;
+        return `<table id="${this.id}" class="fill drop-layout"><tbody><tr><td onclick="G.Dropdown.get('${this.id}').click()">${this.triggerElem}</td></tr>`
+            + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.content}</div></div></td></tr></tbody></table>`;
     }
 
     click() {
-        if (document.querySelector(`#${this.#id} .dropdown`).classList.contains('hide')) {
+        if (document.querySelector(`#${this.id} .dropdown`).classList.contains('hide')) {
             this.open();
         } else {
             this.close();
@@ -587,9 +578,9 @@ class Dropdown {
     }
 
     open() {
-        document.querySelector(`#${this.#id} .dropdown`).classList.remove('hide');
+        document.querySelector(`#${this.id} .dropdown`).classList.remove('hide');
         let closing = (e) => {
-            if (!e.target.closest(`#${this.#id}`)) {
+            if (!e.target.closest(`#${this.id}`)) {
                 this.close();
                 window.removeEventListener('click', closing);
                 window.removeEventListener('touchstart', closing);
@@ -602,48 +593,49 @@ class Dropdown {
     }
 
     close() {
-        document.querySelector(`#${this.#id} .dropdown`).classList.add('hide');
+        document.querySelector(`#${this.id} .dropdown`).classList.add('hide');
     }
 }
+G.Dropdown = Dropdown;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // select class
 class Select {
-    #id;
-    #values;
-    #selected;
-    #onchange;
-    #dropdown;
-    static #selects = new Map();
+    id;
+    values;
+    selected;
+    onchange;
+    dropdown;
+    static dict = new Map();
     static get(id) {
-        return Select.#selects.get(id);
+        return Select.dict.get(id);
     }
 
     constructor(id, values, selected, onchange) {
-        this.#id = id;
-        this.#values = values;
-        this.#selected = selected;
-        this.#onchange = onchange;
+        this.id = id;
+        this.values = values;
+        this.selected = selected;
+        this.onchange = onchange;
         this.style = '';
         this.class = '';
         this.valueEqualtoSelection = (a, b) => a === b;
 
-        Select.#selects.set(id, this);
+        Select.dict.set(id, this);
     }
 
     select(value) {
         // clean list selection
-        let root = document.getElementById(this.#id);
+        let root = document.getElementById(this.id);
 
-        for (let i = 0; i < this.#values.length; ++i) {
+        for (let i = 0; i < this.values.length; ++i) {
             let elem = root.querySelector('.o' + i);
             elem.classList.remove('selected');
         }
 
         // change selection & highlight selected item
-        this.#selected = value;
+        this.selected = value;
         let text = '';
-        for (let [i, [txt, val]] of this.#values.entries()) {
+        for (let [i, [txt, val]] of this.values.entries()) {
             if (val === undefined) {
                 continue;
             }
@@ -658,72 +650,72 @@ class Select {
         }
 
         // set the text
-        document.getElementById(this.#id + '-text').innerText = text;
-        this.#dropdown.close();
-        this.#onchange(value);
+        document.getElementById(this.id + '-text').innerText = text;
+        this.dropdown.close();
+        this.onchange(value);
     }
 
     onclickItem(index) {
-        this.select(this.#values[index][1]);
+        this.select(this.values[index][1]);
     }
 
-    #renderCustom() {
+    renderCustom() {
         let cls = this.class ? ` ${this.class}` : '';
         let style = this.style ? ` style="${this.style}"` : '';
         let text = '';
-        for (let value of this.#values) {
+        for (let value of this.values) {
             if (value.length == 1) {
                 value.push(undefined);
             }
-            if (value[1] === this.#selected) {
+            if (value[1] === this.selected) {
                 text = value[0];
             }
         }
-        let elem = `<div class='select-text${cls}'><span id="${this.#id}-text"${style}>${text}</span><span class="arrow">▽</span></div>`;
+        let elem = `<div class='select-text${cls}'><span id="${this.id}-text"${style}>${text}</span><span class="arrow">▽</span></div>`;
 
-        let options = [`<div id="${this.#id}">`];
+        let options = [`<div id="${this.id}">`];
         let ending = '';
-        for (let [i, [txt, val]] of this.#values.entries()) {
+        for (let [i, [txt, val]] of this.values.entries()) {
             if (val === undefined) {
                 options.push(ending);
                 options.push(`<div class="group"><div onclick="event.stopPropagation()" class="o${i} group-txt">${txt}</div>`);
                 ending = '</div>';
             } else {
-                let selected = this.valueEqualtoSelection(this.#selected, val) ? ' selected' : '';
-                options.push(`<div onclick="Select.get('${this.#id}').onclickItem(${i})" class="o${i} option${selected}${cls}">${txt || '&nbsp;'}</div>`);
+                let selected = this.valueEqualtoSelection(this.selected, val) ? ' selected' : '';
+                options.push(`<div onclick="G.Select.get('${this.id}').onclickItem(${i})" class="o${i} option${selected}${cls}">${txt || '&nbsp;'}</div>`);
             }
         }
         options.push(ending, '</div>');
 
-        this.#dropdown = new Dropdown(this.#id, elem, options.join(''));
-        this.#dropdown.onopen = () => {
-            let root = document.getElementById(this.#id);
-            let index = this.#values.findIndex(v => v[1] === this.#selected);
+        this.dropdown = new Dropdown(this.id, elem, options.join(''));
+        this.dropdown.onopen = () => {
+            let root = document.getElementById(this.id);
+            let index = this.values.findIndex(v => v[1] === this.selected);
             if (index >= 0) {
                 let elem = root.querySelector('.o' + index);
                 elem.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
             }
         }
-        return this.#dropdown.render();
+        return this.dropdown.render();
     }
 
     render(custom) {
         if (custom) {
-            return this.#renderCustom();
+            return this.renderCustom();
         }
 
         let html = [];
         let cls = this.class ? ` class="${this.class}"` : '';
         let ending = '';
-        html.push(`<select${cls} onchange="Select.get('${this.#id}').onselect(this.value)">`);
-        for (let [txt, val] of this.#values) {
+        html.push(`<select${cls} onchange="G.Select.get('${this.id}').onselect(this.value)">`);
+        for (let [txt, val] of this.values) {
             if (val === undefined) {
                 html.push(ending);
                 html.push(`<optgroup label="${txt}">`);
                 ending = '</optgroup>';
             } else {
-                let selectedCls = this.valueEqualtoSelection(this.#selected, val) ? ' class="selected"' : '';
-                let selected = val === this.#selected ? ' selected' : '';
+                let selectedCls = this.valueEqualtoSelection(this.selected, val) ? ' class="selected"' : '';
+                let selected = val === this.selected ? ' selected' : '';
                 html.push(`<option value="${val}"${selectedCls}${selected}>${txt}</option>`);
             }
         }
@@ -733,76 +725,73 @@ class Select {
     }
 
     onselect(value) {
-        this.#onchange(value);
+        this.onchange(value);
     }
 }
-
+G.Select = Select;
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // loading spinner
 class Loading {
-    static #items = new Map();
+    static dict = new Map();
     static get(id) {
-        return Loading.#items.get(id);
+        return Loading.dict.get(id);
     }
 
-    #id;
-    #content;
-    #loadFunc;
-    #status;
     constructor(id, content, loadFunc) {
-        this.#id = id;
-        this.#content = content;
-        this.#loadFunc = loadFunc;
-        this.#status = 'init';
-        Loading.#items.set(id, this);
+        this.id = id;
+        this.content = content;
+        this.loadFunc = loadFunc;
+        this.status = 'init';
+        Loading.dict.set(id, this);
     }
 
     render() {
-        return `<div id="${this.#id}" class="clickable no-dec" onclick="Loading.get('${this.#id}').loading()">${this.#content}</div>`;
+        return `<div id="${this.id}" class="clickable no-dec" onclick="G.Loading.get('${this.id}').loading()">${this.content}</div>`;
     }
 
     loading() {
-        if (this.#status == 'init') {
-            this.#status = 'loading';
-            this.#loadFunc(this.#id);
-            document.getElementById(this.#id).innerHTML = '<div class="loader"></div>';
+        if (this.status == 'init') {
+            this.status = 'loading';
+            this.loadFunc(this.id);
+            document.getElementById(this.id).innerHTML = '<div class="loader"></div>';
         }
     }
 
     done(content) {
-        if (this.#status != 'done') {
-            this.#status = 'done';
-            let elem = document.getElementById(this.#id);
+        if (this.status != 'done') {
+            this.status = 'done';
+            let elem = document.getElementById(this.id);
             elem.innerHTML = content;
             elem.classList.remove('clickable');
         }
     }
 
     failed() {
-        if (this.#status == 'loading') {
-            this.#status = 'init';
-            let elem = document.getElementById(this.#id);
-            elem.innerHTML = this.#content;
+        if (this.status == 'loading') {
+            this.status = 'init';
+            let elem = document.getElementById(this.id);
+            elem.innerHTML = this.content;
             elem.classList.add('clickable');
         }
     }
 }
+G.Loading = Loading;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // double range class
 
 class DoubleRange {
 
-    static #items = new Map();
+    static dict = new Map();
     static get(id) {
-        return DoubleRange.#items.get(id);
+        return DoubleRange.dict.get(id);
     }
 
     constructor(id, min, max, value1, value2, minGap, onchange) {
         this.id = id;
         this.onchange = onchange || (() => { });
-        this.#setValues(min, max, value1, value2, minGap);
-        DoubleRange.#items.set(id, this);
+        this._setValues(min, max, value1, value2, minGap);
+        DoubleRange.dict.set(id, this);
     }
 
     getValues() {
@@ -810,7 +799,7 @@ class DoubleRange {
     }
 
     setValues(min, max, value1, value2, minGap) {
-        this.#setValues(min, max, value1, value2, minGap);
+        this._setValues(min, max, value1, value2, minGap);
 
         let root = document.getElementById(this.id);
         let left = root.querySelectorAll('input[type="range"]')[0];
@@ -822,7 +811,7 @@ class DoubleRange {
         this.fillColor();
     }
 
-    #setValues(min, max, value1, value2, minGap) {
+    _setValues(min, max, value1, value2, minGap) {
         this.min = min;
         this.max = Math.max(max, min + minGap);
         this.value1 = Math.max(min, Math.min(max - minGap, value1));
@@ -837,8 +826,8 @@ class DoubleRange {
 
         return [
             `<div id="${this.id}" class="double-range"><div class="slider-track" style="background:${background}"></div>`,
-            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value1}" oninput="DoubleRange.get('${this.id}').slideOne(this)">`,
-            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value2}" oninput="DoubleRange.get('${this.id}').slideTwo(this)">`,
+            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value1}" oninput="G.DoubleRange.get('${this.id}').slideOne(this)">`,
+            `<input type="range" min="${this.min}" max="${this.max}" value="${this.value2}" oninput="G.DoubleRange.get('${this.id}').slideTwo(this)">`,
             '</div>'].join('');
     }
 
@@ -868,6 +857,7 @@ class DoubleRange {
         this.sliderTrack.style.background = `linear-gradient(to right, #DDE ${percent1}%, #7DF ${percent1}%, #7DF ${percent2}%, #DDE ${percent2}%)`;
     }
 }
+G.DoubleRange = DoubleRange;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // usa swimming data fetch utility functions
@@ -879,6 +869,7 @@ function useProxy(yes) {
 
     return (localStorage.getItem('use-proxy') || 'true') == 'true';
 }
+G.useProxy = useProxy;
 
 async function fetchSwimValues(bodyObj, type) {
     let map = {
@@ -925,7 +916,7 @@ async function fetchSwimValues(bodyObj, type) {
 
         return;
     }
-    
+
     let data = await response.json();
     if (data.error || !data.values) {
         return;
@@ -1048,6 +1039,7 @@ async function ensureToken(force) {
     }
     token = await fetchToken();
 }
+G.token = token;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // initial page
@@ -1055,16 +1047,16 @@ async function ensureToken(force) {
 (() => {
     let drop = new Dropdown('main-search',
         '<div class="search drop"><div>▽</div></div>',
-        `<button onclick="onSearchAll();Dropdown.get('main-search').close();" class="search all">SEARCH 19&OVER</button>`);
+        `<button onclick="G.go('search',document.getElementById('input').value+'~19O');G.Dropdown.get('main-search').close();" class="search all">SEARCH 19&OVER</button>`);
 
     let html = ['<div class="center-row child-space">',
-        '<input id="input" autofocus class="big" />',
-        '<button onclick="onSearch()" class="big search main">SEARCH</button>',
+        `<input id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus class="big" />`,
+        `<button onclick="G.go('search',document.getElementById('input').value)" class="big search main">SEARCH</button>`,
         drop.render(),
-        `<button id="rank-button" onclick="TopButton.onClick('rank')" class="big search hide">RANK</button>`,
-        `<button id="relay-button" onclick="TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
-        `<button id="favirite-button" onclick="TopButton.onClick('favirite')" class="search sq-btn">${starSVG}</button>`,
-        `<button id="config-button" onclick="TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
+        `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="big search hide">RANK</button>`,
+        `<button id="relay-button" onclick="G.TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
+        `<button id="favirite-button" onclick="G.TopButton.onClick('favirite')" class="search sq-btn">${starSVG}</button>`,
+        `<button id="config-button" onclick="G.TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
         '</div>',
         '<div id="content" class="container"></div>',
         '<div id="mloading" class="mback hide"><span class="mloader">Loading</span></div>'
@@ -1074,10 +1066,10 @@ async function ensureToken(force) {
 })();
 
 class TopButton {
-    static #params;
+    static params;
     static onClick(button) {
         if (['relay', 'rank'].includes(button)) {
-            go(button, TopButton.#params);
+            go(button, TopButton.params);
         } else {
             go(button);
         }
@@ -1088,7 +1080,7 @@ class TopButton {
         if (show) {
             if (params) {
                 if (typeof params != 'boolean') {
-                    TopButton.#params = params;
+                    TopButton.params = params;
                 }
                 classList.remove('disabled');
             } else {
@@ -1100,6 +1092,7 @@ class TopButton {
         }
     }
 }
+G.TopButton = TopButton;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // navigation and routing functions
@@ -1108,6 +1101,7 @@ function go(action, value) {
     value = value ? '/' + encodeURIComponent(value) : '';
     window.location.hash = '#' + action + value;
 }
+G.go = go;
 
 function updateContent(html, loadingHash) {
     if (window.location.hash.substring(1) == loadingHash) {
@@ -1145,7 +1139,7 @@ async function loadContent() {
     let [action, value] = loadingHash.split('/');
     value = value && decodeURIComponent(value);
 
-    let func = window[action];
+    let func = G[action];
     if (func) {
         try {
             await func(value);
@@ -1203,7 +1197,7 @@ async function favirite() {
     } else {
         html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
         for (let [pkey, obj] of values.entries()) {
-            html.push(`<tr onclick="go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
+            html.push(`<tr onclick="G.go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
                 '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
@@ -1211,11 +1205,12 @@ async function favirite() {
 
     updateContent(html.join(''), loadingHash);
 }
+G.favirite = favirite;
 
 class Favorite {
     static createButton(pkey, name, age, clubName, lsc) {
         let cls = Favorite.has(pkey) ? ' selected' : '';
-        return createPopup(`<div class="add-fav${cls}" onclick="Favorite.click(this,${pkey},'${name}',${age},'${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+        return createPopup(`<div class="add-fav${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},'${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
     }
 
     static click(elem, pkey, name, age, clubName, lsc) {
@@ -1244,6 +1239,7 @@ class Favorite {
         return new Map(JSON.parse(localStorage.getItem('favorites')));
     }
 }
+G.Favorite = Favorite;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // config page
@@ -1268,12 +1264,13 @@ async function config(params) {
 
     updateContent(tabView.render(index), loadingHash);
 }
+G.config = config;
 
 async function buildTokenPage() {
     await ensureToken(true);
     return [
         '<div class="top-margin">',
-        `<textarea style="width:100%;height:200px" oninput="token=this.value">`, token, '</textarea>',
+        `<textarea style="width:100%;height:200px" oninput="G.token=this.value">`, token, '</textarea>',
         `<button onclick="let t=document.querySelector('textarea');t.select();navigator.clipboard.writeText(t.value);">Copy Token</button>`,
         '</div>',
     ].join('');
@@ -1282,13 +1279,13 @@ async function buildTokenPage() {
 function buildCachePage() {
     return [
         '<div class="top-margin">',
-        createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'LocalCache.enable(this.checked)'),
+        createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'G.LocalCache.enable(this.checked)'),
         '</div><div class="top-margin">',
         createCheckbox('use-proxy-checkbox',
-            `Proxy <input onchange="localStorage.setItem('proxy-server', this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
-            useProxy(), 'useProxy(this.checked)'),
+            `Proxy <input onchange="localStorage.setItem('proxy-server',this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
+            useProxy(), 'G.useProxy(this.checked)'),
         '</div>',
-        '<div class="center-row"><input id="cache-key" /><button onclick="clearCache()">Clear App Cache</button><button onclick="clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'
+        '<div class="center-row"><input id="cache-key" /><button onclick="G.clearCache()">Clear App Cache</button><button onclick="G.clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'
     ].join('');
 }
 
@@ -1322,6 +1319,7 @@ async function clearCache(elem) {
     document.getElementById('cache-info').innerText = text;
     //window.location.reload();
 }
+G.clearCache = clearCache;
 
 function buildAboutPage() {
     return ['<div style="padding:30px" style="max-width:800px">',
@@ -1346,12 +1344,11 @@ function buildAboutPage() {
 
 function buildConfigPage() {
     let html = ['<div style="padding:30px 10px;max-width:800px">'];
-    let hide25 = localStorage.getItem('hide25');
 
-    html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', !hide25, 'show25(this.checked)'), '<br/>&nbsp;</p>');
-    html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'showCustomSelect(this.checked)'));
+    html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'), '<br/>&nbsp;</p>');
+    html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'G.useCustomSelect(this.checked)'));
     html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve select control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
-    html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'showCustomDatePicker(this.checked)'));
+    html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'G.useCustomDatePicker(this.checked)'));
     html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve date-picker control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
 
     html.push('</div>');
@@ -1359,42 +1356,36 @@ function buildConfigPage() {
 }
 
 function show25(show) {
-    if (show) {
-        localStorage.removeItem('hide25');
-    } else {
-        localStorage.setItem('hide25', '1');
+    if (show === undefined) {
+        return localStorage.getItem('show25') != '0';
     }
+    localStorage.setItem('show25', show ? '1' : '0');
 }
+G.show25 = show25;
 
-function useCustomSelect() {
-    let value = localStorage.getItem('custom-select');
-    if (value) {
-        return value == '1';
-    } else {
-        return !isNarrowWindow();
+function useCustomSelect(use) {
+    if (use === undefined) {
+        use = localStorage.getItem('custom-select');
+        return use ? use == '1' : !isNarrowWindow();
     }
-}
 
-function showCustomSelect(show) {
-    localStorage.setItem('custom-select', show ? '1' : '0');
+    localStorage.setItem('custom-select', use ? '1' : '0');
 }
+G.useCustomSelect = useCustomSelect;
 
 function isNarrowWindow() {
     return window.innerWidth < 1000;
 }
 
-function useCustomDatePicker() {
-    let value = localStorage.getItem('custom-date-picker');
-    if (value) {
-        return value == '1';
-    } else {
-        return isOldBrowser();
+function useCustomDatePicker(show) {
+    if (show === undefined) {
+        show = localStorage.getItem('custom-date-picker');
+        return show ? show == '1' : isOldBrowser();
     }
-}
 
-function showCustomDatePicker(show) {
     localStorage.setItem('custom-date-picker', show ? '1' : '0');
 }
+G.useCustomDatePicker = useCustomDatePicker;
 
 function isOldBrowser() {
     let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
@@ -1413,6 +1404,7 @@ async function test(params) {
 
     updateContent(tabView.render(), 'test');
 }
+G.test = test;
 
 function buildAdvancedConfig() {
 
@@ -1432,37 +1424,42 @@ function buildAdvancedConfig() {
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // search functions
 
-const _inputElem = document.getElementById('input');
-_inputElem.addEventListener('keypress', (event) => {
-    if (event.key == 'Enter') {
-        onSearch();
-    }
-});
+// const _inputElem = document.getElementById('input');
+// _inputElem.addEventListener('keypress', (event) => {
+//     if (event.key == 'Enter') {
+//         onSearch();
+//     }
+// });
 
-async function onSearch() {
-    go('search', _inputElem.value);
-}
+// async function onSearch() {
+//     go('search', _inputElem.value);
+// }
+// G.onSearch = onSearch;
 
-async function onSearchAll() {
-    go('searchAll', _inputElem.value);
+// async function onSearchAll() {
+//     go('searchAll', _inputElem.value);
+// }
+// G.onSearchAll = onSearchAll;
 
-}
-
-async function search(name, all) {
+async function search(name) {
     if (!name) {
         window.location.replace('');
         return;
     }
 
+    let hash = 'search/' + encodeURIComponent(name);
+    let all = false;
+    if (name.endsWith('~19O')) {
+        name = name.substring(0, name.length - 4);
+        all = true;
+    }
+
     await ensureToken();
     let values = await loadSearch(name, all);
 
-    showSearch(values, `search${all ? 'All' : ''}/` + encodeURIComponent(name));
+    showSearch(values, hash);
 }
-
-async function searchAll(params) {
-    return await search(params, true);
-}
+G.search = search;
 
 async function loadSearch(name, all) {
     name = name.trim().replace(/\s+/g, ' ');
@@ -1540,7 +1537,7 @@ function showSearch(values, loadingHash) {
     html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
     let index = 0;
     for (let [name, age, club, lsc, pkey] of values) {
-        html.push(`<tr onclick="go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left">', name,
+        html.push(`<tr onclick="G.go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left">', name,
             '</td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
     }
     html.push('</tbody></table>');
@@ -1716,6 +1713,7 @@ async function swimmer(pkey) {
 
     await showDetails(data, 'swimmer/' + pkey);
 }
+G.swimmer = swimmer;
 
 async function loadDetails(pkey) {
     let data = await LocalCache.func('swimmer/' + pkey, async () => {
@@ -1919,8 +1917,7 @@ async function showDetails(data, loadingHash) {
     }
 
     let idx = data.events.idx;
-    let hide25 = localStorage.getItem('hide25');
-    if (hide25) {
+    if (!show25()) {
         //data.events = data.events.filter(e => !_eventList[e[idx.event]].startsWith('25'));
         data.events = data.events.filter(e => e[idx.event] < 80);
         data.events.idx = idx;
@@ -1966,7 +1963,7 @@ async function showDetails(data, loadingHash) {
     tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
     tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
     tabView.addTab('<p>Meets</p>', createMeetTable(data));
-    tabView.addTab(createClickableDiv('Progress Graph', `showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
+    tabView.addTab(createClickableDiv('Progress Graph', `G.showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
     // tabView.addTab('<p>Ranking</p>', await createRankingTable(data, fastRowList, rowInfo));
     html.push(tabView.render());
 
@@ -2180,7 +2177,7 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
         let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
         // build rankings cell
-        html.push('<td class="full">', createClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td><td>',
+        html.push('<td class="full">', createClickableDiv(dist, `G.showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td><td>',
             time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
             await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc, data.swimmer.clubName),
             await buildRankingCell(data.swimmer.pkey, timeInt, genderStr, event, ageKey, data.swimmer.zone, data.swimmer.lsc),
@@ -2236,11 +2233,13 @@ async function createBestTimeTable(data, fastRowList, rowInfo) {
 
 function createProgressGraph(pkey, events) {
     let html = ['<div class="content">',
-        showEventButtons(1, (event) => `showGraph(null,{pkey:${pkey},event:${event}})`),
+        showEventButtons(1, (event) => `G.showGraph(null,{pkey:${pkey},event:${event}})`),
         '<h2 id="graph-title"></h2>'];
 
     let searchDropdown = new Dropdown('add-search',
-        '<div class="center-row" onclick="event.stopPropagation()"><input id="add-input" onkeypress="addKeypress(this, event)"><button onclick="addSearch()">Search</button><button onclick="addSearch(null, true)">19&Over</button></div>',
+        '<div class="center-row" onclick="event.stopPropagation()">' +
+        `<input id="add-input" onkeypress="event.key=='Enter'&&G.addSearch(this.value)">` +
+        '<button onclick="G.addSearch()">Search</button><button onclick="G.addSearch(null, true)">19&Over</button></div>',
         '<div id="adding-list" onclick="event.stopPropagation()"></div>');
 
     html.push('<div class="add-search"><div>Compare progress with other swimmers:</div>', searchDropdown.render(), '</div>');
@@ -2249,17 +2248,17 @@ function createProgressGraph(pkey, events) {
 
     html.push('<div class="top-margin">');
     for (let c of _courseOrder) {
-        html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `showGraph(null,{${c}:this.checked})`), createHSpace(10));
+        html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `G.showGraph(null,{${c}:this.checked})`), createHSpace(10));
     }
     html.push('<span style="display:inline-block"><span id="swimmer-list" class="center-row"></span></span></div>');
 
-    html.push('<canvas id="canvas" class="hide" onmousemove="onCanvasMouseMove(this, event)" onwheel="wheelGraph(this, event)"></canvas>');
+    html.push('<canvas id="canvas" class="hide" onmousemove="G.onCanvasMouseMove(this, event)" onwheel="G.wheelGraph(this, event)"></canvas>');
 
     html.push('<div style="position:relative;margin:0 50px"class="resize-panel">',
-        '<button class="resize hide" style="left:40px;top:-190px" onclick="resizeY(-1)">⇧</button>',
-        '<button class="resize hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="resizeX(-1)">⇧</button>',
-        '<button class="resize hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="resizeX(1)">⇧</button>',
-        '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="resizeY(1)">⇧</button></div>');
+        '<button class="resize hide" style="left:40px;top:-190px" onclick="G.resizeY(-1)">⇧</button>',
+        '<button class="resize hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="G.resizeX(-1)">⇧</button>',
+        '<button class="resize hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="G.resizeX(1)">⇧</button>',
+        '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="G.resizeY(1)">⇧</button></div>');
 
     let dateRange = new DoubleRange('date-range', 0, 1000, 0, 1000, 5, rangeChange);
     html.push('<div>', dateRange.render(), '</div>');
@@ -2313,11 +2312,11 @@ function rangeChange(obj, left, right) {
 })();
 
 let func = new Map();
-
+G.func = func;
 function createCheckbox(id, text, checked, onchange) {
     if (typeof onchange == 'function') {
         func.set(`${id}-onchange`, onchange);
-        onchange = ` onchange="func.get('${id}-onchange')(this.checked)"`;
+        onchange = ` onchange="G.func.get('${id}-onchange')(this.checked)"`;
     } else {
         onchange = onchange ? ` onchange="${onchange}"` : '';
     }
@@ -2340,6 +2339,7 @@ async function onCanvasMouseMove(canvas, e) {
     let offset = canvas.getBoundingClientRect();
     await showGraph(canvas, { mouseX: e.clientX - offset.left, mouseY: e.clientY - offset.top });
 }
+G.onCanvasMouseMove = onCanvasMouseMove;
 
 function updateGraphTitle(config) {
     let [dist, stroke, course] = _eventList[config.event].split(' ');
@@ -2387,6 +2387,7 @@ async function wheelGraph(canvas, e) {
         }
     }
 }
+G.wheelGraph = wheelGraph;
 
 async function resizeX(delta, canvas) {
     canvas = canvas || document.getElementById('canvas');
@@ -2397,6 +2398,7 @@ async function resizeX(delta, canvas) {
     localStorage.setItem('xZoomFactor', factor.toFixed(2));
     await showGraph(canvas, { xZoomFactor: factor });
 }
+G.resizeX = resizeX;
 
 async function resizeY(delta, canvas) {
     canvas = canvas || document.getElementById('canvas');
@@ -2407,6 +2409,7 @@ async function resizeY(delta, canvas) {
     localStorage.setItem('yZoomFactor', factor.toFixed(2));
     await showGraph(canvas, { yZoomFactor: factor });
 }
+G.resizeY = resizeY;
 
 function updateSlider(config) {
     let idx = config.idx;
@@ -2906,12 +2909,14 @@ async function showGraph(canvas, config) {  //, pkey, event, mouseX, mouseY) {
     let tipRow = drawCurve(ctx, config);
     drawTip(ctx, tipRow, config);
 }
+G.showGraph = showGraph;
 
-async function addKeypress(input, e) {
-    if (e.key === 'Enter') {
-        await addSearch(input.value);
-    }
-}
+// async function addKeypress(input, e) {
+//     if (e.key === 'Enter') {
+//         await addSearch(input.value);
+//     }
+// }
+// G.addKeypress = addKeypress;
 
 async function addSearch(value, all) {
     document.getElementById('adding-list').innerHTML = '<div class=""><div class="loader"></div></div>';
@@ -2925,7 +2930,7 @@ async function addSearch(value, all) {
         let idx = list.idx;
         html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left"><tbody>');
         for (let row of list) {
-            html.push(`<tr onclick="addSwimmer(${row[idx.pkey]})"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
+            html.push(`<tr onclick="G.addSwimmer(${row[idx.pkey]})"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
         }
         html.push('</tbody></table>');
         html.push('<p class="tip">Click on the row to add the swimmer for comparison.</p>');
@@ -2935,6 +2940,7 @@ async function addSearch(value, all) {
 
     document.getElementById('adding-list').innerHTML = html.join('');
 }
+G.addSearch = addSearch;
 
 async function addSwimmer(pkey) {
     document.getElementById('adding-list').innerHTML = '<div class="loading"><div class="loader"></div></div>';
@@ -2959,6 +2965,7 @@ async function addSwimmer(pkey) {
     let dropdown = Dropdown.get('add-search');
     dropdown.close();
 }
+G.addSwimmer = addSwimmer;
 
 async function removeSwimmer(pkey) {
     let canvas = document.getElementById('canvas');
@@ -2973,6 +2980,7 @@ async function removeSwimmer(pkey) {
 
     await updateSwimmerList(canvas.config);
 }
+G.removeSwimmer = removeSwimmer;
 
 async function checkSwimmer(elem, pkey) {
     let canvas = document.getElementById('canvas');
@@ -2992,7 +3000,7 @@ async function updateSwimmerList(config) {
     let html = [];
 
     if (config.swimmerList.length > 1) {
-        html.push(createPopup(createCheckbox('age-align', 'Align by Age', config.ageAlign, 'showGraph(null,{ageAlign:this.checked})'),
+        html.push(createPopup(createCheckbox('age-align', 'Align by Age', config.ageAlign, 'G.showGraph(null,{ageAlign:this.checked})'),
             `Compare swimmers' times at the same age.`));
     }
 
@@ -3000,7 +3008,7 @@ async function updateSwimmerList(config) {
         let id = 's_' + swimmer.swimmer.pkey;
         let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
         html.push(createHSpace(20), createCheckbox(id, name, !swimmer.hide, `checkSwimmer(this,${swimmer.swimmer.pkey})`),
-            `<button class="xbutton" onclick="removeSwimmer(${swimmer.swimmer.pkey})">❌</button>`);
+            `<button class="xbutton" onclick="G.removeSwimmer(${swimmer.swimmer.pkey})">❌</button>`);
     }
 
     document.getElementById('swimmer-list').innerHTML = html.join('');
@@ -3032,10 +3040,10 @@ async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, zone, l
     // 0        1     2     3     4          5     6        7     8         9     10
     if (values) {
         let rank = calculateRank(values, pkey, timeInt);
-        html.push('<td class="full rk">', createClickableDiv(rank, `go('rank','${rankDataKey}')`), '</td>');
+        html.push('<td class="full rk">', createClickableDiv(rank, `G.go('rank','${rankDataKey}')`), '</td>');
     } else {
         let id = rankDataKey + '_' + pkey;
-        html.push(`<td class="full rk" id="${id}">`, createClickableDiv('<div class="loader"></div>', `go('rank','${rankDataKey}')`), '</td>');
+        html.push(`<td class="full rk" id="${id}">`, createClickableDiv('<div class="loader"></div>', `G.go('rank','${rankDataKey}')`), '</td>');
 
         _backgroundActions.push([getRank, [rankDataKey, timeInt, pkey, id]]);
     }
@@ -3067,7 +3075,7 @@ async function getRank(params) {
 
     let rank = data ? calculateRank(data.values, pkey, timeInt) : empty;
 
-    element.innerHTML = createClickableDiv(rank, `go('rank', '${mapKey}')`);
+    element.innerHTML = createClickableDiv(rank, `G.go('rank', '${mapKey}')`);
 }
 
 function calculateRank(values, pkey, timeInt) {
@@ -3131,7 +3139,7 @@ function createAgeBestTimeTable(data, fastRowList, rowInfo) {
             html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
         }
 
-        html.push('<td class="full">', createClickableDiv(dist, `showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
+        html.push('<td class="full">', createClickableDiv(dist, `G.showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
         for (let age of uniqueAges) {
             let bestTimeEvent = findBestTimeEventByAge(data.events, event, age);
             if (bestTimeEvent) {
@@ -3278,7 +3286,7 @@ function createMeetTableByCourse(course, events, pkey, meetDict) {
     for (let col of columnInfo) {
         for (let i = 1; i < col.length; ++i) {
             let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
-            let action = `showGraph(null,{pkey:${pkey},event:${evt}})`;
+            let action = `G.showGraph(null,{pkey:${pkey},event:${evt}})`;
             html.push('<td class="full">', createClickableDiv(col[i], action), '</td>');
         }
     }
@@ -3430,6 +3438,7 @@ async function rank(key) {
 
     await showRank(data, key);
 }
+G.rank = rank;
 
 let rankDataRequiredVersion = 2;
 
@@ -3897,7 +3906,7 @@ async function showRank(data, key) {
         '<p>Team:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
-    html.push(showEventButtons(event, (event) => `go('rank', '${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}')`));
+    html.push(showEventButtons(event, (event) => `G.go('rank', '${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}')`));
 
     html.push(showRankTableTitle(key));
 
@@ -3905,7 +3914,7 @@ async function showRank(data, key) {
     if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
-        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
     }
     html.push('<p>Meet cut:</p>', buildStandardSelects(key, customSelect), '</div>');
     html.push('<div id="rank-table" class="top-margin"></div>');
@@ -4023,6 +4032,7 @@ async function onMeetDateChange(value, table) {
         await updateRelayTables();
     }
 }
+G.onMeetDateChange = onMeetDateChange;
 
 function getMeetDate() {
     return localStorage.getItem('meetDate') || '';
@@ -4036,12 +4046,11 @@ async function updateRankTable() {
 function showEventButtons(selectedEvent, onclick) {
     let html = [];
     let course = getEventCourse(selectedEvent);
-    let hide25 = localStorage.getItem('hide25');
 
     html.push('<div class="match-size top-margin">');
     for (let i = 1; i < _eventList.length; ++i) {
         let [d, s, c] = _eventList[i].split(' ');
-        if (c == course && d != '_' && s.indexOf('-R') < 0 && (d != '25' || !hide25)) {
+        if (c == course && d != '_' && s.indexOf('-R') < 0 && (d != '25' || show25())) {
             let seleted = i == selectedEvent ? ' selected' : '';
             html.push(`<button class="evt d${d} ${s}${seleted}" style="border:1px solid;width:45px;"`,
                 ` onclick="${onclick(i)}">${s}<br>${d}</button>`);
@@ -4142,11 +4151,11 @@ async function showRankTable(data, key) {
         let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
             (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
 
-        html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `go('swimmer',${row[idx.pkey]})`),
+        html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `G.go('swimmer',${row[idx.pkey]})`),
             '</td><td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
             '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left full">', loading.render(),
-            `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `go('rank','${rowTeamRankKey}')`) : row[idx.clubName],
-            `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `go('rank','${rowlscRankKey}')`) : row[idx.lsc],
+            `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `G.go('rank','${rowTeamRankKey}')`) : row[idx.clubName],
+            `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `G.go('rank','${rowlscRankKey}')`) : row[idx.lsc],
             '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
     }
     html.push('</tbody></table>');
@@ -4256,6 +4265,7 @@ async function relay(key) {
 
     await showRelay(data, key);
 }
+G.relay = relay;
 
 async function loadRelay(key) {
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
@@ -4302,7 +4312,7 @@ async function showRelay(data, key) {
     if (customDatePicker) {
         html.push(`<input id="datepicker" value="${meetDate}">`);
     } else {
-        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="onMeetDateChange(this.value,'${page}')">`);
+        html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
     }
     html.push('<p>Distance:</p>', createDistanceSelect(key, customSelect, onchange), '</div>');
 
@@ -4312,7 +4322,7 @@ async function showRelay(data, key) {
 
     html.push(`<h3>${genderStr} ${ageKey} ${course} 4x${getRelayDistance(event)} Relay</h3>`);
 
-    let expanderViewHtml = [`<textarea style="width:600px;height:100px" oninput="textChange(this.value)" `,
+    let expanderViewHtml = [`<textarea style="width:600px;height:100px" oninput="G.textChange(this.value)" `,
         `placeholder="Add/Edit swimmers' times in this textbox using the following format:&#10;`,
         '  {Swimmer Name} {Back Time} {Breast Time} {Fly Time} {Free Time}&#10;Use 0 to skip updating a stroke.&#10;',
         'Example:&#10;  Michael Phelps 45.50 53.41 45.40 41.93&#10;  Caeleb Dressel 0 0 42.80 39.90&#10;"></textarea>',
@@ -4373,10 +4383,10 @@ async function updateSelectionTable() {
         let realSwimmer = typeof swimmer.pkey == 'number';
 
         html.push(`<tr><td class="left${realSwimmer ? ' full' : ''}">`,
-            realSwimmer ? createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`) : swimmer.name);
+            realSwimmer ? createClickableDiv(swimmer.name, `G.go('swimmer',${swimmer.pkey})`) : swimmer.name);
         for (let [i, stroke] of _relayOrder.entries()) {
             let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
-            html.push(`</td><td class="${swimmer[stroke] ? 'leg-time' : ''}${deselected}" onclick="deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
+            html.push(`</td><td class="${swimmer[stroke] ? 'leg-time' : ''}${deselected}" onclick="G.deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
         }
 
         html.push('</td><td>', swimmer.age);
@@ -4436,6 +4446,7 @@ async function textChange(value) {
     await updateSelectionTable();
     await updateRelayTables();
 }
+G.textChange = textChange;
 
 async function loadBirthday(params) {
     let [pkey, elemId, callback] = params;
@@ -4462,6 +4473,7 @@ function deselect(elememt, legIndex, pkey) {
 
     updateRelayTables();
 }
+G.deselect = deselect;
 
 function buildSelectionTableData() {
     let table = document.getElementById('relay-table');
@@ -4671,7 +4683,7 @@ function updateRelayTable(relays, type) {
         html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill"><tbody>');
         for (let [i, swimmer] of swimmers.entries()) {
             html.push('<tr>');
-            html.push('<td class="left full">', createClickableDiv(swimmer.name, `go('swimmer',${swimmer.pkey})`),
+            html.push('<td class="left full">', createClickableDiv(swimmer.name, `G.go('swimmer',${swimmer.pkey})`),
                 '</td><td>', swimmer.time, '</td>');
             if (type == 'medley') {
                 html.push('<td>', _relayOrder[i], '</td>');
@@ -4889,7 +4901,7 @@ function timeToInt(stime) {
 })();
 
 
-(function () {
+let lscMap = (function () {
     let data = `
 Adirondack|AD|Eastern
 Alaska|AK|Western
@@ -4958,17 +4970,18 @@ Wyoming|WY|Western`;
             map.set(parts[1], [parts[0], parts[2]]);
         }
     }
-    window.lscMap = map;
-    window.getLSCName = function (lsc) {
-        return (map.get(lsc) || ['', ''])[0];
-    }
-    window.getLSCZone = function (lsc) {
-        return (map.get(lsc) || ['', ''])[1];
-    }
+    return map;
 })();
 
+    function getLSCName (lsc) {
+        return (lscMap.get(lsc) || ['', ''])[0];
+    }
+    function getLSCZone (lsc) {
+        return (lscMap.get(lsc) || ['', ''])[1];
+    }
 
-(function () {
+
+let agmTimes = (function () {
     let data = `
 # USA Swimming 2024-2028 Motivational Standards
 # 10/7/2024 2:19:40 PM
@@ -5745,15 +5758,15 @@ Wyoming|WY|Western`;
         }
     }
 
-    function getAgeGroupMotivationTime(key) {
-        return times.get(key) || ['', 0]
-    }
-
-    window.getAgeGroupMotivationTime = getAgeGroupMotivationTime;
+    return times;
 })();
 
+function getAgeGroupMotivationTime(key) {
+    return agmTimes.get(key) || ['', 0]
+}
 
-(function () {
+
+let meetCuts = (function () {
     let data = `
 # 2024-10-17 updated
 meet: SILVER: PNS 2024-2025 SILVER TIME
@@ -6352,28 +6365,11 @@ meet: OT : 2024 U.S. Olympic Team Trials (6/21/2024)
         }
     }
 
-    window.getMeetStandards = function (age) {
-        return times.filter(x => x.age[0] <= age && age <= x.age[1]);
-    };
+    return times;
 })();
 
-// let global = {};
+function getMeetStandards (age) {
+    return meetCuts.filter(x => x.age[0] <= age && age <= x.age[1]);
+};
 
-// (()=>{
-//     class Hello {
-//         constructor() {
-//             this.message = 'Hello World!';
-//         }
-//     }
-    
-//     function callme() {
-//         console.log('callme');
-//     }
-
-//     global.Hello = Hello;
-
-//     global.hello = new global.Hello();
-
-//     console.log(global.hello.message);
-//     console.log(callme);
-// })()
+})();
