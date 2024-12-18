@@ -16,7 +16,7 @@ Content-Type: application/json
 POST https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken
 Content-Type: application/json
 
-{"sessionId":1993628,"deviceId":0,"hostId":"MA=="}
+{"sessionId":2417701,"deviceId":0,"hostId":"MA=="}
 
 
 ###
@@ -213,7 +213,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 
 POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiYmU5YjRkOWYtOGY5Yi0zYzEwLWI5OTgtMDM4Y2QzMmE3NzAzIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.CJSs3BwZ7TmSToWqA9p50iInJKHvCie5XHKJmgmlOiw
 
 {
   "metadata": [
@@ -262,10 +262,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 
 
 ###
+# event table 
 
 POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMjJhYmIxZGItNzlhYy0zMTQ1LTBjNTItYTU0OGQ5ZjAyOTQ5IiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.0uWonsgKfrpfCDi4GramolaPUNrVrdg-yKAf47s2SQ4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiYmU5YjRkOWYtOGY5Yi0zYzEwLWI5OTgtMDM4Y2QzMmE3NzAzIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.CJSs3BwZ7TmSToWqA9p50iInJKHvCie5XHKJmgmlOiw
 
 {
   "metadata": [
@@ -293,9 +294,109 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
       "datatype": "numeric",
     },
     {
-      "dim": "[EventCompetitionCategory.TypeName]",
-      "datatype": "text"
+      "dim": "[EventCompetitionCategory.TypeCode]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[Meet.Final]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[Meet.Semi]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[Meet.Prelim]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[Age.AgeGroup1]",
+      "datatype": "text",
+    },
+    {
+                            "dim": "[Session.SessionName]",
+                            "datatype": "text",
+    },
+        {
+                            "dim": "[Session.SessionKey]",
+                            "datatype": "text",
     }
+
   ],
   "count": 200,
 }
+
+# total swim time count = 168_201_504
+# {
+#   "metadata": [
+#     {
+#       "agg": "count",
+#       "dim": "[UsasSwimTime.UsasSwimTimeKey]",
+#       "datatype": "numeric",
+#     }
+#   ],
+#   "count": 1,
+# }
+
+###
+# testing
+
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiN2M4ZDlhN2UtODhjYy0xOTM0LTY1N2MtNjI0MmVjZDU4ZTRkIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.onY0_S2D3Mp7Q2PNsDPE8VxZSYqHGgnteS6TbNN_73U
+
+{
+  "metadata": [
+    {
+      "agg": "count",
+      "dim": "[OrgUnit.Level4Code]",
+      "datatype": "text",
+    },
+    {
+      "agg": "count",
+      "dim": "[OrgUnit.Level4Name]",
+      "datatype": "numeric"
+    },
+    {
+      "agg": "count",
+      "dim": "[UsasSwimTime.OrgUnitKey]",
+      "datatype": "numeric"
+    },
+    {
+        "dim": "[UsasSwimTime.SwimEventKey]",
+        "datatype": "numeric",
+        "filter": {
+            "equals": 1
+        },
+        "panel": "scope"
+    }
+  ],
+  "count": 200
+}
+
+
+                    # {
+                    #     "title": "clubName",
+                    #     "dim": "[OrgUnit.Level4Name]",
+                    #     "datatype": "text"
+                    # },
+                    # {
+                    #     "agg": "count",
+                    #     "dim": "[OrgUnit.Level4Code]",
+                    #     "datatype": "text",
+                    # },
+###
+# POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+# Accept: */*
+
+POST http://localhost:8080/q?url=https%3A%2F%2Fusaswimming.sisense.com%2Fapi%2Fdatasources%2FPublic%20Person%20Search%2Fjaql
+# POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Accept: application/json
+Authorization: Bearer 1eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiN2M4ZDlhN2UtODhjYy0xOTM0LTY1N2MtNjI0MmVjZDU4ZTRkIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.onY0_S2D3Mp7Q2PNsDPE8VxZSYqHGgnteS6TbNN_73U
+Content-Type: application/json
+X-Cache-TTL: -1
+# Host: localhost:8080
+Origin: http://data.usaswimming.org
+# Referer: http://localhost:8080/files/swim.html
+
+{"metadata":[{"title":"name","dim":"[Persons.FullName]","datatype":"text"},{"title":"age","dim":"[Persons.Age]","datatype":"numeric","sort":"asc","filter":{"to":18}},{"title":"clubName","dim":"[Persons.ClubName]","datatype":"text"},{"title":"lsc","dim":"[Persons.LscCode]","datatype":"text"},{"title":"pkey","dim":"[Persons.PersonKey]","datatype":"numeric"},{"dim":"[Persons.LastName]","filter":{"startsWith":""},"panel":"scope"},{"dim":"[Persons.FirstAndPreferredName]","filter":{"contains":""},"panel":"scope"}],"count":5000}

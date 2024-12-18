@@ -32,6 +32,16 @@ type ErrorResponse struct {
 	Error json.RawMessage `json:"error"`
 }
 
+type HTTPError struct {
+	Code   int
+	Header http.Header
+	Body   []byte
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.Code, e.Body)
+}
+
 func getLoader(url string, req *http.Request, bodyBytes []byte) utils.Loader[string, httpCacheItem] {
 	return func(key string) (*httpCacheItem, int, error) {
 		code, header, responseBody, err := forwardRequest(req.Method, url, req.Header, bodyBytes)
@@ -40,7 +50,7 @@ func getLoader(url string, req *http.Request, bodyBytes []byte) utils.Loader[str
 		}
 
 		if code != http.StatusOK {
-			return nil, -1, fmt.Errorf("response code: %d", code)
+			return nil, -1, &HTTPError{Code: code, Header: header, Body: responseBody}
 		}
 
 		decodedBody := responseBody
@@ -77,9 +87,9 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 
 	if req.Method == http.MethodOptions {
 		writer.Header().Add("Access-Control-Allow-Methods", "POST")
-		writer.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		writer.Header().Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Cache-TTL")
 		writer.Header().Add("Access-Control-Max-Age", "86400")
-		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Origin", "null")
 		writer.WriteHeader(http.StatusNoContent)
 		return
 	}
@@ -108,7 +118,17 @@ func QueryHandler(writer http.ResponseWriter, req *http.Request) {
 	item, exp, err := httpCache.GetWithLoader(key, ttl, getLoader(url, req, bodyBytes))
 
 	if err != nil {
-		http.Error(writer, err.Error(), http.StatusNotFound)
+		if err, ok := err.(*HTTPError); ok {
+			for key, values := range err.Header {
+				for _, value := range values {
+					writer.Header().Add(key, value)
+				}
+			}
+			writer.WriteHeader(err.Code)
+			writer.Write([]byte(err.Body))
+		} else {
+			http.Error(writer, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -141,9 +161,9 @@ func forwardRequest(method, url string, reqHeader http.Header, bodyBytes []byte)
 	}
 	req.Header = reqHeader
 
-	req.Header.Del("Host")
+	// req.Header.Del("Host")
 	req.Header.Set("Origin", "https://data.usaswimming.org")
-
+	
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if resp != nil && resp.Body != nil {

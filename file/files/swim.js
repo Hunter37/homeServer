@@ -41,12 +41,12 @@ const _1DayInMilliSeconds = _1DayInSec * 1000;
 const _eventList = ['0 _ _',
     '50 FR SCY', '100 FR SCY', '200 FR SCY', '500 FR SCY', '1000 FR SCY', '1650 FR SCY', '_ _ _', '_ _ _', '_ _ _', '_ _ _',
     '50 BK SCY', '100 BK SCY', '200 BK SCY', '50 BR SCY', '100 BR SCY', '200 BR SCY', '50 FL SCY', '100 FL SCY', '200 FL SCY', '100 IM SCY',
-    '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '26 _ _', '27 _ _', '50 FR SCM', '100 FR SCM', '200 FR SCM',
+    '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '200 MED-R SCY', '400 MED-R SCY', '50 FR SCM', '100 FR SCM', '200 FR SCM',
     '400 FR SCM', '800 FR SCM', '1500 FR SCM', '34 _ _', '35 _ _', '36 _ _', '37 _ _', '50 BK SCM', '100 BK SCM', '200 BK SCM',
-    '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM', '50 _ _',
-    '51 _ _', '52 _ _', '53 _ _', '54 _ _', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM', '1500 FR LCM',
+    '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM', '200 FR-R SCM',
+    '400 FR-R SCM', '800 FR-R SCM', '200 MED-R SCM', '400 MED-R SCM', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM', '1500 FR LCM',
     '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM', '200 BR LCM',
-    '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '76 _ _', '77 _ _', '78 _ _', '79 _ _', '80 _ _', '25 FR SCY',
+    '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM', '400 MED-R LCM', '25 FR SCY',
     '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM', '89 _ _', '90 _ _', '91 _ _'];
 const _eventIndexMap = new Map();
 _eventList.forEach((item, index) => {
@@ -173,8 +173,6 @@ class LocalCache {
         try {
             data = await func();
         } catch (e) {
-            console.error(e.stack, key);
-
             // try to use old data if network is down
             data = await LocalCache.get(key, _10YearsInSec, minVersion);
             if (!data) {
@@ -889,34 +887,45 @@ async function fetchSwimValues(bodyObj, type) {
         // meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql',
     }
 
-    let headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-        // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
-    };
+    let response;
+    for (let retry = 0; retry < 2; ++retry) {
+        let headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+            // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+        };
 
-    let url = map[type || 'swimmer'];
+        let url = map[type || 'swimmer'];
 
-    if (useProxy()) {
-        url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
+        if (useProxy()) {
+            url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
-        let ttl = localStorage.getItem('cache-ttl') || 0;
-        if (ttl) {
-            headers['X-Cache-TTL'] = ttl;
+            let ttl = localStorage.getItem('cache-ttl') || 0;
+            if (ttl) {
+                headers['X-Cache-TTL'] = ttl;
+            }
         }
-    }
 
-    let response = await fetch(url, {
-        method: 'POST',
-        headers: headers,
-        signal: AbortSignal.timeout(10_000),
-        body: JSON.stringify(bodyObj)
-    });
+        response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            signal: AbortSignal.timeout(10_000),
+            body: JSON.stringify(bodyObj)
+        });
 
-    if (!response.ok) {
+        if (response.ok) {
+            break;
+        }
+
+        if (response.status == 401) {
+            console.warn(response.statusText, await response.text());
+            await ensureToken(true);
+            continue;
+        }
+
         return;
     }
-
+    
     let data = await response.json();
     if (data.error || !data.values) {
         return;
@@ -935,13 +944,14 @@ async function fetchSwimValues(bodyObj, type) {
 
 async function fetchToken() {
     let tokenCall = async (url, bodyObj) => {
+        // fetch token must use proxy, otherwise it will be blocked by CORS
         url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
         let response = await fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Cache-TTL': 60,
+                'X-Cache-TTL': 10,
             },
             signal: AbortSignal.timeout(5_000),
             body: JSON.stringify(bodyObj)
@@ -1016,33 +1026,27 @@ async function fetchToken() {
 
     let ip2dec = ip => ip.split('.').reduce((s, i) => (s << 8) + parseInt(i), 0) >>> 0;
 
-    return await LocalCache.func('token', async () => {
-        let ip = (await getIpAddress()).trim();
-        let deviceId = MurmurHash(ip + location.toString() + navigator.userAgent);
-        let hostId = btoa(ip2dec(ip));
+    let ip = (await getIpAddress()).trim();
+    let deviceId = MurmurHash(ip + location.toString() + navigator.userAgent);
+    let hostId = btoa(ip2dec(ip));
 
-        let data = await tokenCall('https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken',
-            { toxonomies: [], appName: 'Data', deviceId: deviceId, uIProjectName: 'times-microsite-ui', hostId: hostId, bustCache: false, scope: 'Project' });
+    let data = await tokenCall('https://securityapi.usaswimming.org/security/Auth/GetSecurityInfoForToken',
+        { toxonomies: [], appName: 'Data', deviceId: deviceId, uIProjectName: 'times-microsite-ui', hostId: hostId, bustCache: false, scope: 'Project' });
 
-        let requestId = parseInt(data?.requestId);
+    let requestId = parseInt(data?.requestId);
 
-        data = await tokenCall('https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken',
-            { sessionId: requestId * 13, deviceId: deviceId, hostId: hostId, requestUrl: '/datahub' });
+    data = await tokenCall('https://securityapi.usaswimming.org/security/DataHubAuth/GetSisenseAuthToken',
+        { sessionId: requestId * 13, deviceId: deviceId, hostId: hostId, requestUrl: '/datahub' });
 
-        return data?.accessToken;
-    }, _1HourInSec);
+    return data?.accessToken;
 }
 
 let token;
-async function ensureToken() {
-    try {
-        token = await fetchToken();
-        if (location.pathname.endsWith('/swim.html')) {
-            console.log(token);
-        }
-    } catch (e) {
-        token = localStorage.getItem('test-token');
+async function ensureToken(force) {
+    if (token && !force) {
+        return;
     }
+    token = await fetchToken();
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -1259,16 +1263,17 @@ async function config(params) {
     }
 
     if (params == 'token') {
-        tabView.addTab('<p>TOKEN</p>', buildTokenPage());
+        tabView.addTab('<p>TOKEN</p>', await buildTokenPage());
     }
 
     updateContent(tabView.render(index), loadingHash);
 }
 
-function buildTokenPage() {
+async function buildTokenPage() {
+    await ensureToken(true);
     return [
         '<div class="top-margin">',
-        `<textarea style="width:100%;height:200px" oninput="localStorage.setItem('test-token', this.value.trim())">`, token, '</textarea>',
+        `<textarea style="width:100%;height:200px" oninput="token=this.value">`, token, '</textarea>',
         `<button onclick="let t=document.querySelector('textarea');t.select();navigator.clipboard.writeText(t.value);">Copy Token</button>`,
         '</div>',
     ].join('');
@@ -3889,7 +3894,7 @@ async function showRank(data, key) {
 
     html.push('<div class="center-row p-l-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
         '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
+        '<p>Team:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
     html.push(showEventButtons(event, (event) => `go('rank', '${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}')`));
@@ -4291,7 +4296,7 @@ async function showRelay(data, key) {
 
     html.push('<div class="center-row p-l-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
         '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
-        '<p>Club:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
+        '<p>Team:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
     html.push('<div class="center-row p-l-space top-margin"><p>Meet date:</p>');
     if (customDatePicker) {

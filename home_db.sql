@@ -69,12 +69,12 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 
 CREATE TABLE
     event (
-        swim_key        int NOT NULL,   -- 172040834 -> globle unique
-        person_key      int NOT NULL,
-        meet_key        int NOT NULL,
-        event_key       int NOT NULL,   -- 1 -> 50 SCY Free
-        team_key        int,            -- Team unique key
-        gender          varchar(1),     -- M | F
+        swim_key        int NOT NULL,   -- 172040834 -> globle unique - total (total > 168_201_504)
+        person_key      int NOT NULL,   -- total (total > 1_733_205)
+        meet_key        int NOT NULL,   -- total (total > 176_130)
+        event_key       int NOT NULL,   -- 1 -> 50 SCY Free (total = 92)
+        team_key        int,            -- Team unique key (total > 7_287)
+        gender          varchar(1),     -- M | F | X (MX|Mixed) | U (UN|Unknown)
 
 
 
@@ -96,17 +96,82 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
     {
       "dim": "[UsasSwimTime.UsasSwimTimeKey]",
       "datatype": "numeric",
+    },
+    {
+      "dim": "[UsasSwimTime.PersonKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric",
       "filter": {
-        "equals": 172040834
+        "equals": 264503
       }
     },
     {
-      "title": "MeetKey",
-      "dim": "[Meet.MeetKey]",
+      "dim": "[UsasSwimTime.SwimEventKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[UsasSwimTime.OrgUnitKey]",
+      "datatype": "numeric",
+    },
+    {
+      "dim": "[EventCompetitionCategory.TypeCode]",
       "datatype": "numeric"
     }
   ],
-  "count": 20000,
+  "count": 200,
 }
 
+
+// list all event key and event code
+// 1|1|50 SCY Free (total 92)
+{
+  "metadata": [
+    {
+      "dim": "[UsasSwimTime.SwimEventKey]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[SwimEvent.SwimEventKey]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[SwimEvent.EventCode]",
+      "datatype": "text"
+    }
+  ],
+  "count": 200,
+}
+
+// list all gender code and name (F|Female M|Male MX|Mixed UN|Unknown) (total 4)
+{
+  "metadata": [
+    {
+      "dim": "[EventCompetitionCategory.TypeCode]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[EventCompetitionCategory.TypeName]",
+      "datatype": "numeric"
+    },
+  ],
+  "count": 200,
+}
+
+// list all session key and name (0|Unknown 1|Prelim 2|SwimOff 3|Final 4|SemiFinal 5|QuarterFinal 6|TimedFinal 7|Time Trial) (total 8)
+{
+  "metadata": [
+    {
+      "dim": "[Session.SessionKey]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[Session.SessionName]",
+      "datatype": "text"
+    }
+  ],
+  "count": 200
+}
 */

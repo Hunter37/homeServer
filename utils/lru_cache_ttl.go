@@ -40,8 +40,6 @@ func (c *TTLCache[K, V]) GetWithLoader(key K, ttl time.Duration, loader Loader[K
 			// ttl < 0, will force the item get expired
 			if time.Now().Before(item.expiration) && ttl >= 0 {
 				return item, true
-			} else {
-				close(item.valueChan)
 			}
 		}
 
