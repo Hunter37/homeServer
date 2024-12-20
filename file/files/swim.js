@@ -1977,9 +1977,9 @@ function getAlias(firstName, lastName) {
     return alias;
 }
 
-async function findUsaSwimmer(firstName, lastName, birthday, token, thread) {
-    async function fetchCall(first, last, birthday) {
-        const url = `https://personapi.usaswimming.org/swims/Person/omr/query/dupcheck?firstName=${first}&lastName=${last}&birthDate=${birthday}`;
+async function findUsaSwimmer(firstName, lastName, birthdayPair, token, thread) {
+    async function fetchCall(birthday) {
+        const url = `https://personapi.usaswimming.org/swims/Person/omr/query/dupcheck?firstName=${firstName}&lastName=${lastName}&birthDate=${birthday}`;
         const response = await fetch(url, {
             headers: {
                 'Authorization': 'Bearer ' + token,
@@ -1990,13 +1990,12 @@ async function findUsaSwimmer(firstName, lastName, birthday, token, thread) {
         }
     }
 
-    thread = thread || 10;
-    let end = new Date(birthday[1]+'T00:00:00.000Z');
+    let end = new Date(birthdayPair[1]+'T00:00:00.000Z');
     let dates = [];
-    for (let day = new Date(birthday[0]+'T00:00:00.000Z'); day.getTime() <= end.getTime(); day.setUTCDate(day.getUTCDate() + 1)) {
+    for (let day = new Date(birthdayPair[0]+'T00:00:00.000Z'); day.getTime() <= end.getTime(); day.setUTCDate(day.getUTCDate() + 1)) {
         dates.push(day.toJSON().substring(0, 10));
         if (dates.length == thread || day.getTime() == end.getTime()) {
-            let promises = dates.map(day => fetchCall(firstName, lastName, day));
+            let promises = dates.map(day => fetchCall(day));
             let results = await Promise.all(promises);
             for (let result of results) {
                 if (result?.length > 0) {
@@ -2019,11 +2018,12 @@ async function createDetailsPageTitle(data) {
 
     html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
         convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ');
-    if (localStorage.getItem('xbday') == '1') {
+    let thread = parseInt(localStorage.getItem('xbday'));
+    if (thread > 0) {
         let load = new Loading('xbday', range, async id => {
             let xbday = await LocalCache.get('xbday/' + swimmer.pkey, _10YearsInSec);
             if (!xbday) {
-                let result = await findUsaSwimmer(swimmer.firstName, swimmer.lastName, swimmer.birthday, token);
+                let result = await findUsaSwimmer(swimmer.alias, swimmer.lastName, swimmer.birthday, token, thread);
                 xbday = result?.[0]?.birthDate.substring(0, 10);
                 xbday && LocalCache.set('xbday/' + swimmer.pkey, xbday);
             }
