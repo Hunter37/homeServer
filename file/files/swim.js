@@ -746,14 +746,14 @@ class Loading {
     }
 
     render() {
-        return `<div id="${this.id}" class="clickable no-dec" onclick="G.Loading.get('${this.id}').loading()">${this.content}</div>`;
+        return `<span id="${this.id}" class="clickable no-dec" onclick="G.Loading.get('${this.id}').loading()">${this.content}</span>`;
     }
 
     loading() {
         if (this.status == 'init') {
             this.status = 'loading';
-            this.loadFunc(this.id);
             document.getElementById(this.id).innerHTML = '<div class="loader"></div>';
+            this.loadFunc(this.id);
         }
     }
 
@@ -1039,7 +1039,6 @@ async function ensureToken(force) {
     }
     token = await fetchToken();
 }
-G.token = token;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // initial page
@@ -1055,7 +1054,7 @@ G.token = token;
         drop.render(),
         `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="big search hide">RANK</button>`,
         `<button id="relay-button" onclick="G.TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
-        `<button id="favirite-button" onclick="G.TopButton.onClick('favirite')" class="search sq-btn">${starSVG}</button>`,
+        `<button id="favorite-button" onclick="G.TopButton.onClick('favorite')" class="search sq-btn">${starSVG}</button>`,
         `<button id="config-button" onclick="G.TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
         '</div>',
         '<div id="content" class="container"></div>',
@@ -1132,7 +1131,7 @@ async function loadContent() {
 
     TopButton.show('relay', false);
     TopButton.show('rank', false);
-    TopButton.show('favirite', true, true);
+    TopButton.show('favorite', true, true);
     TopButton.show('config', true, true);
     document.getElementById('mloading').classList.remove('hide');
 
@@ -1178,18 +1177,18 @@ const _backgroundActions = [];
 })();
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
-// favirite swimmer page
+// favorite swimmer page
 //🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠★⛓‍💥❌🔽🔼△▽
 
-async function favirite() {
-    TopButton.show('favirite', true, false);
+async function favorite() {
+    TopButton.show('favorite', true, false);
 
-    let loadingHash = 'favirite';
+    let loadingHash = 'favorite';
     let values = Favorite.get();
 
     let html = [];
 
-    html.push('<h2>Favirites</h2>')
+    html.push('<h2>Favorites</h2>')
 
     if (values.size == 0) {
         html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="display:inline-block;fill:#CCC;width:24px;transform:translateY(7px)">',
@@ -1205,7 +1204,7 @@ async function favirite() {
 
     updateContent(html.join(''), loadingHash);
 }
-G.favirite = favirite;
+G.favorite = favorite;
 
 class Favorite {
     static createButton(pkey, name, age, clubName, lsc) {
@@ -1240,6 +1239,15 @@ class Favorite {
     }
 }
 G.Favorite = Favorite;
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+// set page
+async function set(params) {
+    let part = params.split('=');
+    localStorage.setItem(part[0], part[1]);
+    history.back();
+}
+G.set = set;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // config page
@@ -1423,23 +1431,6 @@ function buildAdvancedConfig() {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////
 // search functions
-
-// const _inputElem = document.getElementById('input');
-// _inputElem.addEventListener('keypress', (event) => {
-//     if (event.key == 'Enter') {
-//         onSearch();
-//     }
-// });
-
-// async function onSearch() {
-//     go('search', _inputElem.value);
-// }
-// G.onSearch = onSearch;
-
-// async function onSearchAll() {
-//     go('searchAll', _inputElem.value);
-// }
-// G.onSearchAll = onSearchAll;
 
 async function search(name) {
     if (!name) {
@@ -1926,7 +1917,7 @@ async function showDetails(data, loadingHash) {
     let html = [];
 
     // build title
-    html.push(createDetailsPageTitle(data));
+    html.push(await createDetailsPageTitle(data));
     if (data.events.length == 0) {
         html.push('<div>No events found</div>');
         updateContent(html.join(''), loadingHash);
@@ -1986,26 +1977,64 @@ function getAlias(firstName, lastName) {
     return alias;
 }
 
-function createDetailsPageTitle(data) {
-    // swimmer
-    // firstName, lastName, age, clubName, lsc, pkey, club, zone
-    // 0          1         2    3         4    5     6     7
-    // events
-    // time, age, std, lsc, club, date, event, meet, gender
-    // 0     1    2    3    4     5     6      7     8
-    // meets
-    // meetKey, startDate, meetName
-    // 0        1          2
+async function findUsaSwimmer(firstName, lastName, birthday, token, thread) {
+    async function fetchCall(first, last, birthday) {
+        const url = `https://personapi.usaswimming.org/swims/Person/omr/query/dupcheck?firstName=${first}&lastName=${last}&birthDate=${birthday}`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': 'Bearer ' + token,
+            },
+        });
+        if (response.ok) {
+            return response.json();
+        }
+    }
 
+    thread = thread || 10;
+    let end = new Date(birthday[1]+'T00:00:00.000Z');
+    let dates = [];
+    for (let day = new Date(birthday[0]+'T00:00:00.000Z'); day.getTime() <= end.getTime(); day.setUTCDate(day.getUTCDate() + 1)) {
+        dates.push(day.toJSON().substring(0, 10));
+        if (dates.length == thread || day.getTime() == end.getTime()) {
+            let promises = dates.map(day => fetchCall(firstName, lastName, day));
+            let results = await Promise.all(promises);
+            for (let result of results) {
+                if (result?.length > 0) {
+                    return result;
+                }
+            }
+            dates = [];
+        }
+    }
+}
+
+async function createDetailsPageTitle(data) {
     let html = [];
 
     console.log(JSON.stringify(data.swimmer));
 
     let swimmer = data.swimmer;
     let name = swimmer.alias + ' ' + swimmer.lastName;
+    let range = BirthdayDictionary.format(swimmer.birthday);
+
     html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
-        convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ',
-        BirthdayDictionary.format(swimmer.birthday), '</p><p>Total Event: ', data.events.length, '</p></div>');
+        convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ');
+    if (localStorage.getItem('xbday') == '1') {
+        let load = new Loading('xbday', range, async id => {
+            let xbday = await LocalCache.get('xbday/' + swimmer.pkey, _10YearsInSec);
+            if (!xbday) {
+                let result = await findUsaSwimmer(swimmer.firstName, swimmer.lastName, swimmer.birthday, token);
+                xbday = result?.[0]?.birthDate.substring(0, 10);
+                xbday && LocalCache.set('xbday/' + swimmer.pkey, xbday);
+            }
+            load.done(xbday);
+        });
+        html.push(load.render());
+    } else {
+        html.push(range);
+    }
+
+    html.push('</p><p>Total Event: ', data.events.length, '</p></div>');
 
     _backgroundActions.push([params => {
         let [pkey, name, age, clubName, lsc] = params;
@@ -2910,13 +2939,6 @@ async function showGraph(canvas, config) {  //, pkey, event, mouseX, mouseY) {
     drawTip(ctx, tipRow, config);
 }
 G.showGraph = showGraph;
-
-// async function addKeypress(input, e) {
-//     if (e.key === 'Enter') {
-//         await addSearch(input.value);
-//     }
-// }
-// G.addKeypress = addKeypress;
 
 async function addSearch(value, all) {
     document.getElementById('adding-list').innerHTML = '<div class=""><div class="loader"></div></div>';
