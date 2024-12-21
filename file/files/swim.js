@@ -4017,7 +4017,7 @@ const G = {};
             let values = [['', '']];
             for (let option of options) {
                 let [short, from, to, std] = option;
-                let text = `${short} (${from == to ? from : from + '-' + to}) = ${std}`;
+                let text = `${short} (${from == to ? from : to == 99 ? from + 'O' : from + '-' + to}) = ${std}`;
                 let value = `${short}|${from}|${to}`;
                 values.push([text, value]);
             }
@@ -4102,11 +4102,11 @@ const G = {};
     async function showRankTable(data, key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
+        let meetStandards = await getMeetStandards(to, lsc);
         let standards = [];
         for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
             let [short, f, t] = (localStorage.getItem('meetStds' + i) || '||').split('|');
-            let meet = await getMeetStandards(to, lsc);
-            meet = meet.filter(m => m.short == short && m.age[0] == f && m.age[1] == t);
+            let meet = meetStandards.filter(m => m.short == short && m.age[0] == f && m.age[1] == t);
             if (meet && meet.length > 0) {
                 let std = meet[0][genderStr].get(_eventList[event]);
                 if (std) {
@@ -5026,18 +5026,17 @@ Wyoming|WY|Western`;
     }
 
     async function getAgeGroupMotivationTime(key) {
-        return await RuntimeCache.func(`motivation-${key}`, async () => {
+        let ageTimes = await RuntimeCache.func(`motivation-times`, async () => {
             try {
                 let root = location.protocol === 'file:' ? '' : '/files/';
                 let data = await getFileData(`${root}motivation.js`);
-                let ageTimes = parseMotivationStandard(data);
-                return ageTimes.get(key) || ['', 0]
+                return parseMotivationStandard(data);
             } catch (e) {
                 console.error(e.stack);
             }
-
-            return ['', 0];
         });
+
+        return ageTimes?.get(key) || ['', 0]
     }
 
     function parseMeetCut(data) {
@@ -5137,26 +5136,26 @@ Wyoming|WY|Western`;
 
     const meet = new Map([
         ['PN', ['pn', 'northwest', 'west']],
-        ['Ak', ['west']],
+        ['Ak', ['northwest', 'west']],
         ['AZ', ['west']],
         ['CC', ['west']],
         ['CO', ['west']],
-        ['HI', ['west']],
-        ['IE', ['west']],
-        ['MT', ['west']],
+        ['HI', ['northwest', 'west']],
+        ['IE', ['northwest', 'west']],
+        ['MT', ['northwest', 'west']],
         ['NM', ['west']],
-        ['OR', ['west']],
+        ['OR', ['northwest', 'west']],
         ['PC', ['west']],
         ['SI', ['west']],
         ['SN', ['west']],
-        ['SR', ['west']],
+        ['SR', ['northwest', 'west']],
         ['CA', ['west']],
         ['UT', ['west']],
-        ['WY', ['west']],
+        ['WY', ['northwest', 'west']],
     ]);
 
     async function getMeetStandards(age, lsc) {
-        return await RuntimeCache.func(`meet-standards-${age}-${lsc}`, async () => {
+        let cuts = await RuntimeCache.func(`meet-cut-${lsc}`, async () => {
             let root = location.protocol === 'file:' ? '' : '/files/';
             let meetCuts = [];
             let list = meet.get(lsc);
@@ -5181,9 +5180,10 @@ Wyoming|WY|Western`;
             } catch (e) {
                 console.error(e.stack);
             }
-
-            return meetCuts.filter(x => x.age[0] <= age && age <= x.age[1]);
+            return meetCuts;
         });
+
+        return cuts.filter(x => x.age[0] <= age && age <= x.age[1]);
     }
 
     async function getFileData(file) {
