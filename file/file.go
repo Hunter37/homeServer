@@ -15,6 +15,12 @@ func FileHandler(writer http.ResponseWriter, req *http.Request) {
 
 	fileName := req.URL.Path
 	if fileName == "/files" || fileName == "/files/" {
+		listing := req.URL.Query().Get("list")
+		if listing != "1" {
+			utils.GzipWrite(writer, nil, http.StatusNotFound);
+			return;
+		}
+
 		files, err := storage.File.List("file/files")
 		utils.LogError(err)
 
