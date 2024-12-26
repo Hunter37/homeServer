@@ -128,7 +128,7 @@ const G = {};
     // local caches
 
     class LocalCache {
-        static currentVersion = 3;
+        static currentVersion = 4;
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
@@ -2088,7 +2088,7 @@ const G = {};
         return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
     }
 
-    function createBestTimeTableHeader(data, meetStds, ageKey) {
+    function createBestTimeTableHeader(data, meetList, ageKey) {
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
         let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
@@ -2106,7 +2106,7 @@ const G = {};
                 '</th>');
         }
 
-        html.push(`<th colspan="${meetStds.length}" class="mc">Meet Standards</th></tr>`,
+        html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th></tr>`,
             '<tr class="gy"><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
             createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
             createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
@@ -2123,8 +2123,10 @@ const G = {};
             }
         }
 
-        for (let std of meetStds) {
-            html.push('<th class="mc full">', createPopup(std.short, std.meet), '</th>');
+        for (let meetInfo of meetList) {
+            let name = meetInfo[0].replace('_', ' ');
+            let details = meetInfo[1].replace(/\[(.+)\]\((https:\/\/.+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            html.push('<th class="mc full">', createPopup(name, details), '</th>');
         }
 
         html.push('</tr>');
@@ -2137,7 +2139,7 @@ const G = {};
         let ageKey = getAgeKey(swimmer.age);
         let genderStr = convetToGenderString(swimmer.gender);
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-        let meetStds = await getMeetStandards(swimmer.age, swimmer.lsc);
+        let meetList = await buildMeetList(swimmer, genderStr);
 
         let html = ['<div class="content"><h2>Personal Best</h2>',
             '<div class="center-row">',
@@ -2164,7 +2166,7 @@ const G = {};
             '<table class="fill top-margin"><tbody>');
 
         // create the table header
-        let header = createBestTimeTableHeader(data, meetStds, ageKey);
+        let header = createBestTimeTableHeader(data, meetList, ageKey);
         html.push(header);
 
         // create the best time table body
@@ -2206,22 +2208,20 @@ const G = {};
             let singleTimeCount = 0;
             if (swimmer.age < 19) {
                 if (swimmer.age > 9) {
-                    let stdKey = `${genderStr} ${swimmer.age} ${eventStr}`;
                     for (let std of stdName) {
-                        stds.push(await getAgeGroupMotivationTime(`${stdKey} ${std}`));
+                        stds.push(await getAgeGroupMotivationTime(std, swimmer.age, genderStr, eventStr, true));
                     }
                 }
                 singleTimeCount = stds.length;
 
-                let stdKey = `${genderStr} ${ageKey} ${eventStr}`;
                 for (let std of stdName) {
-                    stds.push(await getAgeGroupMotivationTime(`${stdKey} ${std}`));
+                    stds.push(await getAgeGroupMotivationTime(std, swimmer.age, genderStr, eventStr));
                 }
             }
             let motivationTimeCount = stds.length;
 
-            for (let std of meetStds) {
-                stds.push(std[genderStr].get(eventStr) || ['', 0]);
+            for (let meetName of meetList) {
+                stds.push(meetName[2][event] || ['', 0]);
             }
 
             // build standard cell
@@ -2246,6 +2246,36 @@ const G = {};
         html.push('</tbody></table></div>');
 
         return html.join('');
+    }
+
+    async function buildMeetList(swimmer, genderStr) {
+        let meetList = [];
+        for (let [name, meet] of await getLscMeetCuts(swimmer.zone, swimmer.lsc)) {
+            if (meet.ageMap.has(swimmer.age)) {
+                meetList.push([name, meet.details, []]);
+            }
+        }
+
+        for (let meetInfo of meetList) {
+            let mapArray = meetInfo[2];
+            for (let eventStr of _eventList) {
+                mapArray.push(await getMeetCut(swimmer.zone, swimmer.lsc, meetInfo[0], swimmer.age, genderStr, eventStr));
+            }
+        }
+
+        meetList.sort((a, b) => {
+            let count = 0;
+            let acuts = a[2];
+            let bcuts = b[2];
+            for (let i = 0; i < acuts.length; ++i) {
+                if (acuts[i] && bcuts[i]) {
+                    count += (acuts[i][1] < bcuts[i][1] ? 1 : -1);
+                }
+            }
+            return count;
+        });
+
+        return meetList;
     }
 
     function createProgressGraph(pkey, events) {
@@ -3826,16 +3856,29 @@ const G = {};
     function decodeAgeKey(ageKey) {
         let from = 0;
         let to = 99;
-        if (ageKey == '10U') {
-            to = 10;
-        } else if (ageKey == '19O') {
-            from = 19;
+        if (ageKey.endsWith('U')) {
+            to = parseInt(ageKey);
+        } else if (ageKey.endsWith('O')) {
+            from = parseInt(ageKey);
         } else {
             let parts = ageKey.split('-');
-            from = Number(parts[0]);
-            to = Number(parts[1]);
+            from = parseInt(parts[0]);
+            to = parseInt(parts[1]);
         }
         return [from, to];
+    }
+
+    function ageRangeToAgeKey(from, to) {
+        if (!to) {
+            return from + '';
+        }
+        if (from == 0) {
+            return to + 'U';
+        }
+        if (to == 99) {
+            return from + 'O';
+        }
+        return from + '-' + to;
     }
 
     async function filterByAge(values, ageKey) {
@@ -3989,38 +4032,34 @@ const G = {};
 
         // prepare the standard options
         let [from, to] = decodeAgeKey(ageKey);
+        let eventMapSet = new Set();
+        let meets = await getLscMeetCuts(zone, lsc);
         let options = [];
-        let set = new Set();
-        for (let age = from; age <= to; ++age) {
-            let meets = await getMeetStandards(age, lsc);
-            for (let [i, meet] of meets.entries()) {
-                let std = meet[genderStr].get(_eventList[event]);
-                let setKey = meet.meet + '|' + meet.age[0] + '|' + meet.age[1];
-                if (std && !set.has(setKey)) {
-                    set.add(setKey);
-                    let opt = [meet.short, meet.age[0], meet.age[1], std[0]];
-                    let index = options.length;
-                    for (let o of options) {
-                        if (o[0].includes(meet.short)) {
-                            index = i + 1;
-                            break;
-                        }
-                    }
-                    options.splice(index, 0, opt);
+        for (let [name, meet] of meets) {
+            for (let age = from; age <= to; ++age) {
+                let eventMapInfo = meet.ageMap.get(age);
+                if (!eventMapInfo || eventMapSet.has(eventMapInfo.eventMap)) {
+                    continue;
+                }
+                eventMapSet.add(eventMapInfo.eventMap);
+                let ageKey = ageRangeToAgeKey(...decodeAgeKey(eventMapInfo.ageRange));
+                let cut = await getMeetCut(zone, lsc, name, age, genderStr, _eventList[event]);
+                if (cut) {
+                    options.push([
+                        `${name.replace('_', ' ')} (${ageKey}) = ${cut[0]}`,
+                        `${name}|${ageKey}`,
+                        cut[1]
+                    ]);
                 }
             }
         }
 
+        options.sort((a, b) => b[2] - a[2]);
+
         let html = [];
         // generate the standard selection
         for (let [i, cls] of ['gn', 'bl', 'rd'].entries()) {
-            let values = [['', '']];
-            for (let option of options) {
-                let [short, from, to, std] = option;
-                let text = `${short} (${from == to ? from : to == 99 ? from + 'O' : from + '-' + to}) = ${std}`;
-                let value = `${short}|${from}|${to}`;
-                values.push([text, value]);
-            }
+            let values = [['', ''], ...options];
 
             // load the standard from local storage
             let standard = localStorage.getItem('meetStds' + i) || '';
@@ -4102,16 +4141,12 @@ const G = {};
     async function showRankTable(data, key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
-        let meetStandards = await getMeetStandards(to, lsc);
         let standards = [];
         for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
-            let [short, f, t] = (localStorage.getItem('meetStds' + i) || '||').split('|');
-            let meet = meetStandards.filter(m => m.short == short && m.age[0] == f && m.age[1] == t);
-            if (meet && meet.length > 0) {
-                let std = meet[0][genderStr].get(_eventList[event]);
-                if (std) {
-                    standards.push([std, clr]);
-                }
+            let [meetName, ageRange] = (localStorage.getItem('meetStds' + i) || '|').split('|');
+            let cut = await getMeetCut(zone, lsc, meetName, parseInt(ageRange), genderStr, _eventList[event]);
+            if (cut) {
+                standards.push([cut, clr]);
             }
         }
         standards.sort((a, b) => a[0][1] - b[0][1]);
@@ -4125,10 +4160,9 @@ const G = {};
             return html.join('');
         }
 
-        html.push('<table class="fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
+        html.push('<table class="hilightrow fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
         let meetDate = getMeetDate();
         let index = 0;
-        let stdKeyBase = `${genderStr} ${ageKey} ${_eventList[event]}`;
         for (let row of data.values) {
             let pkey = row[idx.pkey];
             let range = await _birthdayDictionary.load(pkey);
@@ -4140,8 +4174,7 @@ const G = {};
             let maxStd = '';
             let maxStdInt = '';
             for (let std of ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA']) {
-                let stdKey = `${stdKeyBase} ${std}`;
-                let [_, stdInt] = await getAgeGroupMotivationTime(stdKey);
+                let [_, stdInt] = await getAgeGroupMotivationTime(std, from, genderStr, _eventList[event]);
                 if (timeInt > stdInt) {
                     break;
                 }
@@ -4917,71 +4950,72 @@ const G = {};
 
     let lscMap = (function () {
         let data = `
-Adirondack|AD|Eastern
-Alaska|AK|Western
-Allegheny Mountain|AM|Eastern
-Arkansas|AR|Central
-Arizona|AZ|Western
-Border|BD|Southern
-Central California|CC|Western
-Colorado|CO|Western
-Connecticut|CT|Eastern
-Florida|FL|Southern
-Florida Gold Coast|FG|Southern
-Georgia|GA|Southern
-Gulf|GU|Southern
-Hawaiian|HI|Western
-Illinois|IL|Central
-Indiana|IN|Central
-Inland Empire|IE|Western
-Iowa|IA|Central
-Kentucky|KY|Southern
-Lake Erie|LE|Central
-Louisiana|LA|Southern
-Maine|ME|Eastern
-Maryland|MD|Eastern
-Metropolitan|MR|Eastern
-Michigan|MI|Central
-Middle Atlantic|MA|Eastern
-Midwestern|MW|Central
-Minnesota|MN|Central
-Mississippi|MS|Southern
-Missouri Valley|MV|Central
-Montana|MT|Western
-New England|NE|Eastern
-New Jersey|NJ|Eastern
-New Mexico|NM|Western
-Niagara|NI|Eastern
-North Carolina|NC|Southern
-North Dakota|ND|Central
-North Texas|NT|Southern
-Ohio|OH|Central
-Oklahoma|OK|Central
-Oregon|OR|Western
-Ozark|OZ|Central
-Pacific|PC|Western
-Pacific Northwest|PN|Western
-Potomac Valley|PV|Eastern
-San Diego-Imperial|SI|Western
-Sierra Nevada|SN|Western
-Snake River|SR|Western
-South Carolina|SC|Southern
-South Dakota|SD|Central
-South Texas|ST|Southern
-Southeastern|SE|Southern
-Southern California|CA|Western
-Utah|UT|Western
-Virginia|VA|Eastern
-West Texas|WT|Southern
-West Virginia|WV|Southern
-Wisconsin|WI|Central
-Wyoming|WY|Western`;
+AD|Adirondack|Eastern
+AK|Alaska|Western|west-nw
+AM|Allegheny Mountain|Eastern
+AR|Arkansas|Central|cent-south
+AZ|Arizona|Western|west-four
+BD|Border|Southern
+CC|Central California|Western|west-canv
+CO|Colorado|Western|west-four
+CT|Connecticut|Eastern
+FL|Florida|Southern
+FG|Florida Gold Coast|Southern
+GA|Georgia|Southern
+GU|Gulf|Southern
+HI|Hawaiian|Western|west-nw
+IL|Illinois|Central|cent-north
+IN|Indiana|Central|cent-east
+IE|Inland Empire|Western|west-nw
+IA|Iowa|Central|cent-north
+KY|Kentucky|Southern
+LE|Lake Erie|Central|cent-east
+LA|Louisiana|Southern
+ME|Maine|Eastern
+MD|Maryland|Eastern
+MR|Metropolitan|Eastern
+MI|Michigan|Central|cent-east
+MA|Middle Atlantic|Eastern
+MW|Midwestern|Central|cent-south
+MN|Minnesota|Central|cent-north
+MS|Mississippi|Southern
+MV|Missouri Valley|Central|cent-south
+MT|Montana|Western|west-nw
+NE|New England|Eastern
+NJ|New Jersey|Eastern
+NM|New Mexico|Western|west-four
+NI|Niagara|Eastern
+NC|North Carolina|Southern
+ND|North Dakota|Central|cent-north
+NT|North Texas|Southern
+OH|Ohio|Central|cent-east
+OK|Oklahoma|Central|cent-south
+OR|Oregon|Western|west-nw
+OZ|Ozark|Central|cent-south
+PC|Pacific|Western|west-canv
+PN|Pacific Northwest|Western|west-nw
+PV|Potomac Valley|Eastern
+SI|San Diego-Imperial|Western|west-canv
+SN|Sierra Nevada|Western|west-canv
+SR|Snake River|Western|west-nw
+SC|South Carolina|Southern
+SD|South Dakota|Central|cent-north
+ST|South Texas|Southern
+SE|Southeastern|Southern
+CA|Southern California|Western|west-canv
+UT|Utah|Western|west-four
+VA|Virginia|Eastern
+WT|West Texas|Southern
+WV|West Virginia|Southern
+WI|Wisconsin|Central|cent-north
+WY|Wyoming|Western|west-nw
+`;
         let lines = data.split('\n');
         let map = new Map();
         for (let line of lines) {
             let parts = line.split('|');
-            if (parts.length == 3) {
-                map.set(parts[1], [parts[0], parts[2]]);
+            if (parts.length >= 3) {
+                map.set(parts.shift(), parts);
             }
         }
         return map;
@@ -4990,200 +5024,154 @@ Wyoming|WY|Western`;
     function getLSCName(lsc) {
         return (lscMap.get(lsc) || ['', ''])[0];
     }
+
     function getLSCZone(lsc) {
         return (lscMap.get(lsc) || ['', ''])[1];
     }
 
-    function parseMotivationStandard(data) {
-        const times = new Map();
-
-        let rows = data.split('\n');
-        let ageKey;
-        for (let row of rows) {
-            if (row.startsWith('#') || row.trim() === '') {
-                continue;
-            }
-            let parts = row.replace(/\s+/gi, ' ').trim().split(' ');
-            if (parts.length == 1) {
-                ageKey = parts[0];
-                continue;
-            }
-
-            let stds = ('B BB A AA AAA AAAA d s c AAAA AAA AA A BB B').split(' ');
-
-            let std = `${ageKey} ${parts[6]} ${parts[7]} ${parts[8]}`;
-
-            for (let i = 0; i < 6; ++i) {
-                times.set(`Female ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
-            }
-
-            for (let i = 9; i < 15; ++i) {
-                times.set(`Male ${std} ${stds[i]}`, [parts[i], timeToInt(parts[i])]);
-            }
-        }
-
-        return times;
-    }
-
-    async function getAgeGroupMotivationTime(key) {
-        let ageTimes = await RuntimeCache.func(`motivation-times`, async () => {
-            try {
-                let root = location.protocol === 'file:' ? '' : '/files/';
-                let data = await getFileData(`${root}motivation.js`);
-                return parseMotivationStandard(data);
-            } catch (e) {
-                console.error(e.stack);
-            }
-        });
-
-        return ageTimes?.get(key) || ['', 0]
-    }
-
     function parseMeetCut(data) {
-        let a10Uexclude = new Set(['800 FR', '1000 FR', '1500 FR', '1650 FR', '200 BK', '200 BR', '200 FL', '400 IM']);
-        let a13Oexclude = new Set(['50 BK', '50 BR', '50 FL', '100 IM']);
-        const times = [];
-
-        let rows = data.split('\n');
-        let courseKey;
-        let currentMeet;
-        let currentMeetList;
-        for (let row of rows) {
-            if (row.startsWith('#') || row.trim() === '') {
-                continue;
-            }
-            if (row.startsWith('meet:')) {
-                let [_, short, full] = row.split(':');
-                currentMeet = {
-                    meet: full.trim(),
-                    short: short.trim(),
-                    Female: new Map(),
-                    Male: new Map(),
-                };
-                times.push(currentMeet);
-                continue;
-            }
-            let parts = row.replace(/free/gi, 'FR').replace(/back/gi, 'BK').replace(/breast/gi, 'BR').replace(/fly/gi, 'FL')
-                .replace(/fr/gi, 'FR').replace(/bk/gi, 'BK').replace(/br/gi, 'BR').replace(/fl/gi, 'FL')
-                .replace(/400\/500/gi, '400').replace(/800\/1000/gi, '800').replace(/1500\/1650/gi, '1500')
-                .replace(/\s+/gi, ' ').trim().split(' ');
-
-            // 1 age - multi course
-            if (parts[0].indexOf('-') > 0) {
-                if (currentMeet.age) {
-                    currentMeet = {
-                        meet: currentMeet.meet,
-                        short: currentMeet.short,
-                        Female: new Map(),
-                        Male: new Map(),
-                    };
-                    times.push(currentMeet);
-                }
-                currentMeet.age = parts.shift().split('-').map(x => Number(x));
-                courseKey = parts.length > 0 ? parts : courseKey;
-                continue;
-            }
-
-            // 1 course - multi age
-            if (_courseOrder.includes(parts[0])) {
-                courseKey = parts.shift();
-                if (currentMeet) {
-                    times.pop();
-                    currentMeetList = parts.map(x => ({
-                        meet: currentMeet.meet,
-                        short: currentMeet.short,
-                        age: x.indexOf('-') > 0 ? x.split('-').map(x => Number(x)) : [Number(x), Number(x)],
-                        Female: new Map(),
-                        Male: new Map(),
-                    }));
-
-                    times.push(...currentMeetList);
-                    currentMeet = null;
-                }
-                continue;
-            }
-
-            let event = parts.splice(parts.length / 2 - 1, 2).join(' ');
-            let len = parts.length - 1;
-            if (currentMeet) {
-                // for age-group standards, one meets has multiple tables
-                for (let [i, course] of courseKey.entries()) {
-                    if (parseInt(parts[i])) {
-                        let key = fixDistance(event + ' ' + courseKey[i]);
-                        currentMeet.Female.set(key, [parts[i], timeToInt(parts[i])]);
-                        currentMeet.Male.set(key, [parts[len - i], timeToInt(parts[len - i])]);
-                    }
-                }
-            } else {
-                let key = event + ' ' + courseKey;
-                let i = 0;
-                for (let meet of currentMeetList) {
-                    if (row.indexOf('-') < 0 &&  //don't have '-' in the line
-                        (meet.age[1] <= 10 && a10Uexclude.has(event) || meet.age[0] >= 13 && a13Oexclude.has(event))) {
-                        continue;
-                    }
-                    if (parseInt(parts[i])) {
-                        meet.Female.set(key, [parts[i], timeToInt(parts[i])]);
-                        meet.Male.set(key, [parts[len - i], timeToInt(parts[len - i])]);
-                    }
-                    ++i;
-                }
+        let firstError = true;
+        function alertError(msg) {
+            if (location.protocol === 'file:' && firstError) {
+                alert(msg);
+                firstError = false;
             }
         }
 
-        return times;
+        let meets = new Map();
+        let age, gender, course, meet, cols, eventIndex, columnNum;
+        let setInfo = text => {
+            let parts = text.split(':');
+            for (let part of parts) {
+                if (['M', 'F'].includes(part)) {
+                    gender = part;
+                } else if (_courseOrder.includes(part)) {
+                    course = part;
+                } else if (!isNaN(part.replace('-', ''))) {
+                    age = part;
+                } else {
+                    meet = meets.get(part);
+                }
+            }
+        };
+
+        for (let row of data.split('\n')) {
+            if (row.startsWith('#') || row === '') {
+                continue;
+            }
+            if (row.startsWith('meet ')) {
+                let part = row.split(' ');
+                part.shift();
+                let meet = {
+                    name: part.shift(),
+                    details: part.join(' '),
+                    ageMap: new Map(),
+                    times: new Map(),
+                };
+                meets.set(meet.name, meet);
+                continue;
+            }
+            if (row.startsWith('table ')) {
+                meet = age = gender = course = null;
+                cols = row.split(' ');
+                cols.shift();// remove 'table'
+                setInfo(cols.shift());
+                eventIndex = cols.indexOf('EVENT');
+                columnNum = cols.length;
+                continue;
+            }
+
+            let parts = row.split(' ');
+            if (parts.length !== columnNum) {
+                let msg = `ColumnNum = ${columnNum}: not match row: ${row}`;
+                console.error(msg);
+                alertError(msg);
+                continue;
+            }
+            let event = parts[eventIndex];
+            event = event.substring(0, event.length - 2) + ' ' + event.substring(event.length - 2);
+
+            for (let [i, time] of parts.entries()) {
+                if (i === eventIndex || !time.includes('.')) {
+                    continue;
+                }
+                setInfo(cols[i]);
+                let eventMap = meet.times.get(age) || new Map();
+                meet.times.set(age, eventMap);
+                let ageRange = age.includes('-') ? age : age + '-' + age;
+                let [low, high] = ageRange.split('-').map(x => parseInt(x));
+                for (let a = low; a <= high; a++) {
+                    meet.ageMap.set(a, { ageRange: age, eventMap: eventMap });
+                }
+                event = course == 'SCY'
+                    ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
+                    : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
+                let key = event + ' ' + course + ' ' + gender;
+                if (eventMap.has(key)) {
+                    let msg = `Duplicate event: ${key}, row: ${row}`;
+                    console.error(msg);
+                    alertError(msg);
+                }
+                eventMap.set(key, [time, timeToInt(time)]);
+            }
+        }
+
+        return meets;
     }
 
-    const meet = new Map([
-        ['PN', ['pn', 'northwest', 'west']],
-        ['Ak', ['northwest', 'west']],
-        ['AZ', ['west']],
-        ['CC', ['west']],
-        ['CO', ['west']],
-        ['HI', ['northwest', 'west']],
-        ['IE', ['northwest', 'west']],
-        ['MT', ['northwest', 'west']],
-        ['NM', ['west']],
-        ['OR', ['northwest', 'west']],
-        ['PC', ['west']],
-        ['SI', ['west']],
-        ['SN', ['west']],
-        ['SR', ['northwest', 'west']],
-        ['CA', ['west']],
-        ['UT', ['west']],
-        ['WY', ['northwest', 'west']],
-    ]);
+    async function getMeetCut(zone, lsc, meetName, age, genderStr, event) {
+        let meets = await getLscMeetCuts(zone, lsc);
+        return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]);
+    }
 
-    async function getMeetStandards(age, lsc) {
-        let cuts = await RuntimeCache.func(`meet-cut-${lsc}`, async () => {
+    async function getLscMeetCuts(zone, lsc) {
+        return await RuntimeCache.func(`meet-cut-${lsc}`, async () => {
             let root = location.protocol === 'file:' ? '' : '/files/';
-            let meetCuts = [];
-            let list = meet.get(lsc);
-            if (list) {
-                for (let file of list) {
-                    try {
-                        let data = await getFileData(`${root}meet-${file}.js`);
-                        if (data) {
-                            meetCuts.push(...parseMeetCut(data));
-                        }
-                    } catch (e) {
-                        console.error(e.stack);
+            let meetCuts = new Map();
+
+            async function loadMeetsFromFile(file) {
+                try {
+                    let data = await getFileData(file);
+                    for (let [name, meet] of parseMeetCut(data || '')) {
+                        meetCuts.set(name, meet);
+                    }
+                } catch (e) {
+                    console.error(e.stack);
+                }
+            }
+
+            if (lsc) {
+                let files = (lscMap.get(lsc)[2] || '').split(',');
+                for (let file of files) {
+                    if (file) {
+                        await loadMeetsFromFile(`${root}meet-${file}.js`);
                     }
                 }
+                await loadMeetsFromFile(`${root}meet-${lsc.toLowerCase()}.js`);
             }
+            if (zone) {
+                await loadMeetsFromFile(`${root}meet-${zone.toLowerCase()}.js`);
+            }
+            await loadMeetsFromFile(`${root}meet-usa.js`);
 
-            try {
-                let data = await getFileData(`${root}meet-usa.js`);
-                if (data) {
-                    meetCuts.push(...parseMeetCut(data));
-                }
-            } catch (e) {
-                console.error(e.stack);
-            }
             return meetCuts;
         });
+    }
 
-        return cuts.filter(x => x.age[0] <= age && age <= x.age[1]);
+    async function getAgeGroupMotivationTime(meetName, age, genderStr, event, single) {
+        let file = single ? 'meet-age-single-motivation.js' : 'meet-age-group-motivation.js';
+
+        let meets = await RuntimeCache.func(file, async () => {
+            try {
+                let root = location.protocol === 'file:' ? '' : '/files/';
+                let data = await getFileData(`${root}${file}`);
+                return parseMeetCut(data);
+            } catch (e) {
+                console.error(e.stack);
+            }
+        });
+
+        return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]) || ['', 0];
     }
 
     async function getFileData(file) {
@@ -5197,7 +5185,7 @@ Wyoming|WY|Western`;
             } catch (e) {
                 console.error(e.stack);
             }
-        }, _1DayInSec);
+        }, _1DayInSec, 4);
     }
 
     class RuntimeCache {

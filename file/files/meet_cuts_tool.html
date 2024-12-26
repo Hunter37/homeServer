@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>meet cuts</title>
+  <style>
+    textarea {
+      width: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <textarea id="text" rows="40" placeholder="Enter your text here"></textarea>
+  <button id="submit">Submit</button>
+  <div id="content"></div>
+  <pre id="pre"></pre>
+</body>
+<script>
+  let G = {};
+</script>
+<script src="meet-northwest.js"></script>
+<script>
+  let fileFormat = `
+# parse results
+# meets: map{
+#    'PN_AGI': {
+#        name: 'PN_AGI',
+#        details: 'zzz',
+#        times: map{
+#            '5-10': map{
+#                '50 FR SCY F': {time:'29.50', timeInt:2950},
+#                '100 FR SCY F': {time:'1:05.50', timeInt:6550},
+#            },
+#            '11': map{
+#                '50 FR SCY F': {time:'27.50', timeInt:2750},
+#                '100 FR SCY F': {time:'1:02.50', timeInt:6250},
+#            }
+#        },
+#        ageMap: map{
+#            5: -> {ageRange: '5-10', eventMap: map{5-10}},
+#            6: -> {ageRange: '5-10', eventMap: map{5-10}},
+#            ...
+#        }
+#    },
+#    
+#    ...
+# ]
+
+# table and column definitions from the following 4 variables
+# age  gender course name   (EVENT)
+# 5-10 F      LCM    Junior (50FR),
+
+# fromat
+# meet: name : details
+# table (?/4)  [(?/4)  (?/4).....]
+
+# example:
+# meet: Winter : 2024 Speedo Winter Junior Championships (12/11/2024)
+# table 11-18:SCY:Junior  F  EVENT  M
+# table NWReg:SCY  F:15-18  F:14  F:13  F:12  F:11 F:5-10  EVENT  M:5-10 M:11 M:12 M:13  M:14  M:15-18
+`;
+
+  let textElem = document.getElementById("text");
+  let submitElem = document.getElementById("submit");
+  let contentElem = document.getElementById("content");
+  let preElem = document.getElementById("pre");
+
+  textElem.value = fileFormat + '\n' + G.fileData;
+
+  submitElem.addEventListener("click", () => {
+    let text = cleanup(textElem.value);
+    textElem.value = text;
+
+    let meets = parseMeetCut(text);
+    console.log(meets);
+
+    printTimes(meets);
+
+    testMeets = meets;
+  });
+
+  function cleanup(data) {
+    let result = [];
+    let rows = data.split('\n');
+    for (let row of rows) {
+      row = row.trim().replace(/\s+/g, ' ');
+
+      if (row.startsWith('#') || row === '') {
+        result.push(row, '\n');
+        continue;
+      }
+
+      if (row.startsWith('meet') || row.startsWith('table')) {
+        result.push(row.split(':').map(x => x.trim()).join(':'), '\n');
+        continue;
+      }
+
+      row = row
+        .replace(/freestyle/i, 'FR').replace(/backstroke/i, 'BK').replace(/breaststroke/i, 'BR').replace(/butterfly/i, 'FL')
+        .replace(/free/i, 'FR').replace(/back/i, 'BK').replace(/breast/i, 'BR').replace(/fly/i, 'FL')
+        .replace(/individual medley/i, 'IM')
+        .replace(/400\/500/i, '400').replace(/800\/1000/i, '800').replace(/1500\/1650/i, '1500')
+        .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
+        .replace(/ FR-R/i, 'FR-R').replace(/ MED-R/i, 'MED-R');
+
+      result.push(row, '\n');
+    }
+
+    result = result.join('');
+
+    return result.replace(/\n{3,}/g, '\n\n');
+  }
+
+  function printTimes(meets) {
+    let html = [];
+    let text = [];
+    for (let [name, meet] of meets) {
+      html.push(`<h3>${name.replace('_', ' ')}</h3>`);
+      html.push(`<p>${meet.details}</p><table><tr>`);
+      text.push(`meet ${name} ${meet.details}\n`);
+
+      let ages = [...meet.times.keys()];
+      ages.sort((a, b) => parseInt(b) - parseInt(a));
+      agesReverse = ages.slice().reverse();
+
+      let tableInfo = [];
+
+      for (let age of ages) {
+        html.push(`<th>${age}</th>`);
+        tableInfo.push(ages.length == 1 ? 'F' : `F:${age}`);
+      }
+      html.push('<th></th>');
+      tableInfo.push('EVENT');
+      for (let age of agesReverse) {
+        html.push(`<th>${age}</th>`);
+        tableInfo.push(ages.length == 1 ? 'M' : `M:${age}`);
+      }
+
+      html.push('</tr>');
+
+      let lastCourse = '';
+      for (let event of _eventList) {
+        let row = [];
+        let print = false;
+        for (let [gender, ageList] of [['F', ages], ['M', agesReverse]]) {
+          for (let age of ageList) {
+            let cut = getMeetCut(name, parseInt(age), gender, event, meets);
+            print = print || cut;
+            row.push(cut?.[0] || '-');
+          }
+        }
+        if (print) {
+          let textRow = [...row];
+          row.splice(Math.floor(row.length / 2), 0, event);
+          html.push('<tr><td>' + row.join('</td><td>') + '</td></tr>');
+          let cousre = event.split(' ')[2];
+          if (cousre !== lastCourse) {
+            let ageStr = ages.length == 1 ? `:${ages[0]}` : '';
+            text.push(`\ntable ${name}:${cousre}${ageStr} ${tableInfo.join(' ')}\n\n`);
+            lastCourse = cousre;
+          }
+          let [d, s, c] = event.split(' ');
+          textRow.splice(row.length / 2, 0, `${d}${s}`);
+          text.push(`${textRow.join(' ')}\n`);
+        }
+      }
+
+      html.push('</table>');
+      text.push('\n');
+    }
+
+    contentElem.innerHTML = html.join('');
+    preElem.innerHTML = text.join('');
+  }
+
+  function getMeetCut(meetName, age, genderStr, event, meets) {
+    return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]);
+  }
+
+  /////////////////////////////////////////////////////////////////
+  // copy from swim.js
+  function parseMeetCut(data) {
+    let firstError = true;
+    function alertError(msg) {
+      if (location.protocol === 'file:' && firstError) {
+        alert(msg);
+        firstError = false;
+      }
+    }
+
+    let meets = new Map();
+    let age, gender, course, meet, cols, eventIndex, columnNum;
+    let setInfo = text => {
+      let parts = text.split(':');
+      for (let part of parts) {
+        if (['M', 'F'].includes(part)) {
+          gender = part;
+        } else if (_courseOrder.includes(part)) {
+          course = part;
+        } else if (!isNaN(part.replace('-', ''))) {
+          age = part;
+        } else {
+          meet = meets.get(part);
+        }
+      }
+    };
+
+    for (let row of data.split('\n')) {
+      if (row.startsWith('#') || row === '') {
+        continue;
+      }
+      if (row.startsWith('meet')) {
+        let part = row.split(' ');
+        part.shift();
+        let meet = {
+          name: part.shift(),
+          details: part.join(' '),
+          ageMap: new Map(),
+          times: new Map(),
+        };
+        meets.set(meet.name, meet);
+        continue;
+      }
+      if (row.startsWith('table')) {
+        meet = age = gender = course = null;
+        cols = row.split(' ');
+        cols.shift();// remove 'table'
+        setInfo(cols.shift());
+        eventIndex = cols.indexOf('EVENT');
+        columnNum = cols.length;
+        continue;
+      }
+
+      let parts = row.split(' ');
+      if (parts.length !== columnNum) {
+        let msg = `ColumnNum = ${columnNum}: not match row: ${row}`;
+        console.error(msg);
+        alertError(msg);
+        continue;
+      }
+      let event = parts[eventIndex];
+      event = event.substring(0, event.length - 2) + ' ' + event.substring(event.length - 2);
+
+      for (let [i, time] of parts.entries()) {
+        if (i === eventIndex || !time.includes('.')) {
+          continue;
+        }
+        setInfo(cols[i]);
+        let eventMap = meet.times.get(age) || new Map();
+        meet.times.set(age, eventMap);
+        let ageRange = age.includes('-') ? age : age + '-' + age;
+        let [low, high] = ageRange.split('-').map(x => parseInt(x));
+        for (let a = low; a <= high; a++) {
+          meet.ageMap.set(a, { ageRange: age, eventMap: eventMap });
+        }
+        event = course == 'SCY'
+          ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
+          : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
+        let key = event + ' ' + course + ' ' + gender;
+        if (eventMap.has(key)) {
+          let msg = `Duplicate event: ${key}, row: ${row}`;
+          console.error(msg);
+          alertError(msg);
+        }
+        eventMap.set(key, [time, timeToInt(time)]);
+      }
+    }
+
+    return meets;
+  }
+  const _eventList = ['0 _ _',
+    '50 FR SCY', '100 FR SCY', '200 FR SCY', '500 FR SCY', '1000 FR SCY', '1650 FR SCY', '_ _ _', '_ _ _', '_ _ _', '_ _ _',
+    '50 BK SCY', '100 BK SCY', '200 BK SCY', '50 BR SCY', '100 BR SCY', '200 BR SCY', '50 FL SCY', '100 FL SCY', '200 FL SCY', '100 IM SCY',
+    '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '200 MED-R SCY', '400 MED-R SCY', '50 FR SCM', '100 FR SCM', '200 FR SCM',
+    '400 FR SCM', '800 FR SCM', '1500 FR SCM', '34 _ _', '35 _ _', '36 _ _', '37 _ _', '50 BK SCM', '100 BK SCM', '200 BK SCM',
+    '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM', '200 FR-R SCM',
+    '400 FR-R SCM', '800 FR-R SCM', '200 MED-R SCM', '400 MED-R SCM', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM', '1500 FR LCM',
+    '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM', '200 BR LCM',
+    '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM', '400 MED-R LCM', '25 FR SCY',
+    '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM', '89 _ _', '90 _ _', '91 _ _'];
+  const _courseOrder = ['SCY', 'SCM', 'LCM'];
+  function timeToInt(stime) {
+    let result = 0;
+    if (stime) {
+      let parts = stime.split(':');
+      if (parts.length == 2) {
+        result = parseInt(parts[0]) * 6000;
+        parts[0] = parts[1];
+      }
+      parts = (parts[0] + '.00').split('.');
+      result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
+    }
+    return result;
+  }
+</script>
+
+</html>
