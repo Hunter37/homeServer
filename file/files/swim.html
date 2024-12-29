@@ -29,10 +29,6 @@
         font: 14px Verdana;
     }
 
-    tr>* {
-        border: 1px solid black;
-    }
-
     th {
         padding: 10px 5px;
     }
@@ -137,119 +133,8 @@
         text-align: center;
     }
 
-    .hd.FR {
-        background-color: #FDD;
-    }
-
-    .d25.FR {
-        background-color: #FF000035;
-    }
-
-    .d50.FR {
-        background-color: #FF000030;
-    }
-
-    .d100.FR {
-        background-color: #FF000025;
-    }
-
-    .d200.FR {
-        background-color: #FF000020;
-    }
-
-    .d400.FR,
-    .d500.FR {
-        background-color: #FF000015;
-    }
-
-    .d800.FR,
-    .d1000.FR {
-        background-color: #FF000010;
-    }
-
-    .d1500.FR,
-    .d1650.FR {
-        background-color: #FF000008;
-    }
-
-    .hd.BK {
-        background-color: #CEF;
-    }
-
-    .d25.BK {
-        background-color: #0AF5;
-    }
-
-    .d50.BK {
-        background-color: #0AF4;
-    }
-
-    .d100.BK {
-        background-color: #0AF3;
-    }
-
-    .d200.BK {
-        background-color: #0AF2;
-    }
-
-    .hd.BR {
-        background-color: #DFD;
-    }
-
-    .d25.BR {
-        background-color: #0F75;
-    }
-
-    .d50.BR {
-        background-color: #0F74;
-    }
-
-    .d100.BR {
-        background-color: #0F73;
-    }
-
-    .d200.BR {
-        background-color: #0F72;
-    }
-
-    .hd.FL {
-        background-color: #FFD;
-    }
-
-    .d25.FL {
-        background-color: #FF04;
-    }
-
-    .d50.FL {
-        background-color: #FF03;
-    }
-
-    .d100.FL {
-        background-color: #FF02;
-    }
-
-    .d200.FL {
-        background-color: #FF01;
-    }
-
-    .hd.IM {
-        background-color: #BFF;
-    }
-
-    .d100.IM {
-        background-color: #0FF6;
-    }
-
-    .d200.IM {
-        background-color: #0FF4;
-    }
-
-    .d400.IM {
-        background-color: #0FF2;
-    }
 
     .age {
-        background-color: #DDD;
         font-weight: bold;
         text-align: center;
     }
@@ -258,13 +143,7 @@
         font-weight: bold;
     }
 
-    td .dp {
-        color: #284
-    }
 
-    td .ad {
-        color: #A00
-    }
 
     td>div {
         margin: 0;
@@ -275,7 +154,6 @@
     .ds {
         user-select: none;
         font-size: x-small;
-        color: #555;
         margin: 0 0 -4px 0;
     }
 
@@ -466,9 +344,7 @@
 
     .tabs {
         margin: 0;
-        background-color: #EEE;
         user-select: none;
-        border-bottom: 1px solid #000;
     }
 
     .tab {
@@ -476,17 +352,11 @@
         padding: 0;
         /* cursor: pointer; */
         margin: 0;
-        border: 1px solid #CCC;
         border-radius: 5px 5px 0 0;
-        background-color: #DDD;
     }
 
     .tabs>.selected {
-        background-color: #FFF;
-        border: 1px solid #000;
-        border-bottom: 1px solid #FFF;
         transform: translateY(1.5px);
-        box-shadow: 1px -2px 1px 0px #0007;
     }
 
     .view {
@@ -597,13 +467,9 @@
         cursor: default;
     }
 
-    .hilightrow tr:hover {
-        color: #57E;
-    }
 
-    .hilightrow tr>th {
-        color: initial;
-    }
+
+
 
     .add-fav:hover,
     .leg-time:hover,
@@ -767,7 +633,6 @@
     }
 
     .dropdown {
-        box-shadow: 0px 9px 16px 3px #0007;
         overflow: auto;
         position: absolute;
         z-index: 1;
@@ -775,8 +640,6 @@
         height: auto;
         max-height: 500px;
         margin: 0;
-        background-color: #FFF;
-        border: 1px solid #777;
         border-radius: 7px;
     }
 
@@ -792,9 +655,6 @@
         background-color: lightskyblue;
     }
 
-    .dropdown .group>div {
-        background-color: #fff;
-    }
 
     .dropdown .group .group-txt {
         margin: 0;
@@ -809,9 +669,7 @@
         cursor: pointer;
     }
 
-    .dropdown .option.selected {
-        background-color: #CCC;
-    }
+
 
     .select-text {
         padding: 5px;
@@ -933,9 +791,6 @@
     }
 
     .search.disabled {
-        background-color: #DDD;
-        color: #777;
-        stroke: #777;
         cursor: default;
     }
 
@@ -972,7 +827,6 @@
         min-width: 40px;
         padding: 8px;
         fill: none;
-        stroke: #000;
         stroke-linejoin: round;
     }
 
@@ -1011,11 +865,304 @@
     .add-fav {
         width: 24px;
         height: 24px;
-        fill: #CCC;
+    }
+</style>
+<style id="light-mode" class="theme">
+    body {
+        background-color: #FFF;
+        color: #000;
+        stroke: #000;
+    }
+
+    tr>* {
+        border: 1px solid #000;
+    }
+
+    .age {
+        background-color: #DDD;
+    }
+
+    .tabs {
+        background-color: #EEE;
+        border-bottom: 1px solid #000;
+    }
+
+    .tab {
+        border: 1px solid #CCC;
+        background-color: #DDD;
+    }
+
+    .tabs>.selected {
+        background-color: #FFF;
+        border: 1px solid #000;
+        border-bottom: 1px solid #FFF;
+        box-shadow: 1px -2px 1px 0px #0007;
+    }
+
+    td .dp {
+        color: #284
+    }
+
+    td .ad {
+        color: #A00
+    }
+
+    .st,
+    .dd,
+    .ds {
+        color: #555;
+    }
+
+    .hilightrow tr>th {
+        color: initial;
+    }
+
+    .hilightrow tr:hover {
+        color: #25F;
+    }
+
+    .dropdown {
+        box-shadow: 0px 9px 16px 3px #0007;
+        background-color: #FFF;
+        border: 1px solid #777;
+    }
+
+    .dropdown .group>div {
+        background-color: #FFF;
+    }
+
+    .dropdown .option.selected {
+        background-color: #CCC;
+    }
+
+    .search.disabled {
+        background-color: #DDD;
+        color: #777;
+        stroke: #777;
+    }
+
+    .add-fav {
+        fill: #DDD;
     }
 
     .add-fav.selected {
-        fill: #777 !important;
+        fill: #888 !important;
+    }
+
+    /* .hd.FR {
+        background-color: #FDD;
+    } */
+</style>
+<style id="dark-mode" class="theme">
+    body {
+        background-color: #000;
+        color: #DDD;
+        stroke: #DDD;
+    }
+
+    textarea {
+        background-color: #111;
+        color: #DDD;
+    }
+
+    input,
+    select {
+        background-color: #555;
+        color: #DDD;
+    }
+
+    a {
+        color: #9AF;
+    }
+
+    .search {
+        color: #000;
+        stroke: #000;
+    }
+
+    tr>* {
+        border: 1px solid #DDD;
+    }
+
+    th,
+    button,
+    .age {
+        background-color: #333;
+    }
+
+    .tabs {
+        background-color: #333;
+        border-bottom: 1px solid #DDD;
+    }
+
+    .tab {
+        border: 1px solid #777;
+        background-color: #555;
+    }
+
+    .tabs>.selected {
+        background-color: #000;
+        border: 1px solid #DDD;
+        border-bottom: 1px solid #000;
+        box-shadow: 1px -2px 1px 0px #DDD7;
+    }
+
+    td .dp {
+        color: #3E7;
+    }
+
+    td .ad {
+        color: #F44;
+    }
+
+    .st,
+    .dd,
+    .ds {
+        color: #BBB;
+    }
+
+    .hilightrow tr>th {
+        color: #DDD;
+    }
+
+    .hilightrow tr:hover {
+        color: #89F;
+    }
+
+    .dropdown {
+        box-shadow: 0px 9px 16px 3px #DDD7;
+        background-color: #000;
+        border: 1px solid #777;
+    }
+
+    .dropdown .group>div {
+        background-color: #000;
+    }
+
+    .dropdown .option.selected {
+        background-color: #777;
+    }
+
+    .search.disabled {
+        background-color: #777;
+        color: #AAA;
+        stroke: #AAA;
+    }
+
+    .add-fav {
+        fill: #000;
+    }
+
+    .add-fav.selected {
+        fill: #AAA !important;
+    }
+</style>
+<style id="default-color" class="theme">
+    .d25.FR {
+        background-color: #FF000035;
+    }
+
+    .d50.FR {
+        background-color: #FF000030;
+    }
+
+    .d100.FR {
+        background-color: #FF000025;
+    }
+
+    .d200.FR {
+        background-color: #FF000020;
+    }
+
+    .d400.FR,
+    .d500.FR {
+        background-color: #FF000015;
+    }
+
+    .d800.FR,
+    .d1000.FR {
+        background-color: #FF000010;
+    }
+
+    .d1500.FR,
+    .d1650.FR {
+        background-color: #FF000008;
+    }
+
+    .hd.BK {
+        background-color: #CEF;
+    }
+
+    .d25.BK {
+        background-color: #0AF5;
+    }
+
+    .d50.BK {
+        background-color: #0AF4;
+    }
+
+    .d100.BK {
+        background-color: #0AF3;
+    }
+
+    .d200.BK {
+        background-color: #0AF2;
+    }
+
+    .hd.BR {
+        background-color: #DFD;
+    }
+
+    .d25.BR {
+        background-color: #0F75;
+    }
+
+    .d50.BR {
+        background-color: #0F74;
+    }
+
+    .d100.BR {
+        background-color: #0F73;
+    }
+
+    .d200.BR {
+        background-color: #0F72;
+    }
+
+    .hd.FL {
+        background-color: #FFD;
+    }
+
+    .d25.FL {
+        background-color: #FF04;
+    }
+
+    .d50.FL {
+        background-color: #FF03;
+    }
+
+    .d100.FL {
+        background-color: #FF02;
+    }
+
+    .d200.FL {
+        background-color: #FF01;
+    }
+
+    .hd.IM {
+        background-color: #BFF;
+    }
+
+    .d100.IM {
+        background-color: #0FF6;
+    }
+
+    .d200.IM {
+        background-color: #0FF4;
+    }
+
+    .d400.IM {
+        background-color: #0FF2;
     }
 </style>
 

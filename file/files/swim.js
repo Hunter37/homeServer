@@ -1103,6 +1103,14 @@ const G = {};
     }
     G.go = go;
 
+    // function setPageData(data) {
+    //     document.getElementById('content').pageData = data;
+    // }
+
+    // function getPageData() {
+    //     return document.getElementById('content').pageData;
+    // }
+
     function updateContent(html, loadingHash) {
         if (window.location.hash.substring(1) == loadingHash) {
             document.getElementById('content').innerHTML = html;
@@ -1123,6 +1131,7 @@ const G = {};
 
     async function loadContent() {
         _backgroundActions.length = 0;
+        showColor();
 
         let loadingHash = window.location.hash.substring(1);
         if (!loadingHash) {
@@ -1210,7 +1219,7 @@ const G = {};
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
             let cls = Favorite.has(pkey) ? ' selected' : '';
-            return createPopup(`<div class="add-fav${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},'${clubName}','${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+            return createPopup(`<div class="add-fav${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
         }
 
         static click(elem, pkey, name, age, clubName, lsc) {
@@ -1354,14 +1363,42 @@ const G = {};
     function buildConfigPage() {
         let html = ['<div style="padding:30px 10px;max-width:800px">'];
 
-        html.push('<p>', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'), '<br/>&nbsp;</p>');
-        html.push('<p>', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'G.useCustomSelect(this.checked)'));
-        html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve select control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
-        html.push('<p>', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'G.useCustomDatePicker(this.checked)'));
-        html.push('<span style="padding:0 20px;float:right;width:500px;">(Improve date-picker control compatibility on certain browsers.)</span><br/>&nbsp;</p>');
+        html.push(createVSpace(30));
+        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'), '</div>');
+        html.push(createVSpace(30));
+        html.push('<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'G.useCustomSelect(this.checked)'));
+        html.push('<span style="padding:0 20px;">(Improve select control compatibility on certain browsers)</span></div>');
+        html.push(createVSpace(30));
+        html.push('<div class="center-row">', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'G.useCustomDatePicker(this.checked)'));
+        html.push('<span style="padding:0 20px;">(Improve date-picker control compatibility on certain browsers)</span></div>');
+
+        let colorSelect = new Select('theme-color', [
+            ['Stroke Colors', 'light-mode,default-color'],
+            ['Light Mode', 'light-mode'],
+            ['Dark Mode', 'dark-mode'],
+        ], showColor(), showColor);
+        colorSelect.class = 'big';
+
+        html.push(createVSpace(30));
+        html.push('<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()), '</div>');
 
         html.push('</div>');
         return html.join('');
+    }
+
+    function showColor(color) {
+        if (color === undefined) {
+            color = localStorage.getItem('theme-color') || 'default-color';
+        } else {
+            localStorage.setItem('theme-color', color);
+        }
+
+        let colors = new Set(color.split(','));
+        for (let elem of document.querySelectorAll('.theme')) {
+            elem.disabled = !colors.has(elem.id);
+        }
+
+        return color;
     }
 
     function show25(show) {
@@ -1379,6 +1416,7 @@ const G = {};
         }
 
         localStorage.setItem('custom-select', use ? '1' : '0');
+        window.location.reload();
     }
     G.useCustomSelect = useCustomSelect;
 
@@ -1695,6 +1733,7 @@ const G = {};
 
         await ensureToken();
         let data = await loadDetails(Number(pkey));
+        //setPageData(data);
 
         // show the rank button, need some info for the rank href
         let swimmer = data.swimmer;
@@ -1741,9 +1780,11 @@ const G = {};
         let meets = new Set(data.events.map(e => e[idx.meet]));
         data.meetDict = await _meetDictinary.loadMeets(meets);
 
-        data.swimmer.birthday = _birthdayDictionary.calculate(data.swimmer.pkey, data.events, data.meetDict, data.swimmer.age);
-        data.swimmer.alias = getAlias(data.swimmer.firstName, data.swimmer.lastName);
-        data.swimmer.gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
+        let swimmer = data.swimmer;
+        swimmer.birthday = _birthdayDictionary.calculate(swimmer.pkey, data.events, data.meetDict, swimmer.age);
+        swimmer.alias = getAlias(swimmer.firstName, swimmer.lastName);
+        swimmer.gender = data.events.length > 0 ? data.events[0][data.events.idx.gender] : '';
+        swimmer.name = swimmer.alias + ' ' + swimmer.lastName
 
         return data;
     }
@@ -2014,10 +2055,10 @@ const G = {};
         console.log(data.swimmer);
 
         let swimmer = data.swimmer;
-        let name = swimmer.alias + ' ' + swimmer.lastName;
         let range = BirthdayDictionary.format(swimmer.birthday);
 
-        html.push('<div class="center-row header p-space">', Favorite.createButton(swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc), '<p>', name, '</p><p>',
+        html.push('<div class="center-row header p-space">',
+            Favorite.createButton(swimmer.pkey, swimmer.name, swimmer.age, swimmer.clubName, swimmer.lsc), '<p>', swimmer.name, '</p><p>',
             convetToGenderString(swimmer.gender), '</p><p>', swimmer.age, '</p><p>', swimmer.clubName, '</p><p>Birthday: ');
         let thread = parseInt(localStorage.getItem('xbday'));
         if (thread > 0) {
@@ -2037,12 +2078,13 @@ const G = {};
 
         html.push('</p><p>Total Event: ', data.events.length, '</p></div>');
 
+        // update favorite swimmer info in the background
         _backgroundActions.push([params => {
             let [pkey, name, age, clubName, lsc] = params;
             if (Favorite.has(pkey)) {
                 Favorite.set(pkey, name, age, clubName, lsc);
             }
-        }, [swimmer.pkey, name, swimmer.age, swimmer.clubName, swimmer.lsc]]);
+        }, [swimmer.pkey, swimmer.name, swimmer.age, swimmer.clubName, swimmer.lsc]]);
 
         return html.join('');
     }
@@ -2125,7 +2167,7 @@ const G = {};
 
         for (let meetInfo of meetList) {
             let name = meetInfo[0].replace('_', ' ');
-            let details = meetInfo[1].replace(/\[(.+)\]\((https:\/\/.+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            let details = meetInfo[1].replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
             html.push('<th class="mc full">', createPopup(name, details), '</th>');
         }
 
@@ -2543,7 +2585,7 @@ const G = {};
                 let eventStr = fixDistance(`${dist} ${stroke} ${c}`);
                 let evt = _eventIndexMap.get(eventStr);
                 let value = swimmer.events.filter(e => e[idx.event] == evt);
-                value.name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName;
+                value.name = swimmer.swimmer.name;
                 value.birthday = bday;
                 value.bdayOffset = bdayOffset;
                 values.push(value);
@@ -3047,8 +3089,7 @@ const G = {};
 
         for (let swimmer of config.swimmerList) {
             let id = 's_' + swimmer.swimmer.pkey;
-            let name = swimmer.swimmer.alias + ' ' + swimmer.swimmer.lastName
-            html.push(createHSpace(20), createCheckbox(id, name, !swimmer.hide, `G.checkSwimmer(this,${swimmer.swimmer.pkey})`),
+            html.push(createHSpace(20), createCheckbox(id, swimmer.swimmer.name, !swimmer.hide, `G.checkSwimmer(this,${swimmer.swimmer.pkey})`),
                 `<button class="xbutton" onclick="G.removeSwimmer(${swimmer.swimmer.pkey})">❌</button>`);
         }
 
@@ -3059,9 +3100,10 @@ const G = {};
     function createHSpace(px) {
         return `<div style="width:${px}px;display:inline-block"></div>`;
     }
-    // function createVSpace(px) {
-    //     return `<div style="height:${px}px"></div>`;
-    // }
+
+    function createVSpace(px) {
+        return `<div style="height:${px}px"></div>`;
+    }
 
     function formatTime(time) {
         let min = Math.floor(time / 6000);
