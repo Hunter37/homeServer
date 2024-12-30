@@ -1050,7 +1050,7 @@ const G = {};
             `<button onclick="G.go('search',document.getElementById('input').value+'~19O');G.Dropdown.get('main-search').close();" class="search all">SEARCH 19&OVER</button>`);
 
         let html = ['<div class="center-row child-space">',
-            `<input id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus class="big" />`,
+            `<input type="text" id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus class="big" />`,
             `<button onclick="G.go('search',document.getElementById('input').value)" class="big search main">SEARCH</button>`,
             drop.render(),
             `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="big search hide">RANK</button>`,
@@ -2327,7 +2327,7 @@ const G = {};
 
         let searchDropdown = new Dropdown('add-search',
             '<div class="center-row" onclick="event.stopPropagation()">' +
-            `<input id="add-input" onkeypress="event.key=='Enter'&&G.addSearch(this.value)">` +
+            `<input type="text" id="add-input" onkeypress="event.key=='Enter'&&G.addSearch(this.value)">` +
             '<button onclick="G.addSearch()">Search</button><button onclick="G.addSearch(null, true)">19&Over</button></div>',
             '<div id="adding-list" onclick="event.stopPropagation()"></div>');
 
@@ -2635,7 +2635,7 @@ const G = {};
         let duration = config.duration;
 
         // draw the axis
-        ctx.strokeStyle = 'black';
+        ctx.strokeStyle = window.getComputedStyle(document.body).color;
         ctx.fillStyle = 'blue';
         ctx.moveTo(0, 0);
         ctx.lineTo(0, height);
@@ -4992,44 +4992,44 @@ const G = {};
 
     let lscMap = (function () {
         let data = `
-AD|Adirondack|Eastern
+AD|Adirondack|Eastern|east-north
 AK|Alaska|Western|west-nw
 AM|Allegheny Mountain|Eastern
 AR|Arkansas|Central|cent-south
-AZ|Arizona|Western|west-four,west-farwest
-BD|Border|Southern
+AZ|Arizona|Western|west-4c,west-farwest
+BD|Border|Southern|south-south
 CC|Central California|Western|west-canv
-CO|Colorado|Western|west-four
-CT|Connecticut|Eastern
+CO|Colorado|Western|west-4c
+CT|Connecticut|Eastern|east-north
 FL|Florida|Southern
-FG|Florida Gold Coast|Southern
-GA|Georgia|Southern
-GU|Gulf|Southern
+FG|Florida Gold Coast|Southern|south-east
+GA|Georgia|Southern|south-east
+GU|Gulf|Southern|south-south
 HI|Hawaiian|Western|west-nw,west-farwest
 IL|Illinois|Central|cent-north
 IN|Indiana|Central|cent-east
 IE|Inland Empire|Western|west-nw
 IA|Iowa|Central|cent-north
-KY|Kentucky|Southern
+KY|Kentucky|Southern|south-east
 LE|Lake Erie|Central|cent-east
-LA|Louisiana|Southern
+LA|Louisiana|Southern|south-south
 ME|Maine|Eastern
 MD|Maryland|Eastern
-MR|Metropolitan|Eastern
+MR|Metropolitan|Eastern|east-north
 MI|Michigan|Central|cent-east
-MA|Middle Atlantic|Eastern
+MA|Middle Atlantic|Eastern|east-north
 MW|Midwestern|Central|cent-south
 MN|Minnesota|Central|cent-north
-MS|Mississippi|Southern
+MS|Mississippi|Southern|south-east
 MV|Missouri Valley|Central|cent-south
 MT|Montana|Western|west-nw
-NE|New England|Eastern
-NJ|New Jersey|Eastern
-NM|New Mexico|Western|west-four
-NI|Niagara|Eastern
-NC|North Carolina|Southern
+NE|New England|Eastern|east-north
+NJ|New Jersey|Eastern|east-north
+NM|New Mexico|Western|west-4c
+NI|Niagara|Eastern|east-north
+NC|North Carolina|Southern|south-east
 ND|North Dakota|Central|cent-north
-NT|North Texas|Southern
+NT|North Texas|Southern|south-south
 OH|Ohio|Central|cent-east
 OK|Oklahoma|Central|cent-south
 OR|Oregon|Western|west-nw
@@ -5040,14 +5040,14 @@ PV|Potomac Valley|Eastern
 SI|San Diego-Imperial|Western|west-canv,west-farwest
 SN|Sierra Nevada|Western|west-canv,west-farwest
 SR|Snake River|Western|west-nw
-SC|South Carolina|Southern
+SC|South Carolina|Southern|south-east
 SD|South Dakota|Central|cent-north
-ST|South Texas|Southern
-SE|Southeastern|Southern
+ST|South Texas|Southern|south-south
+SE|Southeastern|Southern|south-east
 CA|Southern California|Western|west-canv,west-farwest
-UT|Utah|Western|west-four
+UT|Utah|Western|west-4c
 VA|Virginia|Eastern
-WT|West Texas|Southern
+WT|West Texas|Southern|south-south
 WV|West Virginia|Southern
 WI|Wisconsin|Central|cent-north
 WY|Wyoming|Western|west-nw
