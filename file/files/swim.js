@@ -4992,7 +4992,7 @@ const G = {};
 
     let lscMap = (function () {
         let data = `
-AD|Adirondack|Eastern|east-north
+AD|Adirondack|Eastern
 AK|Alaska|Western|west-nw
 AM|Allegheny Mountain|Eastern
 AR|Arkansas|Central|cent-south
@@ -5000,7 +5000,7 @@ AZ|Arizona|Western|west-4c,west-farwest
 BD|Border|Southern|south-south
 CC|Central California|Western|west-canv
 CO|Colorado|Western|west-4c
-CT|Connecticut|Eastern|east-north
+CT|Connecticut|Eastern
 FL|Florida|Southern
 FG|Florida Gold Coast|Southern|south-east
 GA|Georgia|Southern|south-east
@@ -5015,18 +5015,18 @@ LE|Lake Erie|Central|cent-east
 LA|Louisiana|Southern|south-south
 ME|Maine|Eastern
 MD|Maryland|Eastern
-MR|Metropolitan|Eastern|east-north
+MR|Metropolitan|Eastern
 MI|Michigan|Central|cent-east
-MA|Middle Atlantic|Eastern|east-north
+MA|Middle Atlantic|Eastern
 MW|Midwestern|Central|cent-south
 MN|Minnesota|Central|cent-north
 MS|Mississippi|Southern|south-east
 MV|Missouri Valley|Central|cent-south
 MT|Montana|Western|west-nw
-NE|New England|Eastern|east-north
-NJ|New Jersey|Eastern|east-north
+NE|New England|Eastern
+NJ|New Jersey|Eastern
 NM|New Mexico|Western|west-4c
-NI|Niagara|Eastern|east-north
+NI|Niagara|Eastern
 NC|North Carolina|Southern|south-east
 ND|North Dakota|Central|cent-north
 NT|North Texas|Southern|south-south
