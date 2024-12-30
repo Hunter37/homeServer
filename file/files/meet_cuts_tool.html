@@ -202,7 +202,7 @@
   function parseMeetCut(data) {
     let firstError = true;
     function alertError(msg) {
-      if (location.protocol === 'file:' && firstError) {
+      if (isRunningLocally() && firstError) {
         alert(msg);
         firstError = false;
       }
@@ -258,8 +258,7 @@
         alertError(msg);
         continue;
       }
-      let event = parts[eventIndex];
-      event = event.substring(0, event.length - 2) + ' ' + event.substring(event.length - 2);
+      let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
 
       for (let [i, time] of parts.entries()) {
         if (i === eventIndex || !time.includes('.')) {
@@ -276,11 +275,18 @@
         event = course == 'SCY'
           ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
           : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
+        if (!_eventIndexMap.has(event + ' ' + course)) {
+          let msg = `Unknown event: ${event}, row: ${row}`;
+          console.error(msg);
+          alertError(msg);
+          continue;
+        }
         let key = event + ' ' + course + ' ' + gender;
         if (eventMap.has(key)) {
           let msg = `Duplicate event: ${key}, row: ${row}`;
           console.error(msg);
           alertError(msg);
+          continue;
         }
         eventMap.set(key, [time, timeToInt(time)]);
       }
@@ -298,6 +304,10 @@
     '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM', '200 BR LCM',
     '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM', '400 MED-R LCM', '25 FR SCY',
     '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM', '89 _ _', '90 _ _', '91 _ _'];
+  const _eventIndexMap = new Map();
+  _eventList.forEach((item, index) => {
+    _eventIndexMap.set(item, index);
+  });
   const _courseOrder = ['SCY', 'SCM', 'LCM'];
   function timeToInt(stime) {
     let result = 0;
@@ -311,6 +321,9 @@
       result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
     }
     return result;
+  }
+  function isRunningLocally() {
+    return location.protocol === 'file:';
   }
 </script>
 

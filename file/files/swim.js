@@ -64,6 +64,14 @@ const G = {};
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // page utility functions
 
+    function isRunningLocally() {
+        return location.protocol === 'file:';
+    }
+
+    function getFileRoot() {
+        return isRunningLocally() ? '' : '/files/';
+    }
+
     function getEventCourse(event) {
         return _eventList[event].split(' ')[2];
     }
@@ -2148,8 +2156,11 @@ const G = {};
                 '</th>');
         }
 
-        html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th></tr>`,
-            '<tr class="gy"><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
+        if (meetList.length > 0) {
+            html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th>`);
+        }
+
+        html.push('</tr><tr class="gy"><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
             createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
             createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
 
@@ -2202,10 +2213,12 @@ const G = {};
                 createHSpace(20))
         }
 
-        html.push('<style id="show-mc-style"></style>',
-            createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`),
-            '</div>',
-            '<table class="fill top-margin"><tbody>');
+        if (meetList.length > 0) {
+            html.push('<style id="show-mc-style"></style>',
+                createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`));
+        }
+
+        html.push('</div><table class="fill top-margin"><tbody>');
 
         // create the table header
         let header = createBestTimeTableHeader(data, meetList, ageKey);
@@ -4722,7 +4735,7 @@ const G = {};
     }
 
     async function initDatepicker(table) {
-        let root = location.protocol === 'file:' ? '' : '/files/';
+        let root = getFileRoot();
         loadCSS(`${root}datepicker.material.css`);
         await loadScript(`${root}datepicker.js`);
         new Datepicker('#datepicker', {
@@ -5074,7 +5087,7 @@ WY|Wyoming|Western|west-nw
     function parseMeetCut(data) {
         let firstError = true;
         function alertError(msg) {
-            if (location.protocol === 'file:' && firstError) {
+            if (isRunningLocally() && firstError) {
                 alert(msg);
                 firstError = false;
             }
@@ -5101,7 +5114,7 @@ WY|Wyoming|Western|west-nw
             if (row.startsWith('#') || row === '') {
                 continue;
             }
-            if (row.startsWith('meet ')) {
+            if (row.startsWith('meet')) {
                 let part = row.split(' ');
                 part.shift();
                 let meet = {
@@ -5113,7 +5126,7 @@ WY|Wyoming|Western|west-nw
                 meets.set(meet.name, meet);
                 continue;
             }
-            if (row.startsWith('table ')) {
+            if (row.startsWith('table')) {
                 meet = age = gender = course = null;
                 cols = row.split(' ');
                 cols.shift();// remove 'table'
@@ -5130,8 +5143,7 @@ WY|Wyoming|Western|west-nw
                 alertError(msg);
                 continue;
             }
-            let event = parts[eventIndex];
-            event = event.substring(0, event.length - 2) + ' ' + event.substring(event.length - 2);
+            let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
 
             for (let [i, time] of parts.entries()) {
                 if (i === eventIndex || !time.includes('.')) {
@@ -5148,11 +5160,18 @@ WY|Wyoming|Western|west-nw
                 event = course == 'SCY'
                     ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
                     : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
+                if (!_eventIndexMap.has(event + ' ' + course)) {
+                    let msg = `Unknown event: ${event}, row: ${row}`;
+                    console.error(msg);
+                    alertError(msg);
+                    continue;
+                }
                 let key = event + ' ' + course + ' ' + gender;
                 if (eventMap.has(key)) {
                     let msg = `Duplicate event: ${key}, row: ${row}`;
                     console.error(msg);
                     alertError(msg);
+                    continue;
                 }
                 eventMap.set(key, [time, timeToInt(time)]);
             }
@@ -5168,7 +5187,7 @@ WY|Wyoming|Western|west-nw
 
     async function getLscMeetCuts(zone, lsc) {
         return await RuntimeCache.func(`meet-cut-${lsc}`, async () => {
-            let root = location.protocol === 'file:' ? '' : '/files/';
+            let root = getFileRoot();
             let meetCuts = new Map();
 
             async function loadMeetsFromFile(file) {
@@ -5205,7 +5224,7 @@ WY|Wyoming|Western|west-nw
 
         let meets = await RuntimeCache.func(file, async () => {
             try {
-                let root = location.protocol === 'file:' ? '' : '/files/';
+                let root = getFileRoot();
                 let data = await getFileData(`${root}${file}`);
                 return parseMeetCut(data);
             } catch (e) {
