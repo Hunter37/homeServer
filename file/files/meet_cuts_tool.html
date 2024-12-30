@@ -29,7 +29,7 @@
 <script>
   let G = {};
 </script>
-<script src="meet-northwest.js"></script>
+<script src="meet-west-nw.js"></script>
 <script>
   let fileFormat = `
 # parse results
@@ -69,6 +69,9 @@
 # meet: Winter : 2024 Speedo Winter Junior Championships (12/11/2024)
 # table 11-18:SCY:Junior  F  EVENT  M
 # table NWReg:SCY  F:15-18  F:14  F:13  F:12  F:11 F:5-10  EVENT  M:5-10 M:11 M:12 M:13  M:14  M:15-18
+#
+# tools:
+# onlineocr.net
 `;
 
   let textElem = document.getElementById("text");
@@ -79,15 +82,20 @@
   textElem.value = fileFormat + '\n' + G.fileData;
 
   submitElem.addEventListener("click", () => {
-    let text = cleanup(textElem.value);
-    textElem.value = text;
+    try {
+      let text = cleanup(textElem.value);
+      textElem.value = text;
 
-    let meets = parseMeetCut(text);
-    console.log(meets);
+      let meets = parseMeetCut(text);
+      console.log(meets);
 
-    printTimes(meets);
+      printTimes(meets);
 
-    testMeets = meets;
+      testMeets = meets;
+    } catch (e) {
+      console.error(e.stack);
+      alert(e.stack);
+    }
   });
 
   function cleanup(data) {
@@ -102,7 +110,7 @@
       }
 
       if (row.startsWith('meet') || row.startsWith('table')) {
-        result.push(row.split(':').map(x => x.trim()).join(':'), '\n');
+        result.push(row.replace(/event/ig, 'EVENT').split(':').map(x => x.trim()).join(':'), '\n');
         continue;
       }
 

@@ -117,14 +117,6 @@
         margin: 5px 4px;
     }
 
-    tr:nth-child(odd) {
-        background-color: #0000;
-    }
-
-    tr:nth-child(even) {
-        background-color: #0002;
-    }
-
     tr.d25 {
         background-color: inherit;
     }
@@ -132,7 +124,6 @@
     .hd {
         text-align: center;
     }
-
 
     .age {
         font-weight: bold;
@@ -142,8 +133,6 @@
     .bold {
         font-weight: bold;
     }
-
-
 
     td>div {
         margin: 0;
@@ -177,7 +166,6 @@
         top: 0;
         bottom: 0;
         right: 0;
-        background-color: #0004;
         z-index: -1;
     }
 
@@ -277,11 +265,9 @@
     .bs .pop {
         visibility: hidden;
         padding: 5px;
-        background-color: #FFF;
         border-radius: 8px;
-        border: 1px solid #000;
         white-space: nowrap;
-        color: #57E;
+        cursor: default;
 
         /* Position the tooltip */
         position: absolute;
@@ -467,10 +453,6 @@
         cursor: default;
     }
 
-
-
-
-
     .add-fav:hover,
     .leg-time:hover,
     .expander>.fold:hover,
@@ -582,8 +564,6 @@
         border-radius: 36px;
     }
 
-    /* -------------- */
-
     #swimmer-list {
         margin: 0 50px;
     }
@@ -655,7 +635,6 @@
         background-color: lightskyblue;
     }
 
-
     .dropdown .group .group-txt {
         margin: 0;
         padding: 5px;
@@ -668,8 +647,6 @@
         padding: 5px;
         cursor: pointer;
     }
-
-
 
     .select-text {
         padding: 5px;
@@ -907,6 +884,24 @@
         color: #A00
     }
 
+    td>.r {
+        background-color: #0004;
+    }
+
+    /* tr:nth-child(odd) {
+        background-color: #0000;
+    } */
+
+    tr:nth-child(even) {
+        background-color: #0001;
+    }
+
+    .bs .pop {
+        background-color: #FFF;
+        border: 1px solid #000;
+        color: #57E;
+    }
+
     .st,
     .dd,
     .ds {
@@ -1008,11 +1003,29 @@
     }
 
     td .dp {
-        color: #3E7;
+        color: #2D6;
     }
 
     td .ad {
-        color: #F44;
+        color: #E33;
+    }
+
+    td>.r {
+        background-color: #FFF6;
+    }
+
+    /* tr:nth-child(odd) {
+        background-color: #0000;
+    } */
+
+    tr:nth-child(even) {
+        background-color: #FFF2;
+    }
+
+    .bs .pop {
+        background-color: #444;
+        border: 1px solid #DDD;
+        color: #68E;
     }
 
     .st,

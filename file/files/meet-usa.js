@@ -1,6 +1,6 @@
 (() => {
 G.fileData = `
-meet Futures 2025 Futures Championships (7/23/2025)
+meet Futures [2025 Futures Championships](https://www.usaswimming.org/times/time-standards) (7/23/2025)
 
 table Futures:SCY F:19-99 F:11-18 EVENT M:11-18 M:19-99
 
@@ -72,43 +72,7 @@ table Winter:LCM:13-18 F EVENT M
 2:22.09 200IM 2:09.49
 5:00.29 400IM 4:35.89
 
-meet Open 2024 Toyota U.S. Open Championships (12/4/2024)
-
-table Open:SCY:13-99 F EVENT M
-
-22.79 50FR 20.39
-49.69 100FR 44.39
-1:47.39 200FR 1:38.09
-4:48.09 500FR 4:24.69
-9:56.79 1000FR 9:13.19
-16:32.59 1650FR 15:34.19
-54.49 100BK 48.89
-1:57.69 200BK 1:47.09
-1:02.79 100BR 55.29
-2:15.49 200BR 2:00.99
-53.99 100FL 48.39
-1:59.39 200FL 1:47.89
-2:00.59 200IM 1:48.89
-4:15.19 400IM 3:52.69
-
-table Open:LCM:13-99 F EVENT M
-
-26.59 50FR 23.79
-57.59 100FR 51.99
-2:04.29 200FR 1:54.09
-4:21.39 400FR 4:02.79
-8:58.69 800FR 8:23.09
-17:11.29 1500FR 16:05.09
-1:04.39 100BK 58.19
-2:18.29 200BK 2:06.99
-1:13.29 100BR 1:05.29
-2:38.29 200BR 2:22.89
-1:02.39 100FL 55.99
-2:16.99 200FL 2:05.09
-2:20.99 200IM 2:08.19
-4:57.29 400IM 4:33.09
-
-meet Junior 2025 Speedo Junior National Championships (7/30/2025)
+meet Junior [2025 Speedo Junior National Championships](https://www.usaswimming.org/times/time-standards) (7/30/2025)
 
 table Junior:SCY:13-18 F EVENT M
 
@@ -144,7 +108,7 @@ table Junior:LCM:13-18 F EVENT M
 2:21.29 200IM 2:07.99
 5:00.29 400IM 4:33.09
 
-meet TYR_Pro 2025 TYR Pro Championships (8/5/2025)
+meet TYR_Pro [2025 TYR Pro Championships](https://www.usaswimming.org/times/time-standards) (8/5/2025)
 
 table TYR_Pro:SCY:13-99 F EVENT M
 
@@ -180,7 +144,7 @@ table TYR_Pro:LCM:13-99 F EVENT M
 2:17.99 200IM 2:04.19
 4:54.69 400IM 4:26.89
 
-meet National 2025 USA Swimming National Championships (6/3/2025)
+meet National [2025 USA Swimming National Championships](https://www.usaswimming.org/times/time-standards) (6/3/2025)
 
 table National:SCY F:19-99 F:13-18 EVENT M:13-18 M:19-99
 
@@ -216,25 +180,24 @@ table National:LCM F:19-99 F:13-18 EVENT M:13-18 M:19-99
 2:16.89 2:18.19 200IM 2:04.29 2:02.89
 4:51.79 4:51.79 400IM 4:25.19 4:24.69
 
-meet OT 2024 U.S. Olympic Team Trials (6/21/2024)
+meet Pro_Ser [2025 TYR Pro Swim Series](https://www.usaswimming.org/times/time-standards)
 
-table OT:LCM:13-99 F EVENT M
+table Pro_Ser:13-99 F:SCY F:LCM EVENT M:LCM M:SCY
 
-25.69 50FR 22.79
-55.79 100FR 49.99
-2:00.89 200FR 1:49.99
-4:15.49 400FR 3:55.59
-8:45.79 800FR 8:09.69
-16:45.69 1500FR 15:39.89
-1:01.89 100BK 55.69
-2:13.59 200BK 2:01.69
-1:10.29 100BR 1:02.19
-2:31.69 200BR 2:15.99
-1:00.19 100FL 53.59
-2:13.69 200FL 2:00.49
-2:16.09 200IM 2:03.49
-4:49.89 400IM 4:25.19
+23.29 26.89 50FR 24.09 20.59
+50.39 58.19 100FR 52.59 44.99
+1:49.09 2:04.99 200FR 1:55.29 1:38.59
+4:53.59 4:26.69 400FR 4:05.29 4:29.29
+10:11.49 9:06.79 800FR 8:28.19 9:24.29
+17:02.19 17:26.79 1500FR 16:14.79 15:40.39
+55.09 1:04.79 100BK 58.79 49.29
+1:59.39 2:19.59 200BK 2:08.29 1:47.99
+1:03.09 1:13.79 100BR 1:05.99 55.69
+2:17.19 2:38.59 200BR 2:24.39 2:01.89
+54.69 1:02.69 100FL 56.59 48.79
+2:01.69 2:18.39 200FL 2:06.39 1:49.29
+2:02.19 2:22.09 200IM 2:09.49 1:49.79
+4:21.69 5:00.29 400IM 4:35.89 3:56.99
 
-# onlineocr.net
 `;
 })();

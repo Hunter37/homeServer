@@ -1388,7 +1388,7 @@ const G = {};
 
     function showColor(color) {
         if (color === undefined) {
-            color = localStorage.getItem('theme-color') || 'default-color';
+            color = localStorage.getItem('theme-color') || 'light-mode,default-color';
         } else {
             localStorage.setItem('theme-color', color);
         }
@@ -2166,7 +2166,7 @@ const G = {};
         }
 
         for (let meetInfo of meetList) {
-            let name = meetInfo[0].replace('_', ' ');
+            let name = meetInfo[0].replace(/_/g, ' ');
             let details = meetInfo[1].replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
             html.push('<th class="mc full">', createPopup(name, details), '</th>');
         }
@@ -4996,7 +4996,7 @@ AD|Adirondack|Eastern
 AK|Alaska|Western|west-nw
 AM|Allegheny Mountain|Eastern
 AR|Arkansas|Central|cent-south
-AZ|Arizona|Western|west-four
+AZ|Arizona|Western|west-four,west-farwest
 BD|Border|Southern
 CC|Central California|Western|west-canv
 CO|Colorado|Western|west-four
@@ -5005,7 +5005,7 @@ FL|Florida|Southern
 FG|Florida Gold Coast|Southern
 GA|Georgia|Southern
 GU|Gulf|Southern
-HI|Hawaiian|Western|west-nw
+HI|Hawaiian|Western|west-nw,west-farwest
 IL|Illinois|Central|cent-north
 IN|Indiana|Central|cent-east
 IE|Inland Empire|Western|west-nw
@@ -5034,17 +5034,17 @@ OH|Ohio|Central|cent-east
 OK|Oklahoma|Central|cent-south
 OR|Oregon|Western|west-nw
 OZ|Ozark|Central|cent-south
-PC|Pacific|Western|west-canv
+PC|Pacific|Western|west-canv,west-farwest
 PN|Pacific Northwest|Western|west-nw
 PV|Potomac Valley|Eastern
-SI|San Diego-Imperial|Western|west-canv
-SN|Sierra Nevada|Western|west-canv
+SI|San Diego-Imperial|Western|west-canv,west-farwest
+SN|Sierra Nevada|Western|west-canv,west-farwest
 SR|Snake River|Western|west-nw
 SC|South Carolina|Southern
 SD|South Dakota|Central|cent-north
 ST|South Texas|Southern
 SE|Southeastern|Southern
-CA|Southern California|Western|west-canv
+CA|Southern California|Western|west-canv,west-farwest
 UT|Utah|Western|west-four
 VA|Virginia|Eastern
 WT|West Texas|Southern

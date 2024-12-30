@@ -1,5 +1,7 @@
 (() => {
 G.fileData = `
+#https://www.socalswim.org/calendar/2025/1
+#https://www.socalswim.org/time-standards/
 
 meet A SCS 8&U A
 
@@ -71,7 +73,7 @@ table B:SCY:0-8 F EVENT M
 28.80 25BR 28.00
 25.60 25FL 25.60
 
-meet SprAGC 2025 Spring Age Group Championships
+meet SprAGC 2025 SCS Spring Age Group Championships (3/13 - 3/16)
 
 table SprAGC:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 
@@ -114,7 +116,7 @@ table SprAGC:LCM F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 2:39.20 2:49.40 3:13.70 200IM 3:11.80 2:47.10 2:29.90
 5:37.90 - - 400IM - - 5:22.80
 
-meet JAG 2025 June Age Group Championships
+meet JAG 2025 SCS June Age Group Championships (6/12 - 6/15)
 
 table JAG:SCY F:17-18 F:15-16 F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14 M:15-16 M:17-18
 
@@ -156,7 +158,7 @@ table JAG:LCM F:17-18 F:15-16 F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-1
 2:35.80 2:35.80 2:45.70 2:56.80 3:28.30 200IM 3:25.90 2:55.80 2:36.00 2:21.30 2:21.30
 5:47.50 5:47.50 5:57.80 - - 400IM - - 5:44.90 5:12.80 5:12.80
 
-meet Elite 2025 Elite Age Group Championships
+meet Elite 2025 SCS Elite Age Group Championships (7/17 - 7/20)
 
 table Elite:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 
@@ -199,7 +201,7 @@ table Elite:LCM F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 2:39.20 2:49.40 3:13.70 200IM 3:11.80 2:47.10 2:29.90
 5:37.90 - - 400IM - - 5:22.80
 
-meet SAG 2025 Summer Age Group Championships
+meet SAG 2025 SCS Summer Age Group Championships (7/24 - 7/27)
 
 table SAG:SCY F:17-18 F:15-16 F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14 M:15-16 M:17-18
 
@@ -241,7 +243,7 @@ table SAG:LCM F:17-18 F:15-16 F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-1
 2:38.90 2:38.90 2:45.10 2:55.60 3:21.10 200IM 3:21.20 2:54.40 2:34.80 2:24.10 2:24.10
 5:56.80 5:56.80 6:00.20 - - 400IM - - 5:44.70 5:21.90 5:21.90
 
-meet SCS_Sr SCS Senior Development
+meet SCS_Sr 2025 SCS Senior Development (1/9 - 1/12)
 
 table SCS_Sr:SCY:11-99 F EVENT M
 

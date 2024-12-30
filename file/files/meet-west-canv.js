@@ -1,8 +1,8 @@
 (() => {
 G.fileData = `
-meet Sectional Sectional
+meet Sectionals [2025 CA/NV Speedo Sectionals](https://www.gomotionapp.com/sdisicac/UserFiles/File/Meet-Announcements/2025/2025-canv-spring-sectionals---carlsbad_008403.pdf) (2/27 - 3/2)
 
-table Sectional:SCY:11-18 F EVENT M
+table Sectionals:SCY:11-18 F EVENT M
 
 24.89 50FR 22.19
 53.99 100FR 48.19
@@ -19,7 +19,7 @@ table Sectional:SCY:11-18 F EVENT M
 2:10.49 200IM 1:58.19
 4:39.09 400IM 4:14.69
 
-table Sectional:LCM:11-18 F EVENT M
+table Sectionals:LCM:11-18 F EVENT M
 
 28.69 50FR 25.89
 1:01.89 100FR 56.09
