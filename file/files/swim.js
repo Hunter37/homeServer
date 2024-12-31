@@ -2225,7 +2225,7 @@ const G = {};
                 tableElem.innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
             ageSelect.class = 'big';
-            html.push(createHSpace(20), '<span>Standards Age:&nbsp;</span>', ageSelect.render(customSelect));
+            html.push(createHSpace(20), '<span>cuts age:&nbsp;</span>', ageSelect.render(customSelect));
 
             let lscOpts = [];
             for (let [lsc, details] of lscMap) {
@@ -2240,7 +2240,7 @@ const G = {};
                 document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
             lscSelect.class = 'big';
-            html.push(createHSpace(20), '<span>Standards LSC:&nbsp;</span>', lscSelect.render(customSelect));
+            html.push(createHSpace(20), '<span>cuts LSC:&nbsp;</span>', lscSelect.render(customSelect));
         }
 
         html.push('</div><div id="best-time-table">',

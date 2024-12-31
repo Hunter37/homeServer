@@ -110,12 +110,14 @@
       }
 
       if (row.startsWith('meet') || row.startsWith('table')) {
-        result.push(row.replace(/event/ig, 'EVENT').split(':').map(x => x.trim()).join(':'), '\n');
+        result.push(row
+          .replace(/event/ig, 'EVENT').replace(/10&U/ig, '0-10')
+          .split(':').map(x => x.trim()).join(':'), '\n');
         continue;
       }
 
       row = row
-        .replace(/-+/g, '-').replace('NA', '-').replace(/x+/ig, '-')
+        .replace(/-+/g, '-').replace('NA', '-').replace(/x+/ig, '-').replace(/\d\*/g, '')
         .replace(/freestyle/i, 'FR').replace(/backstroke/i, 'BK').replace(/breaststroke/i, 'BR').replace(/butterfly/i, 'FL')
         .replace(/free/i, 'FR').replace(/back/i, 'BK').replace(/breast/i, 'BR').replace(/fly/i, 'FL')
         .replace(/individual medley/i, 'IM').replace(/ IM/i, 'IM').replace(/ I\.M\./i, 'IM')
