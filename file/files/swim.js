@@ -2001,7 +2001,7 @@ const G = {};
         }
 
         let tabView = new TabView('swimmerTabView');
-        tabView.addTab('<p>Personal Best</p>', await createBestTimeTable(data, fastRowList, rowInfo));
+        tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', createMeetTable(data));
         tabView.addTab(createClickableDiv('Progress Graph', `G.showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
@@ -2138,17 +2138,18 @@ const G = {};
         return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
     }
 
-    function createBestTimeTableHeader(data, meetList, ageKey) {
+    function createBestTimeTableHeader(data, meetList, age) {
+        let ageKey = getAgeKey(age);
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
         let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
             '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
             createPopup('Event<br>Count', 'Total Event Count'), '</th><th class="rk" colspan="4">Rankings</th>'];
 
-        if (data.swimmer.age < 19) {
-            if (data.swimmer.age > 9) {
+        if (age < 19) {
+            if (age > 9) {
                 html.push(`<th colspan="${stdName.length}" class="smt full">`,
-                    createPopup(`Motivational Standards (${data.swimmer.age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
+                    createPopup(`Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
                     '</th>');
             }
             html.push(`<th colspan="${stdName.length}" class="mt full">`,
@@ -2164,8 +2165,8 @@ const G = {};
             createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
             createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
 
-        if (data.swimmer.age < 19) {
-            if (data.swimmer.age > 9) {
+        if (age < 19) {
+            if (age > 9) {
                 for (let std of stdName) {
                     html.push('<th class="smt">', std, '</th>');
                 }
@@ -2186,13 +2187,9 @@ const G = {};
         return html.join('');
     }
 
-    async function createBestTimeTable(data, fastRowList, rowInfo) {
-        let idx = data.events.idx;
+    async function createBestTimeTablePage(data, fastRowList, rowInfo) {
         let swimmer = data.swimmer;
-        let ageKey = getAgeKey(swimmer.age);
-        let genderStr = convetToGenderString(swimmer.gender);
-        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-        let meetList = await buildMeetList(swimmer, genderStr);
+        let customSelect = useCustomSelect();
 
         let html = ['<div class="content"><h2>Personal Best</h2>',
             '<div class="center-row">',
@@ -2213,15 +2210,53 @@ const G = {};
                 createHSpace(20))
         }
 
-        if (meetList.length > 0) {
-            html.push('<style id="show-mc-style"></style>',
-                createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`));
+        html.push('<style id="show-mc-style"></style>',
+            createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`));
+
+        if (swimmer.age < 19) {
+            let ageOpts = [];
+            for (let i = 8; i < 19; ++i) {
+                ageOpts.push([`　${i == 8 ? '8U' : i}　`, i]);
+            }
+            let ageSelect = new Select('age-select', ageOpts, swimmer.age < 9 ? 8 : swimmer.age, async value => {
+                document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, { age: value });
+            });
+            ageSelect.class = 'big';
+            html.push(createHSpace(20), '<span>Standards Age:&nbsp;</span>', ageSelect.render(customSelect));
+
+            let lscOpts = [];
+            for (let [lsc, details] of lscMap) {
+                lscOpts.push([`${lsc} - ${details[0]}`, `${lsc},${details[1]}`]);
+            }
+            let lscSelect = new Select('lsc-select', lscOpts, `${swimmer.lsc},${swimmer.zone}`, async value => {
+                let [lsc, zone] = value.split(',');
+                document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, { lsc: lsc, zone: zone });
+            });
+            lscSelect.class = 'big';
+            html.push(createHSpace(20), '<span>Standards LSC:&nbsp;</span>', lscSelect.render(customSelect));
         }
 
-        html.push('</div><table class="fill top-margin"><tbody>');
+        html.push('</div><div id="best-time-table">',
+            await createBestTimeTable(data, fastRowList, rowInfo),
+            '</div></div>');
+
+        return html.join('');
+    }
+
+    async function createBestTimeTable(data, fastRowList, rowInfo, override) {
+        let idx = data.events.idx;
+        let swimmer = data.swimmer;
+        let rankAgeKey = getAgeKey(swimmer.age);
+        let age = override?.age || swimmer.age;
+        let zone = override?.zone || swimmer.zone;
+        let lsc = override?.lsc || swimmer.lsc;
+        let genderStr = convetToGenderString(swimmer.gender);
+        let meetList = await buildMeetList(genderStr, age, zone, lsc);
+
+        let html = ['<table class="fill top-margin"><tbody>'];
 
         // create the table header
-        let header = createBestTimeTableHeader(data, meetList, ageKey);
+        let header = createBestTimeTableHeader(data, meetList, age);
         html.push(header);
 
         // create the best time table body
@@ -2253,24 +2288,26 @@ const G = {};
             // build rankings cell
             html.push('<td class="full">', createClickableDiv(dist, `G.showGraph(null,{pkey:${swimmer.pkey},event:${event}})`), '</td><td>',
                 time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, ageKey, swimmer.zone, swimmer.lsc, swimmer.clubName),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, ageKey, swimmer.zone, swimmer.lsc),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, ageKey, swimmer.zone),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, ageKey));
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone, swimmer.lsc, swimmer.clubName),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone, swimmer.lsc),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey));
 
             let stds = [];
 
             let singleTimeCount = 0;
-            if (swimmer.age < 19) {
-                if (swimmer.age > 9) {
+            if (age < 19) {
+                let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+
+                if (age > 9) {
                     for (let std of stdName) {
-                        stds.push(await getAgeGroupMotivationTime(std, swimmer.age, genderStr, eventStr, true));
+                        stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr, true));
                     }
                 }
                 singleTimeCount = stds.length;
 
                 for (let std of stdName) {
-                    stds.push(await getAgeGroupMotivationTime(std, swimmer.age, genderStr, eventStr));
+                    stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr));
                 }
             }
             let motivationTimeCount = stds.length;
@@ -2289,7 +2326,7 @@ const G = {};
                 }
                 preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
                 let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
-                percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent))
+                percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent));
                 let cls = timeInt <= stdInt ? 'dp' : 'ad';
                 html.push(`<td class="${css} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
                 preTime = stdInt;
@@ -2298,15 +2335,15 @@ const G = {};
             html.push('</tr>');
         }
 
-        html.push('</tbody></table></div>');
+        html.push('</tbody></table>');
 
         return html.join('');
     }
 
-    async function buildMeetList(swimmer, genderStr) {
+    async function buildMeetList(genderStr, age, zone, lsc) {
         let meetList = [];
-        for (let [name, meet] of await getLscMeetCuts(swimmer.zone, swimmer.lsc)) {
-            if (meet.ageMap.has(swimmer.age)) {
+        for (let [name, meet] of await getLscMeetCuts(zone, lsc)) {
+            if (meet.ageMap.has(age)) {
                 meetList.push([name, meet.details, []]);
             }
         }
@@ -2314,7 +2351,7 @@ const G = {};
         for (let meetInfo of meetList) {
             let mapArray = meetInfo[2];
             for (let eventStr of _eventList) {
-                mapArray.push(await getMeetCut(swimmer.zone, swimmer.lsc, meetInfo[0], swimmer.age, genderStr, eventStr));
+                mapArray.push(await getMeetCut(zone, lsc, meetInfo[0], age, genderStr, eventStr));
             }
         }
 
