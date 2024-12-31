@@ -2215,11 +2215,14 @@ const G = {};
 
         if (swimmer.age < 19) {
             let ageOpts = [];
-            for (let i = 8; i < 19; ++i) {
-                ageOpts.push([`　${i == 8 ? '8U' : i}　`, i]);
+            for (let i = 8; i <= 19; ++i) {
+                ageOpts.push([`　${i == 8 ? '8U' : i == 19 ? '19O' : i}　`, i]);
             }
             let ageSelect = new Select('age-select', ageOpts, swimmer.age < 9 ? 8 : swimmer.age, async value => {
-                document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, { age: value });
+                let tableElem = document.getElementById('best-time-table');
+                let override = tableElem.override = tableElem.override || {};
+                override.age = parseInt(value);
+                tableElem.innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
             ageSelect.class = 'big';
             html.push(createHSpace(20), '<span>Standards Age:&nbsp;</span>', ageSelect.render(customSelect));
@@ -2230,7 +2233,11 @@ const G = {};
             }
             let lscSelect = new Select('lsc-select', lscOpts, `${swimmer.lsc},${swimmer.zone}`, async value => {
                 let [lsc, zone] = value.split(',');
-                document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, { lsc: lsc, zone: zone });
+                let tableElem = document.getElementById('best-time-table');
+                let override = tableElem.override = tableElem.override || {};
+                override.lsc = lsc;
+                override.zone = zone;
+                document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
             lscSelect.class = 'big';
             html.push(createHSpace(20), '<span>Standards LSC:&nbsp;</span>', lscSelect.render(customSelect));
