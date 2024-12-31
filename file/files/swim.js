@@ -119,9 +119,37 @@ const G = {};
         return (delta > 0 ? '+' : '') + (delta != null ? delta.toFixed(2) : '');
     }
 
+    function decodeAgeKey(ageKey) {
+        let from = 0;
+        let to = 99;
+        if (ageKey.endsWith('U')) {
+            to = parseInt(ageKey);
+        } else if (ageKey.endsWith('O')) {
+            from = parseInt(ageKey);
+        } else {
+            let parts = ageKey.split('-');
+            from = parseInt(parts[0]);
+            to = parseInt(parts[1]);
+        }
+        return [from, to];
+    }
+
+    function ageRangeToAgeKey(from, to) {
+        if (!to) {
+            return from + '';
+        }
+        if (from == 0) {
+            return to + 'U';
+        }
+        if (to == 99) {
+            return from + 'O';
+        }
+        return from + '-' + to;
+    }
+
     function getAgeKey(age) {
         age = Math.floor((age + 1) / 2) * 2;
-        return age <= 10 ? '10U' : age > 18 ? '19O' : (age - 1) + '-' + age;
+        return age <= 8 ? '8U' : age <= 10 ? '10U' : age > 18 ? '19O' : (age - 1) + '-' + age;
     }
 
     function convetToGenderString(gender) {
@@ -1372,7 +1400,8 @@ const G = {};
         let html = ['<div style="padding:30px 10px;max-width:800px">'];
 
         html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'), '</div>');
+        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'));
+        html.push('<span style="padding:0 20px;">(Display 25-yard/meter events for swimmers aged 9 and over)</span></div>');
         html.push(createVSpace(30));
         html.push('<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'G.useCustomSelect(this.checked)'));
         html.push('<span style="padding:0 20px;">(Improve select control compatibility on certain browsers)</span></div>');
@@ -1957,8 +1986,9 @@ const G = {};
             return;
         }
 
+        let hide25 = data.swimmer.age > 8 && !show25();
         let idx = data.events.idx;
-        if (!show25()) {
+        if (hide25) {
             //data.events = data.events.filter(e => !_eventList[e[idx.event]].startsWith('25'));
             data.events = data.events.filter(e => e[idx.event] < 80);
             data.events.idx = idx;
@@ -2004,7 +2034,7 @@ const G = {};
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', createMeetTable(data));
-        tabView.addTab(createClickableDiv('Progress Graph', `G.showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, data.events));
+        tabView.addTab(createClickableDiv('Progress Graph', `G.showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, hide25));
         // tabView.addTab('<p>Ranking</p>', await createRankingTable(data, fastRowList, rowInfo));
         html.push(tabView.render());
 
@@ -2153,7 +2183,7 @@ const G = {};
                     '</th>');
             }
             html.push(`<th colspan="${stdName.length}" class="mt full">`,
-                createPopup(`Motivational Standards (${ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
+                createPopup(`Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
                 '</th>');
         }
 
@@ -2377,9 +2407,9 @@ const G = {};
         return meetList;
     }
 
-    function createProgressGraph(pkey, events) {
+    function createProgressGraph(pkey, hide25) {
         let html = ['<div class="content">',
-            showEventButtons(1, (event) => `G.showGraph(null,{pkey:${pkey},event:${event}})`),
+            showEventButtons(1, hide25, (event) => `G.showGraph(null,{pkey:${pkey},event:${event}})`),
             '<h2 id="graph-title"></h2>'];
 
         let searchDropdown = new Dropdown('add-search',
@@ -2994,7 +3024,7 @@ const G = {};
     async function defaultConfig(pkey) {
         let swimmer = await loadDetails(pkey);
         let event = swimmer.events[swimmer.events.length - 1][swimmer.events.idx.event];
-        event = event > 54 ? event - 54 : event > 27 ? event - 27 : event;
+        event = event > 80 ? event : event > 54 ? event - 54 : event > 27 ? event - 27 : event;
         return {
             pkey: pkey,
             swimmerList: [swimmer],
@@ -3952,34 +3982,6 @@ const G = {};
         return await fetchSwimValues(bodyObj, 'event');
     }
 
-    function decodeAgeKey(ageKey) {
-        let from = 0;
-        let to = 99;
-        if (ageKey.endsWith('U')) {
-            to = parseInt(ageKey);
-        } else if (ageKey.endsWith('O')) {
-            from = parseInt(ageKey);
-        } else {
-            let parts = ageKey.split('-');
-            from = parseInt(parts[0]);
-            to = parseInt(parts[1]);
-        }
-        return [from, to];
-    }
-
-    function ageRangeToAgeKey(from, to) {
-        if (!to) {
-            return from + '';
-        }
-        if (from == 0) {
-            return to + 'U';
-        }
-        if (to == 99) {
-            return from + 'O';
-        }
-        return from + '-' + to;
-    }
-
     async function filterByAge(values, ageKey) {
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey
         // 0        1     2     3     4          5     6        7     8         9
@@ -4059,7 +4061,8 @@ const G = {};
             '<p>Team:</p>', await buildClubSelect(key, customSelect, onchange), '</div>');
 
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
-        html.push(showEventButtons(event, (event) => `G.go('rank', \`${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}\`)`));
+        let hide25 = ageKey != '8U' && !show25();
+        html.push(showEventButtons(event, hide25, (event) => `G.go('rank', \`${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}\`)`));
 
         html.push(showRankTableTitle(key));
 
@@ -4194,14 +4197,14 @@ const G = {};
         table.innerHTML = await showRankTable(table.data, table.key);
     }
 
-    function showEventButtons(selectedEvent, onclick) {
+    function showEventButtons(selectedEvent, hide25, onclick) {
         let html = [];
         let course = getEventCourse(selectedEvent);
 
         html.push('<div class="match-size top-margin">');
         for (let i = 1; i < _eventList.length; ++i) {
             let [d, s, c] = _eventList[i].split(' ');
-            if (c == course && d != '_' && s.indexOf('-R') < 0 && (d != '25' || show25())) {
+            if (c == course && d != '_' && s.indexOf('-R') < 0 && (d != '25' || !hide25)) {
                 let seleted = i == selectedEvent ? ' selected' : '';
                 html.push(`<button class="evt d${d} ${s}${seleted}" style="border:1px solid;width:45px;"`,
                     ` onclick="${onclick(i)}">${s}<br>${d}</button>`);
@@ -4324,7 +4327,7 @@ const G = {};
         let values = [];
         for (let g of ['Female', 'Male']) {
             values.push([g]);
-            for (let ag of ['10U', '11-12', '13-14', '15-16', '17-18', '19O']) {
+            for (let ag of ['8U', '10U', '11-12', '13-14', '15-16', '17-18', '13-18', '19O']) {
                 let value = getRankDataKey(g, event, ag, zone, lsc, clubName);
                 values.push([ag + ' ' + g, value]);
             }
