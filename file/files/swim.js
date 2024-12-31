@@ -5010,14 +5010,14 @@ AK|Alaska|Western|west-nw
 AM|Allegheny Mountain|Eastern
 AR|Arkansas|Central|cent-south
 AZ|Arizona|Western|west-4c,west-farwest
-BD|Border|Southern|south-south
+BD|Border|Southern|south-west
 CC|Central California|Western|west-canv
 CO|Colorado|Western|west-4c
 CT|Connecticut|Eastern
-FL|Florida|Southern
-FG|Florida Gold Coast|Southern|south-east
+FL|Florida|Southern|south-south
+FG|Florida Gold Coast|Southern|south-south
 GA|Georgia|Southern|south-east
-GU|Gulf|Southern|south-south
+GU|Gulf|Southern|south-west
 HI|Hawaiian|Western|west-nw,west-farwest
 IL|Illinois|Central|cent-north
 IN|Indiana|Central|cent-east
@@ -5025,7 +5025,7 @@ IE|Inland Empire|Western|west-nw
 IA|Iowa|Central|cent-north
 KY|Kentucky|Southern|south-east
 LE|Lake Erie|Central|cent-east
-LA|Louisiana|Southern|south-south
+LA|Louisiana|Southern|south-west
 ME|Maine|Eastern
 MD|Maryland|Eastern
 MR|Metropolitan|Eastern
@@ -5042,7 +5042,7 @@ NM|New Mexico|Western|west-4c
 NI|Niagara|Eastern
 NC|North Carolina|Southern|south-east
 ND|North Dakota|Central|cent-north
-NT|North Texas|Southern|south-south
+NT|North Texas|Southern|south-west
 OH|Ohio|Central|cent-east
 OK|Oklahoma|Central|cent-south
 OR|Oregon|Western|west-nw
@@ -5055,13 +5055,13 @@ SN|Sierra Nevada|Western|west-canv,west-farwest
 SR|Snake River|Western|west-nw
 SC|South Carolina|Southern|south-east
 SD|South Dakota|Central|cent-north
-ST|South Texas|Southern|south-south
+ST|South Texas|Southern|south-west
 SE|Southeastern|Southern|south-east
 CA|Southern California|Western|west-canv,west-farwest
 UT|Utah|Western|west-4c
 VA|Virginia|Eastern
-WT|West Texas|Southern|south-south
-WV|West Virginia|Southern
+WT|West Texas|Southern|south-west
+WV|West Virginia|Southern|south-east
 WI|Wisconsin|Central|cent-north
 WY|Wyoming|Western|west-nw
 `;

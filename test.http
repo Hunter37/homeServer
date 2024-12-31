@@ -339,6 +339,31 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 # }
 
 ###
+# get all lsc in a meet
+
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiMDhhYTVlYmMtMmI3Ny05M2IyLTUwNDAtOTE0ZGUwYTBiMmUzIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.wimscCV-zoU9uhR3X0qYYVEvffsdfw62u9v4m3ZV19U
+
+{
+  "metadata": [
+    {
+      "dim": "[OrgUnit.Level3Code]",
+      "datatype": "text",
+    },
+    {
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric",
+      "filter": {
+        "equals": 254611
+      }
+    },
+  ],
+  "count": 200
+}
+
+
+###
 # testing
 
 POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql

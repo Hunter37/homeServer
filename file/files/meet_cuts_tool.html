@@ -120,7 +120,7 @@
         .replace(/individual medley/i, 'IM').replace(/ IM/i, 'IM').replace(/ I\.M\./i, 'IM')
         .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
         .replace(/400\s*\/\s*500/i, '400').replace(/800\s*\/\s*1000/i, '800').replace(/1500\s*\/\s*1650/i, '1500')
-        .replace(/ :/g, ' ')
+        .replace(/ :/g, ' ').replace(/^:/, '')
         .replace(/ FR-R/i, 'FR-R').replace(/ MED-R/i, 'MED-R');
 
       result.push(row, '\n');
