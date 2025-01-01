@@ -1411,13 +1411,19 @@ const G = {};
 
         let colorSelect = new Select('theme-color', [
             ['Stroke Colors', 'light-mode,default-color'],
+            ['Stroke Colors (Dark)', 'dark-mode,red-color'],
+            ['Rustic Harmony', 'light-mode,harmony'],
+            ['Celestial Palette', 'light-mode,celestial'],
             ['Light Mode', 'light-mode'],
             ['Dark Mode', 'dark-mode'],
         ], showColor(), showColor);
         colorSelect.class = 'big';
 
         html.push(createVSpace(30));
-        html.push('<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()), '</div>');
+        html.push('<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()));
+        html.push(
+            '<table style="margin:0 30px" class="example"><tr><td class="d50 FR">Free</td><td class="d50 BK">Back</td><td class="d50 BR">Breast</td><td class="d50 FL">Fly</td><td class="d100 IM">IM</td></tr></table>',
+            '</div>');
 
         html.push('</div>');
         return html.join('');

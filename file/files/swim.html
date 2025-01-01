@@ -841,6 +841,11 @@
         width: 24px;
         height: 24px;
     }
+
+    .example td {
+        width: 60px;
+        text-align: center;
+    }
 </style>
 <style id="light-mode" class="theme">
     body {
@@ -948,6 +953,22 @@
 
     /* .hd.FR {
         background-color: #FDD;
+    }
+
+    .hd.BK {
+        background-color: #CEF;
+    }
+
+    .hd.BR {
+        background-color: #DFD;
+    }
+
+    .hd.FL {
+        background-color: #FFD;
+    }
+
+    .hd.IM {
+        background-color: #BFF;
     } */
 
     .mback {
@@ -1117,10 +1138,6 @@
         background-color: #FF000008;
     }
 
-    .hd.BK {
-        background-color: #CEF;
-    }
-
     .d25.BK {
         background-color: #0AF5;
     }
@@ -1135,10 +1152,6 @@
 
     .d200.BK {
         background-color: #0AF2;
-    }
-
-    .hd.BR {
-        background-color: #DFD;
     }
 
     .d25.BR {
@@ -1157,10 +1170,6 @@
         background-color: #0F72;
     }
 
-    .hd.FL {
-        background-color: #FFD;
-    }
-
     .d25.FL {
         background-color: #FF04;
     }
@@ -1177,10 +1186,6 @@
         background-color: #FF01;
     }
 
-    .hd.IM {
-        background-color: #BFF;
-    }
-
     .d100.IM {
         background-color: #0FF6;
     }
@@ -1191,6 +1196,282 @@
 
     .d400.IM {
         background-color: #0FF2;
+    }
+</style>
+<style id="red-color" class="theme">
+    .d25.FR {
+        background-color: #FF777775;
+    }
+
+    .d50.FR {
+        background-color: #FF777770;
+    }
+
+    .d100.FR {
+        background-color: #FF777765;
+    }
+
+    .d200.FR {
+        background-color: #FF777760;
+    }
+
+    .d400.FR,
+    .d500.FR {
+        background-color: #FF777755;
+    }
+
+    .d800.FR,
+    .d1000.FR {
+        background-color: #FF777745;
+    }
+
+    .d1500.FR,
+    .d1650.FR {
+        background-color: #FF777735;
+    }
+
+    .d25.BK {
+        background-color: #0AF9;
+    }
+
+    .d50.BK {
+        background-color: #0AF8;
+    }
+
+    .d100.BK {
+        background-color: #0AF7;
+    }
+
+    .d200.BK {
+        background-color: #0AF6;
+    }
+
+    .d25.BR {
+        background-color: #0F77;
+    }
+
+    .d50.BR {
+        background-color: #0F76;
+    }
+
+    .d100.BR {
+        background-color: #0F75;
+    }
+
+    .d200.BR {
+        background-color: #0F74;
+    }
+
+    .d25.FL {
+        background-color: #FF06;
+    }
+
+    .d50.FL {
+        background-color: #FF05;
+    }
+
+    .d100.FL {
+        background-color: #FF04;
+    }
+
+    .d200.FL {
+        background-color: #FF03;
+    }
+
+    .d100.IM {
+        background-color: #0FF6;
+    }
+
+    .d200.IM {
+        background-color: #0FF5;
+    }
+
+    .d400.IM {
+        background-color: #0FF4;
+    }
+</style>
+<style id="harmony" class="theme">
+    .d25.FR {
+        background-color: #C6584070;
+    }
+
+    .d50.FR {
+        background-color: #C6584065;
+    }
+
+    .d100.FR {
+        background-color: #C6584060;
+    }
+
+    .d200.FR {
+        background-color: #C6584055;
+    }
+
+    .d400.FR,
+    .d500.FR {
+        background-color: #C6584045;
+    }
+
+    .d800.FR,
+    .d1000.FR {
+        background-color: #C6584035;
+    }
+
+    .d1500.FR,
+    .d1650.FR {
+        background-color: #C6584020;
+    }
+
+    .d25.BK {
+        background-color: #7CD9;
+    }
+
+    .d50.BK {
+        background-color: #7CD8;
+    }
+
+    .d100.BK {
+        background-color: #7CD7;
+    }
+
+    .d200.BK {
+        background-color: #7CD6;
+    }
+
+    .d25.BR {
+        background-color: #FD57;
+    }
+
+    .d50.BR {
+        background-color: #FD56;
+    }
+
+    .d100.BR {
+        background-color: #FD55;
+    }
+
+    .d200.BR {
+        background-color: #FD54;
+    }
+
+    .d25.FL {
+        background-color: #4776;
+    }
+
+    .d50.FL {
+        background-color: #4775;
+    }
+
+    .d100.FL {
+        background-color: #4774;
+    }
+
+    .d200.FL {
+        background-color: #4773;
+    }
+
+    .d100.IM {
+        background-color: #6576;
+    }
+
+    .d200.IM {
+        background-color: #6575;
+    }
+
+    .d400.IM {
+        background-color: #6574;
+    }
+</style>
+<style id="celestial" class="theme">
+    .d25.FR {
+        background-color: #40B3BA90;
+    }
+
+    .d50.FR {
+        background-color: #40B3BA80;
+    }
+
+    .d100.FR {
+        background-color: #40B3BA70;
+    }
+
+    .d200.FR {
+        background-color: #40B3BA60;
+    }
+
+    .d400.FR,
+    .d500.FR {
+        background-color: #40B3BA50;
+    }
+
+    .d800.FR,
+    .d1000.FR {
+        background-color: #40B3BA40;
+    }
+
+    .d1500.FR,
+    .d1650.FR {
+        background-color: #40B3BA25;
+    }
+
+    .d25.BK {
+        background-color: #9AD271F0;
+    }
+
+    .d50.BK {
+        background-color: #9AD271D0;
+    }
+
+    .d100.BK {
+        background-color: #9AD271B0;
+    }
+
+    .d200.BK {
+        background-color: #9AD27190;
+    }
+
+    .d25.BR {
+        background-color: #CB7D66C0;
+    }
+
+    .d50.BR {
+        background-color: #CB7D66B0;
+    }
+
+    .d100.BR {
+        background-color: #CB7D66A0;
+    }
+
+    .d200.BR {
+        background-color: #CB7D6690;
+    }
+
+    .d25.FL {
+        background-color: #F0C22EB7;
+    }
+
+    .d50.FL {
+        background-color: #F0C22EA0;
+    }
+
+    .d100.FL {
+        background-color: #F0C22E87;
+    }
+
+    .d200.FL {
+        background-color: #F0C22E70;
+    }
+
+    .d100.IM {
+        background-color: #F3ACB4E0;
+    }
+
+    .d200.IM {
+        background-color: #F3ACB4C0;
+    }
+
+    .d400.IM {
+        background-color: #F3ACB490;
     }
 </style>
 
