@@ -616,20 +616,20 @@ const G = {};
 
         open() {
             document.querySelector(`#${this.id} .dropdown`).classList.remove('hide');
-            let closing = (e) => {
+            this.closing = (e) => {
                 if (!e.target.closest(`#${this.id}`)) {
                     this.close();
-                    window.removeEventListener('click', closing);
-                    window.removeEventListener('touchstart', closing);
                 }
             }
 
-            window.addEventListener('click', closing);
-            window.addEventListener('touchstart', closing);
+            window.addEventListener('click', this.closing);
+            window.addEventListener('touchstart', this.closing);
             this.onopen && this.onopen();
         }
 
         close() {
+            window.removeEventListener('click', this.closing);
+            window.removeEventListener('touchstart', this.closing);
             document.querySelector(`#${this.id} .dropdown`).classList.add('hide');
         }
     }
@@ -1411,7 +1411,7 @@ const G = {};
 
         let colorSelect = new Select('theme-color', [
             ['Stroke Colors', 'light-mode,default-color'],
-            ['Stroke Colors (Dark)', 'dark-mode,red-color'],
+            ['Stroke Colors (Dark)', 'dark-mode,default-color'],
             ['Rustic Harmony', 'light-mode,harmony'],
             ['Celestial Palette', 'light-mode,celestial'],
             ['Light Mode', 'light-mode'],
@@ -2296,7 +2296,7 @@ const G = {};
         let genderStr = convetToGenderString(swimmer.gender);
         let meetList = await buildMeetList(genderStr, age, zone, lsc);
 
-        let html = ['<table class="fill top-margin"><tbody>'];
+        let html = ['<table class="fill top-margin color-table"><tbody>'];
 
         // create the table header
         let header = createBestTimeTableHeader(data, meetList, age);
@@ -2311,30 +2311,31 @@ const G = {};
             let timeInt = timeToInt(time);
             let eventStr = _eventList[event];
             let [dist, stroke, course] = eventStr.split(' ');
+            let cls = `d${dist} ${stroke}`;
 
             if (rowInfo[i].length == 2 && i > 0) {
                 // html.push('<tr><td colspan="100" style="background:#FFF"></td></tr>')
                 html.push(header);
             }
 
-            html.push(`<tr class="d${dist} ${stroke}">`);
+            html.push(`<tr>`);
             if (rowInfo[i].length == 2) {
                 html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
             }
             if (rowInfo[i].length > 0) {
-                html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
+                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
             // count the event for the swimmer
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
             // build rankings cell
-            html.push('<td class="full">', createClickableDiv(dist, `G.showGraph(null,{pkey:${swimmer.pkey},event:${event}})`), '</td><td>',
-                time, '</td><td>', formatDate(date), '</td><td>', count, '</td>',
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone, swimmer.lsc, swimmer.clubName),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone, swimmer.lsc),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, swimmer.zone),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey));
+            html.push(`<td class="full ${cls}">`, createClickableDiv(dist, `G.showGraph(null,{pkey:${swimmer.pkey},event:${event}})`),
+                `</td><td class="${cls}">`, time, `</td><td class="${cls}">`, formatDate(date), `</td><td class="${cls}">`, count, '</td>',
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc, swimmer.clubName),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone),
+                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls));
 
             let stds = [];
 
@@ -2364,14 +2365,14 @@ const G = {};
             for (let [i, [stdStr, stdInt]] of stds.entries()) {
                 let css = i < singleTimeCount ? 'smt' : i < motivationTimeCount ? 'mt' : 'mc';
                 if (!stdInt) {
-                    html.push(`<td class="${css}"></td>`);
+                    html.push(`<td class="${css} ${cls}"></td>`);
                     continue;
                 }
                 preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
                 let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
                 percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent));
-                let cls = timeInt <= stdInt ? 'dp' : 'ad';
-                html.push(`<td class="${css} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), cls, percent), '</td>');
+                let updowncls = timeInt <= stdInt ? 'dp' : 'ad';
+                html.push(`<td class="${css} ${cls} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), updowncls, percent), '</td>');
                 preTime = stdInt;
             }
 
@@ -3206,7 +3207,7 @@ const G = {};
         return minStr + secStr;
     }
 
-    async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, zone, lsc, club) {
+    async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, cls, zone, lsc, club) {
         let html = [];
 
         let rankDataKey = getRankDataKey(genderStr, event, ageKey, zone, lsc, club);
@@ -3216,10 +3217,10 @@ const G = {};
         // 0        1     2     3     4          5     6        7     8         9     10
         if (values) {
             let rank = calculateRank(values, pkey, timeInt);
-            html.push('<td class="full rk">', createClickableDiv(rank, `G.go('rank',\`${rankDataKey}\`)`), '</td>');
+            html.push(`<td class="full rk ${cls}">`, createClickableDiv(rank, `G.go('rank',\`${rankDataKey}\`)`), '</td>');
         } else {
             let id = rankDataKey + '_' + pkey;
-            html.push(`<td class="full rk" id="${id}">`, createClickableDiv('<div class="loader"></div>', `G.go('rank',\`${rankDataKey}\`)`), '</td>');
+            html.push(`<td class="full rk ${cls}" id="${id}">`, createClickableDiv('<div class="loader"></div>', `G.go('rank',\`${rankDataKey}\`)`), '</td>');
 
             _backgroundActions.push([getRank, [rankDataKey, timeInt, pkey, id]]);
         }
@@ -3287,7 +3288,7 @@ const G = {};
         // 0     1    2    3    4     5     6      7     8
 
         let idx = data.events.idx;
-        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table"><tbody>'];
 
         // get all age column
         let ages = new Set(data.events.map(e => e[idx.age]));
@@ -3307,15 +3308,15 @@ const G = {};
                 html.push(header);
             }
 
-            html.push(`<tr class="d${dist} ${stroke}">`);
+            html.push(`<tr>`);
             if (rowInfo[i].length == 2) {
                 html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
             }
             if (rowInfo[i].length > 0) {
-                html.push(`<td class="bold" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
+                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
-            html.push('<td class="full">', createClickableDiv(dist, `G.showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
+            html.push(`<td class="full d${dist} ${stroke}">`, createClickableDiv(dist, `G.showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
             for (let age of uniqueAges) {
                 let bestTimeEvent = findBestTimeEventByAge(data.events, event, age);
                 if (bestTimeEvent) {
@@ -3325,9 +3326,9 @@ const G = {};
                     let short = formatStandard(std, true);
                     let date = formatDate(bestTimeEvent[idx.date]);
                     let cls = !preBestTime ? '' : timeToInt(bestTime) < timeToInt(preBestTime) ? 'dp' : 'ad';
-                    html.push('<td class="tc">', buildTimeCell(bestTime, createPopup(short, std), date, cls), '</td>');
+                    html.push(`<td class="tc d${dist} ${stroke}">`, buildTimeCell(bestTime, createPopup(short, std), date, cls), '</td>');
                 } else {
-                    html.push('<td></td>');
+                    html.push(`<td class="d${dist} ${stroke}"></td>`);
                 }
             }
             html.push('</tr>');
@@ -3404,7 +3405,7 @@ const G = {};
         // 0     1    2    3    4     5     6      7     8
         let idx = events.idx;
         let html = ['<div class="header"><span>', course, ' Event Count: ', events.length,
-            '</span></div><table class="fill"><tbody>'];
+            '</span></div><table class="fill color-table"><tbody>'];
 
         // remove dup event in one meet
         let meetEvents = new Map();

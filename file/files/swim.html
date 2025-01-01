@@ -846,6 +846,87 @@
         width: 60px;
         text-align: center;
     }
+
+    .FR.d25::after {
+        opacity: 0.28;
+    }
+
+    .FR.d50::after {
+        opacity: 0.24;
+    }
+
+    .FR.d100::after {
+        opacity: 0.2;
+    }
+
+    .FR.d200::after {
+        opacity: 0.16;
+    }
+
+    .FR.d400::after,
+    .FR.d500::after {
+        opacity: 0.12;
+    }
+
+    .FR.d800::after,
+    .FR.d1000::after {
+        opacity: 0.08;
+    }
+
+    .FR.d1500::after,
+    .FR.d1650::after {
+        opacity: 0.04;
+    }
+
+    .d25::after {
+        opacity: 0.32;
+    }
+
+    .d50::after {
+        opacity: 0.24;
+    }
+
+    .d100::after {
+        opacity: 0.16;
+    }
+
+    .d200::after {
+        opacity: 0.08;
+    }
+
+    .IM.d100::after {
+        opacity: 0.3;
+    }
+
+    .IM.d200::after {
+        opacity: 0.2;
+    }
+
+    .IM.d400::after {
+        opacity: 0.1;
+    }
+
+    .FR,
+    .BK,
+    .BR,
+    .FL,
+    .IM {
+        position: relative;
+    }
+
+    .FR::after,
+    .BK::after,
+    .BR::after,
+    .FL::after,
+    .IM::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        z-index: -9;
+    }
 </style>
 <style id="light-mode" class="theme">
     body {
@@ -1107,371 +1188,78 @@
     }
 </style>
 <style id="default-color" class="theme">
-    .d25.FR {
-        background-color: #FF000035;
+    .color-table tr {
+        background-color: inherit;
     }
 
-    .d50.FR {
-        background-color: #FF000030;
+    .FR::after {
+        background: #F00;
     }
 
-    .d100.FR {
-        background-color: #FF000025;
+    .BK::after {
+        background: #0AF;
     }
 
-    .d200.FR {
-        background-color: #FF000020;
+    .BR::after {
+        background: #0F7;
     }
 
-    .d400.FR,
-    .d500.FR {
-        background-color: #FF000015;
+    .FL::after {
+        background: #FF0;
     }
 
-    .d800.FR,
-    .d1000.FR {
-        background-color: #FF000010;
-    }
-
-    .d1500.FR,
-    .d1650.FR {
-        background-color: #FF000008;
-    }
-
-    .d25.BK {
-        background-color: #0AF5;
-    }
-
-    .d50.BK {
-        background-color: #0AF4;
-    }
-
-    .d100.BK {
-        background-color: #0AF3;
-    }
-
-    .d200.BK {
-        background-color: #0AF2;
-    }
-
-    .d25.BR {
-        background-color: #0F75;
-    }
-
-    .d50.BR {
-        background-color: #0F74;
-    }
-
-    .d100.BR {
-        background-color: #0F73;
-    }
-
-    .d200.BR {
-        background-color: #0F72;
-    }
-
-    .d25.FL {
-        background-color: #FF04;
-    }
-
-    .d50.FL {
-        background-color: #FF03;
-    }
-
-    .d100.FL {
-        background-color: #FF02;
-    }
-
-    .d200.FL {
-        background-color: #FF01;
-    }
-
-    .d100.IM {
-        background-color: #0FF6;
-    }
-
-    .d200.IM {
-        background-color: #0FF4;
-    }
-
-    .d400.IM {
-        background-color: #0FF2;
-    }
-</style>
-<style id="red-color" class="theme">
-    .d25.FR {
-        background-color: #FF777775;
-    }
-
-    .d50.FR {
-        background-color: #FF777770;
-    }
-
-    .d100.FR {
-        background-color: #FF777765;
-    }
-
-    .d200.FR {
-        background-color: #FF777760;
-    }
-
-    .d400.FR,
-    .d500.FR {
-        background-color: #FF777755;
-    }
-
-    .d800.FR,
-    .d1000.FR {
-        background-color: #FF777745;
-    }
-
-    .d1500.FR,
-    .d1650.FR {
-        background-color: #FF777735;
-    }
-
-    .d25.BK {
-        background-color: #0AF9;
-    }
-
-    .d50.BK {
-        background-color: #0AF8;
-    }
-
-    .d100.BK {
-        background-color: #0AF7;
-    }
-
-    .d200.BK {
-        background-color: #0AF6;
-    }
-
-    .d25.BR {
-        background-color: #0F77;
-    }
-
-    .d50.BR {
-        background-color: #0F76;
-    }
-
-    .d100.BR {
-        background-color: #0F75;
-    }
-
-    .d200.BR {
-        background-color: #0F74;
-    }
-
-    .d25.FL {
-        background-color: #FF06;
-    }
-
-    .d50.FL {
-        background-color: #FF05;
-    }
-
-    .d100.FL {
-        background-color: #FF04;
-    }
-
-    .d200.FL {
-        background-color: #FF03;
-    }
-
-    .d100.IM {
-        background-color: #0FF6;
-    }
-
-    .d200.IM {
-        background-color: #0FF5;
-    }
-
-    .d400.IM {
-        background-color: #0FF4;
+    .IM::after {
+        background: #0FF;
     }
 </style>
 <style id="harmony" class="theme">
-    .d25.FR {
-        background-color: #C6584070;
+    .color-table tr {
+        background-color: inherit;
     }
 
-    .d50.FR {
-        background-color: #C6584065;
+    .FR::after {
+        background: #C65840;
     }
 
-    .d100.FR {
-        background-color: #C6584060;
+    .BK::after {
+        background: #477;
     }
 
-    .d200.FR {
-        background-color: #C6584055;
+    .BR::after {
+        background: #FD5;
     }
 
-    .d400.FR,
-    .d500.FR {
-        background-color: #C6584045;
+    .FL::after {
+        background: #7CD;
     }
 
-    .d800.FR,
-    .d1000.FR {
-        background-color: #C6584035;
-    }
-
-    .d1500.FR,
-    .d1650.FR {
-        background-color: #C6584020;
-    }
-
-    .d25.BK {
-        background-color: #7CD9;
-    }
-
-    .d50.BK {
-        background-color: #7CD8;
-    }
-
-    .d100.BK {
-        background-color: #7CD7;
-    }
-
-    .d200.BK {
-        background-color: #7CD6;
-    }
-
-    .d25.BR {
-        background-color: #FD57;
-    }
-
-    .d50.BR {
-        background-color: #FD56;
-    }
-
-    .d100.BR {
-        background-color: #FD55;
-    }
-
-    .d200.BR {
-        background-color: #FD54;
-    }
-
-    .d25.FL {
-        background-color: #4776;
-    }
-
-    .d50.FL {
-        background-color: #4775;
-    }
-
-    .d100.FL {
-        background-color: #4774;
-    }
-
-    .d200.FL {
-        background-color: #4773;
-    }
-
-    .d100.IM {
-        background-color: #6576;
-    }
-
-    .d200.IM {
-        background-color: #6575;
-    }
-
-    .d400.IM {
-        background-color: #6574;
+    .IM::after {
+        background: #657;
     }
 </style>
 <style id="celestial" class="theme">
-    .d25.FR {
-        background-color: #40B3BA90;
+    .color-table tr {
+        background-color: inherit;
     }
 
-    .d50.FR {
-        background-color: #40B3BA80;
+    .FR::after {
+        background: #CB7D66;
     }
 
-    .d100.FR {
-        background-color: #40B3BA70;
+    .BK::after {
+        background: #40B3BA;
     }
 
-    .d200.FR {
-        background-color: #40B3BA60;
+    .BR::after {
+        background: #9AD271;
     }
 
-    .d400.FR,
-    .d500.FR {
-        background-color: #40B3BA50;
+    .FL::after {
+        background: #F0C22E;
     }
 
-    .d800.FR,
-    .d1000.FR {
-        background-color: #40B3BA40;
-    }
-
-    .d1500.FR,
-    .d1650.FR {
-        background-color: #40B3BA25;
-    }
-
-    .d25.BK {
-        background-color: #9AD271F0;
-    }
-
-    .d50.BK {
-        background-color: #9AD271D0;
-    }
-
-    .d100.BK {
-        background-color: #9AD271B0;
-    }
-
-    .d200.BK {
-        background-color: #9AD27190;
-    }
-
-    .d25.BR {
-        background-color: #CB7D66C0;
-    }
-
-    .d50.BR {
-        background-color: #CB7D66B0;
-    }
-
-    .d100.BR {
-        background-color: #CB7D66A0;
-    }
-
-    .d200.BR {
-        background-color: #CB7D6690;
-    }
-
-    .d25.FL {
-        background-color: #F0C22EB7;
-    }
-
-    .d50.FL {
-        background-color: #F0C22EA0;
-    }
-
-    .d100.FL {
-        background-color: #F0C22E87;
-    }
-
-    .d200.FL {
-        background-color: #F0C22E70;
-    }
-
-    .d100.IM {
-        background-color: #F3ACB4E0;
-    }
-
-    .d200.IM {
-        background-color: #F3ACB4C0;
-    }
-
-    .d400.IM {
-        background-color: #F3ACB490;
+    .IM::after {
+        background: #F3ACB4;
     }
 </style>
 
