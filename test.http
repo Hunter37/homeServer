@@ -411,17 +411,24 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
                     #     "datatype": "text",
                     # },
 ###
-# POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
-# Accept: */*
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+Accept: */*
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiNjM4MDllMTUtMDI2MC02MTFjLWUzY2MtMmU4N2ZmNjU5NDMwIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.xwywApsNy8q1H7TPg96Z2Y0wFz_TLxM4c2nBiVgSI54
 
-POST http://localhost:8080/q?url=https%3A%2F%2Fusaswimming.sisense.com%2Fapi%2Fdatasources%2FPublic%20Person%20Search%2Fjaql
-# POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
-Accept: application/json
-Authorization: Bearer 1eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiN2M4ZDlhN2UtODhjYy0xOTM0LTY1N2MtNjI0MmVjZDU4ZTRkIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.onY0_S2D3Mp7Q2PNsDPE8VxZSYqHGgnteS6TbNN_73U
-Content-Type: application/json
-X-Cache-TTL: -1
-# Host: localhost:8080
-Origin: http://data.usaswimming.org
-# Referer: http://localhost:8080/files/swim.html
-
-{"metadata":[{"title":"name","dim":"[Persons.FullName]","datatype":"text"},{"title":"age","dim":"[Persons.Age]","datatype":"numeric","sort":"asc","filter":{"to":18}},{"title":"clubName","dim":"[Persons.ClubName]","datatype":"text"},{"title":"lsc","dim":"[Persons.LscCode]","datatype":"text"},{"title":"pkey","dim":"[Persons.PersonKey]","datatype":"numeric"},{"dim":"[Persons.LastName]","filter":{"startsWith":""},"panel":"scope"},{"dim":"[Persons.FirstAndPreferredName]","filter":{"contains":""},"panel":"scope"}],"count":5000}
+{
+  "metadata": [
+    {
+      "dim": "[UsasSwimTime.EventCompetitionCategoryKey]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[EventCompetitionCategory.TypeCode]",
+      "datatype": "numeric"
+    },
+    {
+      "dim": "[EventCompetitionCategory.TypeName]",
+      "datatype": "numeric"
+    },
+  ],
+  "count": 200,
+}

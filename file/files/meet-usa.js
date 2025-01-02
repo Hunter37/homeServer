@@ -2,7 +2,7 @@
 G.fileData = `
 meet Futures [2025 Futures Championships](https://www.usaswimming.org/times/time-standards) (7/23/2025)
 
-table Futures:SCY F:19-99 F:11-18 EVENT M:11-18 M:19-99
+table Futures:SCY F:19-99 F:13-18 EVENT M:13-18 M:19-99
 
 22.79 23.89 50FR 21.29 20.39
 49.69 51.89 100FR 46.39 44.39
@@ -19,7 +19,7 @@ table Futures:SCY F:19-99 F:11-18 EVENT M:11-18 M:19-99
 2:00.59 2:06.39 200IM 1:53.89 1:48.89
 4:15.19 4:30.69 400IM 4:06.99 3:52.69
 
-table Futures:LCM F:19-99 F:11-18 EVENT M:11-18 M:19-99
+table Futures:LCM F:19-99 F:13-18 EVENT M:13-18 M:19-99
 
 26.59 27.39 50FR 24.59 23.79
 57.59 59.29 100FR 53.59 51.99

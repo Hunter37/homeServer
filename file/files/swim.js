@@ -56,6 +56,12 @@ const G = {};
         _eventIndexMap.set(item, index);
     });
 
+    // session code (0|Unknown 1|Prelim 2|SwimOff 3|Final 4|SemiFinal 5|QuarterFinal 6|TimedFinal 7|Time Trial)
+    // order: unknown, timed, prelim, swimoff, quarter, semi, final, time trial
+    //        0        1      2       3        4        5     6      7
+    const _sessionOrder = [0, 2, 3, 6, 5, 4, 1, 7];
+    const _sessionNames = ['Unknown', 'Prelim', 'SwimOff', 'Final', 'SemiFinal', 'QuarterFinal', 'TimedFinal', 'Time Trial'];
+
     const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"/></svg>';
     const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"/><circle cx="9" cy="9" r="3"/></svg>';
     // const starSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
@@ -164,7 +170,7 @@ const G = {};
     // local caches
 
     class LocalCache {
-        static currentVersion = 4;
+        static currentVersion = 5;
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
@@ -1811,7 +1817,7 @@ const G = {};
                 swimmer: swimmerInfo,
                 cacheTime: events.cacheTime
             };
-        }, null, 2);
+        }, null, 5);
 
         if (data) {
             return await postLoadDetails(data);
@@ -1883,6 +1889,11 @@ const G = {};
                     datatype: 'numeric'
                 },
                 {
+                    title: 'session',
+                    dim: '[Session.SessionKey]',
+                    datatype: 'numeric'
+                },
+                {
                     dim: '[UsasSwimTime.PersonKey]',
                     datatype: 'numeric',
                     filter: {
@@ -1907,7 +1918,7 @@ const G = {};
             row[idx.date] = row[idx.date].substring(0, 10);
         }
 
-        events.sort((a, b) => a[idx.date] == b[idx.date] ? timeToInt(b[idx.time]) - timeToInt(a[idx.time]) : a[idx.date] < b[idx.date] ? -1 : 1);
+        events.sort((a, b) => a[idx.date] == b[idx.date] ? _sessionOrder[a[idx.session]] - _sessionOrder[b[idx.session]] : a[idx.date] < b[idx.date] ? -1 : 1);
 
         return events;
     }
@@ -3003,7 +3014,7 @@ const G = {};
         ctx.stroke();
 
         let meetName = config.meetDict.get(row[idx.meet])[config.meetDict.idx.name];
-        let dateAge = formatDate(row[idx.date]) + '   ' + _eventList[row[idx.event]].split(' ').pop() + '   Age:' + row[idx.age];
+        let dateAge = `${formatDate(row[idx.date])}   ${_eventList[row[idx.event]].split(' ').pop()}   ${_sessionNames[row[idx.session]]}   Age:${row[idx.age]}`;
         let timeStd = row[idx.time] + '     ' + formatStandard(row[idx.std]) + (config.drawName ? '  (' + name + ')' : '');
 
         ctx.beginPath();
@@ -3475,6 +3486,13 @@ const G = {};
             let cellKey = row[idx.meet] + '-' + _eventList[row[idx.event]];
             cellInfo[cellKey] = row;
         }
+        // append the duplicate event to the cell info map
+        for (let row of events) {
+            let cellKey = row[idx.meet] + '-' + _eventList[row[idx.event]];
+            let cell = cellInfo[cellKey];
+            cell.more = cell.more || [];
+            cell.more.push(row);
+        }
 
         // create the meet table body
         let first = true;
@@ -3509,6 +3527,10 @@ const G = {};
                             let time = cell[idx.time];
                             let std = formatStandard(cell[idx.std]);
                             let short = formatStandard(std, true);
+
+                            if (cell.more.length > 1) {
+                                time = createPopup(time, cell.more.map(r => _sessionNames[r[idx.session]] + ' ' + r[idx.time]).join('<br>'));
+                            }
 
                             html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
                             clubName = cell[idx.clubName];

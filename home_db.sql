@@ -145,9 +145,13 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
   "count": 200,
 }
 
-// list all gender code and name (F|Female M|Male MX|Mixed UN|Unknown) (total 4)
+// list all gender code and name (0|UN|Unknown 1|F|Female 2|M|Male 3|MX|Mixed) (total 4)
 {
   "metadata": [
+    {
+      "dim": "[UsasSwimTime.EventCompetitionCategoryKey]",
+      "datatype": "numeric"
+    },
     {
       "dim": "[EventCompetitionCategory.TypeCode]",
       "datatype": "numeric"
