@@ -865,7 +865,7 @@ const G = {};
         render() {
             let percent1 = (((this.value1 - this.min) / (this.max - this.min)) * 100).toFixed(2);
             let percent2 = (((this.value2 - this.min) / (this.max - this.min)) * 100).toFixed(2);
-            let background = `linear-gradient(to right, #DDE ${percent1}%, #7DF ${percent1}%, #7DF ${percent2}%, #DDE ${percent2}%)`;
+            let background = `linear-gradient(to right, var(--b3-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent2}%, var(--b3-clr) ${percent2}%)`;
 
             return [
                 `<div id="${this.id}" class="double-range"><div class="slider-track" style="background:${background}"></div>`,
@@ -897,7 +897,7 @@ const G = {};
             let range = 100 / (this.max - this.min);
             let percent1 = ((this.value1 - this.min) * range).toFixed(2);
             let percent2 = ((this.value2 - this.min) * range).toFixed(2);
-            this.sliderTrack.style.background = `linear-gradient(to right, #DDE ${percent1}%, #7DF ${percent1}%, #7DF ${percent2}%, #DDE ${percent2}%)`;
+            this.sliderTrack.style.background = `linear-gradient(to right, var(--b3-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent2}%, var(--b3-clr) ${percent2}%)`;
         }
     }
     G.DoubleRange = DoubleRange;
@@ -2189,7 +2189,7 @@ const G = {};
         let ageKey = getAgeKey(age);
         let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
-        let html = ['<tr class="wt"><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
+        let html = ['<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
             '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
             createPopup('Event<br>Count', 'Total Event Count'), '</th><th class="rk" colspan="4">Rankings</th>'];
 
@@ -2208,7 +2208,7 @@ const G = {};
             html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th>`);
         }
 
-        html.push('</tr><tr class="gy"><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
+        html.push('</tr><tr><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
             createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
             createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
 
@@ -2428,7 +2428,7 @@ const G = {};
     function createProgressGraph(pkey, hide25) {
         let html = ['<div class="content">',
             showEventButtons(1, hide25, (event) => `G.showGraph(null,{pkey:${pkey},event:${event}})`),
-            '<h2 id="graph-title"></h2>'];
+            '<h2 id="graph-title" class="top-margin"></h2>'];
 
         let searchDropdown = new Dropdown('add-search',
             '<div class="center-row" onclick="event.stopPropagation()">' +
@@ -3282,7 +3282,7 @@ const G = {};
     }
 
     function createAgeBestTimeTableHeader(uniqueAges) {
-        let html = ['<tr class="wt"><th>Course</th><th>Stroke</th><th>Distance</th>'];
+        let html = ['<tr><th>Course</th><th>Stroke</th><th>Distance</th>'];
         for (let age of uniqueAges) {
             html.push('<th>', age, '</th>');
         }
