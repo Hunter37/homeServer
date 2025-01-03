@@ -166,6 +166,24 @@ const G = {};
         return genderStr == 'Male' ? 2 : 1;
     }
 
+    function statbleSort(arr, cmp) {
+        let stable = arr.map((v, i) => [v, i]);
+        stable.sort((a, b) => cmp(a[0], b[0]) || a[1] - b[1]);
+        return stable.map(v => v[0]);
+    }
+
+    function arrayEqual(a, b, eq) {
+        if (a.length != b.length) {
+            return false;
+        }
+        for (let i = 0; i < a.length; i++) {
+            if (!eq(a[i], b[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // local caches
 
@@ -1237,12 +1255,6 @@ const G = {};
 
         let loadingHash = 'favorite';
         let values = Favorite.get();
-        let sortby = localStorage.getItem('fav-sort');
-        if (sortby) {
-            sortby = sortby.toLowerCase();
-            values = [...values].sort((a, b) => a[1][sortby] > b[1][sortby] ? 1 : -1);
-            values = new Map(values);
-        }
 
         let html = ['<h2>Favorites</h2>'];
 
@@ -1252,7 +1264,7 @@ const G = {};
         } else {
             html.push('<table class="fill top-margin"><tbody><tr><th></th>');
             for (let e of ['Name', 'Age', 'Club', 'LSC']) {
-                html.push(`<th class="clickable" onclick="localStorage.setItem('fav-sort','${e}');G.favorite()">${e}</th>`);
+                html.push(`<th class="clickable" onclick="G.Favorite.sort('${e}');G.favorite()">${e}</th>`);
             }
             html.push('</tr>');
             for (let [pkey, obj] of values.entries()) {
@@ -1280,22 +1292,38 @@ const G = {};
             } else {
                 favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
             }
-            localStorage.setItem('favorites', JSON.stringify([...favorites]));
+            Favorite._save(favorites);
         }
 
         static set(pkey, name, age, clubName, lsc) {
             let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
             favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
-            localStorage.setItem('favorites', JSON.stringify([...favorites]));
+            Favorite._save(favorites);
         }
 
         static has(pkey) {
-            let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
+            let favorites = Favorite.get();
             return favorites.has(pkey);
         }
 
         static get() {
             return new Map(JSON.parse(localStorage.getItem('favorites')));
+        }
+
+        static _save(favorites) {
+            localStorage.setItem('favorites', JSON.stringify([...favorites]));
+        }
+
+        static sort(by) {
+            by = by.toLowerCase();
+            let values = Favorite.get();
+            values = [...values];
+            let sorted = statbleSort(values, (a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] > b[1][by] ? 1 : -1);
+            if (arrayEqual(sorted, values, (a, b) => a[0] == b[0])) {
+                sorted = statbleSort(values, (a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] < b[1][by] ? 1 : -1);
+            }
+
+            Favorite._save(sorted);
         }
     }
     G.Favorite = Favorite;
@@ -1427,6 +1455,7 @@ const G = {};
             ['Stroke Colors (Dark)', 'dark-mode,default-color'],
             ['Rustic Harmony', 'light-mode,harmony'],
             ['Celestial Palette', 'light-mode,celestial'],
+            ['Ethereal Fade', 'light-mode,fade-color'],
             ['Light Mode', 'light-mode'],
             ['Dark Mode', 'dark-mode'],
         ], showColor(), showColor);
@@ -1617,19 +1646,37 @@ const G = {};
             return;
         }
 
-        let html = [];
-        // name, age, club, lsc, pkey
-
-        html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
-        let index = 0;
-        for (let [name, age, club, lsc, pkey] of values) {
-            html.push(`<tr class="clickable" onclick="G.go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left">', name,
-                '</td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
+        let html = ['<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th>'];
+        let idx = values.idx;
+        for (let [i, title] of [[idx.name, 'Name'], [idx.age, 'Age'], [idx.clubName, 'Club'], [idx.lsc, 'LSC']]) {
+            html.push(`<th class="clickable" onclick="G.sortSearch(${i})">${title}</th>`);
+        }
+        html.push('</tr>');
+        for (let [i, row] of values.entries()) {
+            html.push(`<tr class="clickable" onclick="G.go('swimmer', ${row[idx.pkey]})"><td>`, i, '</td><td class="left">',
+                row[idx.name], '</td><td>', row[idx.age], '</td><td class="left">', row[idx.clubName], '</td><td>', row[idx.lsc], '</td></tr>');
         }
         html.push('</tbody></table>');
 
         updateContent(html.join(''), loadingHash);
+
+        let table = document.getElementById('search-table');
+        table.values = values;
+        table.loadingHash = loadingHash;
     }
+
+    function sortSearch(sortby) {
+        let table = document.getElementById('search-table');
+        let values = table.values;
+        let idx = values.idx;
+        let sorted = statbleSort(values, (a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] > b[sortby] ? 1 : -1);
+        if (arrayEqual(sorted, values, (a, b) => a == b)) {
+            sorted = statbleSort(values, (a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] < b[sortby] ? 1 : -1);
+        }
+        sorted.idx = idx;
+        showSearch(sorted, table.loadingHash);
+    }
+    G.sortSearch = sortSearch;
 
     async function loadClubSearch(value, all) {
         let bodyObj = {
