@@ -529,7 +529,7 @@ const G = {};
 
             html.push('<div class="tabs">');
             for (let i = 0; i < this.tabs.length; ++i) {
-                html.push(`<div class="tab${i == index ? ' selected' : ''}" onclick="G.TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
+                html.push(`<div class="tab clickable${i == index ? ' selected' : ''}" onclick="G.TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
             }
             html.push('</div>');
 
@@ -574,8 +574,8 @@ const G = {};
         }
 
         render() {
-            return `<div class="expander" id="${this.id}"><div class="expand" onclick="G.Expander.get('${this.id}').expand()">${this.expandHeader}</div>` +
-                `<div class="fold hide" onclick="G.Expander.get('${this.id}').fold()">${this.foldHeader}</div><div class="exp-content hide">${this.content}</div></div>`;
+            return `<div class="expander" id="${this.id}"><div class="expand clickable" onclick="G.Expander.get('${this.id}').expand()">${this.expandHeader}</div>` +
+                `<div class="fold clickable hide" onclick="G.Expander.get('${this.id}').fold()">${this.foldHeader}</div><div class="exp-content hide">${this.content}</div></div>`;
         }
 
         expand() {
@@ -714,7 +714,7 @@ const G = {};
                     text = value[0];
                 }
             }
-            let elem = `<div class='select-text${cls}'><span id="${this.id}-text"${style}>${text}</span><span class="arrow">▽</span></div>`;
+            let elem = `<div class='select-text clickable${cls}' id="${this.id}-text"${style}>${text}</div>`;
 
             let options = [`<div id="${this.id}">`];
             let ending = '';
@@ -725,7 +725,7 @@ const G = {};
                     ending = '</div>';
                 } else {
                     let selected = this.valueEqualtoSelection(this.selected, val) ? ' selected' : '';
-                    options.push(`<div onclick="G.Select.get('${this.id}').onclickItem(${i})" class="o${i} option${selected}${cls}">${txt || '&nbsp;'}</div>`);
+                    options.push(`<div onclick="G.Select.get('${this.id}').onclickItem(${i})" class="o${i} option clickable${selected}${cls}">${txt || '&nbsp;'}</div>`);
                 }
             }
             options.push(ending, '</div>');
@@ -1088,17 +1088,17 @@ const G = {};
 
     (() => {
         let drop = new Dropdown('main-search',
-            '<div class="search drop"><div>▽</div></div>',
-            `<button onclick="G.go('search',document.getElementById('input').value+'~19O');G.Dropdown.get('main-search').close();" class="search all">SEARCH 19&OVER</button>`);
+            '<div class="drop clickable"><div style="margin:auto">▽</div></div>',
+            `<button onclick="G.go('search',document.getElementById('input').value+'~19O');G.Dropdown.get('main-search').close();" style="width:100%">SEARCH 19&OVER</button>`);
 
-        let html = ['<div class="center-row child-space">',
-            `<input type="text" id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus class="big" />`,
-            `<button onclick="G.go('search',document.getElementById('input').value)" class="big search main">SEARCH</button>`,
+        let html = ['<div class="center-row search-bar">',
+            `<input type="text" id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus/>`,
+            `<button onclick="G.go('search',document.getElementById('input').value)" class="search">SEARCH</button>`,
             drop.render(),
-            `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="big search hide">RANK</button>`,
-            `<button id="relay-button" onclick="G.TopButton.onClick('relay')" class="big search hide">RELAY</button>`,
-            `<button id="favorite-button" onclick="G.TopButton.onClick('favorite')" class="search sq-btn">${starSVG}</button>`,
-            `<button id="config-button" onclick="G.TopButton.onClick('config')" class="search sq-btn">${gearSVG}</button>`,
+            `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="hide">RANK</button>`,
+            `<button id="relay-button" onclick="G.TopButton.onClick('relay')" class="hide">RELAY</button>`,
+            `<button id="favorite-button" onclick="G.TopButton.onClick('favorite')" class="sq-btn">${starSVG}</button>`,
+            `<button id="config-button" onclick="G.TopButton.onClick('config')" class="sq-btn">${gearSVG}</button>`,
             '</div>',
             '<div id="content" class="container"></div>',
             '<div id="mloading" class="mback hide"><span class="mloader">Loading</span></div>'
@@ -1237,18 +1237,26 @@ const G = {};
 
         let loadingHash = 'favorite';
         let values = Favorite.get();
+        let sortby = localStorage.getItem('fav-sort');
+        if (sortby) {
+            sortby = sortby.toLowerCase();
+            values = [...values].sort((a, b) => a[1][sortby] > b[1][sortby] ? 1 : -1);
+            values = new Map(values);
+        }
 
-        let html = [];
-
-        html.push('<h2>Favorites</h2>')
+        let html = ['<h2>Favorites</h2>'];
 
         if (values.size == 0) {
             html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="display:inline-block;fill:#CCC;width:24px;transform:translateY(7px)">',
                 starSVG, '</span> next to a swimmer\'s name to add.</p>');
         } else {
-            html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
+            html.push('<table class="fill top-margin"><tbody><tr><th></th>');
+            for (let e of ['Name', 'Age', 'Club', 'LSC']) {
+                html.push(`<th class="clickable" onclick="localStorage.setItem('fav-sort','${e}');G.favorite()">${e}</th>`);
+            }
+            html.push('</tr>');
             for (let [pkey, obj] of values.entries()) {
-                html.push(`<tr onclick="G.go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
+                html.push(`<tr class="clickable" onclick="G.go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
                     '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
             }
             html.push('</tbody></table>');
@@ -1261,7 +1269,7 @@ const G = {};
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
             let cls = Favorite.has(pkey) ? ' selected' : '';
-            return createPopup(`<div class="add-fav${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+            return createPopup(`<div class="add-fav clickable ${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
         }
 
         static click(elem, pkey, name, age, clubName, lsc) {
@@ -1272,13 +1280,13 @@ const G = {};
             } else {
                 favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
             }
-            localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.entries())));
+            localStorage.setItem('favorites', JSON.stringify([...favorites]));
         }
 
         static set(pkey, name, age, clubName, lsc) {
             let favorites = new Map(JSON.parse(localStorage.getItem('favorites')));
             favorites.set(pkey, { name: name, age: age, club: clubName, lsc: lsc });
-            localStorage.setItem('favorites', JSON.stringify(Array.from(favorites.entries())));
+            localStorage.setItem('favorites', JSON.stringify([...favorites]));
         }
 
         static has(pkey) {
@@ -1377,7 +1385,6 @@ const G = {};
             text += k + '\n';
         }
         document.getElementById('cache-info').innerText = text;
-        //window.location.reload();
     }
     G.clearCache = clearCache;
 
@@ -1423,7 +1430,6 @@ const G = {};
             ['Light Mode', 'light-mode'],
             ['Dark Mode', 'dark-mode'],
         ], showColor(), showColor);
-        colorSelect.class = 'big';
 
         html.push(createVSpace(30));
         html.push('<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()));
@@ -1465,7 +1471,8 @@ const G = {};
         }
 
         localStorage.setItem('custom-select', use ? '1' : '0');
-        window.location.reload();
+
+        config();   // refresh config page
     }
     G.useCustomSelect = useCustomSelect;
 
@@ -1616,7 +1623,7 @@ const G = {};
         html.push('<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th><th>Name</th><th>Age</th><th>Club</th><th>LSC</th></tr>');
         let index = 0;
         for (let [name, age, club, lsc, pkey] of values) {
-            html.push(`<tr onclick="G.go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left">', name,
+            html.push(`<tr class="clickable" onclick="G.go('swimmer', ${pkey})"><td>`, ++index, '</td><td class="left">', name,
                 '</td><td>', age, '</td><td class="left">', club, '</td><td>', lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
@@ -2271,7 +2278,6 @@ const G = {};
                 override.age = parseInt(value);
                 tableElem.innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
-            ageSelect.class = 'big';
             html.push(createHSpace(20), '<span>cuts age:&nbsp;</span>', ageSelect.render(customSelect));
 
             let lscOpts = [];
@@ -2286,7 +2292,6 @@ const G = {};
                 override.zone = zone;
                 document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
-            lscSelect.class = 'big';
             html.push(createHSpace(20), '<span>cuts LSC:&nbsp;</span>', lscSelect.render(customSelect));
         }
 
@@ -2449,10 +2454,10 @@ const G = {};
         html.push('<canvas id="canvas" class="hide" onmousemove="G.onCanvasMouseMove(this, event)" onwheel="G.wheelGraph(this, event)"></canvas>');
 
         html.push('<div style="position:relative;margin:0 50px"class="resize-panel">',
-            '<button class="resize hide" style="left:40px;top:-190px" onclick="G.resizeY(-1)">⇧</button>',
-            '<button class="resize hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="G.resizeX(-1)">⇧</button>',
-            '<button class="resize hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="G.resizeX(1)">⇧</button>',
-            '<button class="resize hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="G.resizeY(1)">⇧</button></div>');
+            '<button class="resize clickable hide" style="left:40px;top:-190px" onclick="G.resizeY(-1)">⇧</button>',
+            '<button class="resize clickable hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="G.resizeX(-1)">⇧</button>',
+            '<button class="resize clickable hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="G.resizeX(1)">⇧</button>',
+            '<button class="resize clickable hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="G.resizeY(1)">⇧</button></div>');
 
         let dateRange = new DoubleRange('date-range', 0, 1000, 0, 1000, 5, rangeChange);
         html.push('<div>', dateRange.render(), '</div>');
@@ -3117,7 +3122,7 @@ const G = {};
             let idx = list.idx;
             html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left"><tbody>');
             for (let row of list) {
-                html.push(`<tr onclick="G.addSwimmer(${row[idx.pkey]})"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
+                html.push(`<tr onclick="G.addSwimmer(${row[idx.pkey]})" class="clickable"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
             }
             html.push('</tbody></table>');
             html.push('<p class="tip">Click on the row to add the swimmer for comparison.</p>');
@@ -4097,9 +4102,9 @@ const G = {};
 
         html.push('<div class="center-row p-l-space top-margin"><p>Meet date:</p>');
         if (customDatePicker) {
-            html.push(`<input id="datepicker" value="${meetDate}">`);
+            html.push(`<input id="datepicker" class="clickable" value="${meetDate}">`);
         } else {
-            html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
+            html.push(`<input type="date" id="datepicker" class="clickable" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
         }
         html.push('<p>Meet cut:</p>', await buildStandardSelects(key, customSelect), '</div>');
         html.push('<div id="rank-table" class="top-margin"></div>');
@@ -4362,7 +4367,6 @@ const G = {};
             }
         }
         let select = new Select('age-gender-select', values, key, onchange);
-        select.class = custom ? '' : 'big';
         return select.render(custom);
     }
 
@@ -4377,7 +4381,6 @@ const G = {};
         }
 
         let select = new Select('course-select', values, key, onchange);
-        select.class = custom ? '' : 'big';
         return select.render(custom);
     }
 
@@ -4411,7 +4414,6 @@ const G = {};
         }
 
         let select = new Select('club-select', values, key, onchange);
-        select.class = custom ? '' : 'big';
         select.valueEqualtoSelection = (val, ops) => {
             let [genderStrVal, ageKeyVal, eventVal, zoneVal, lscVal, clubVal] = decodeRankMapKey(val);
             let [genderStrOps, ageKeyOps, eventOps, zoneOps, lscOps, clubOps] = decodeRankMapKey(ops);
@@ -4564,7 +4566,7 @@ const G = {};
                 realSwimmer ? createClickableDiv(swimmer.name, `G.go('swimmer',${swimmer.pkey})`) : swimmer.name);
             for (let [i, stroke] of _relayOrder.entries()) {
                 let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
-                html.push(`</td><td class="${swimmer[stroke] ? 'leg-time' : ''}${deselected}" onclick="G.deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
+                html.push(`</td><td class="${swimmer[stroke] ? 'leg-time clickable' : ''}${deselected}" onclick="G.deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
             }
 
             html.push('</td><td>', swimmer.age);
@@ -4844,7 +4846,6 @@ const G = {};
         }
 
         let select = new Select('dist-select', values, selected, onchange);
-        select.class = custom ? '' : 'big';
         return select.render(custom);
     }
 
