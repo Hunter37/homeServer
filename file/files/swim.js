@@ -5230,6 +5230,12 @@ WY|Wyoming|Western|west-nw
                     age = part;
                 } else {
                     meet = meets.get(part);
+                    if (!meet) {
+                        let msg = `Wrong meet name: ${part}, row: ${text}`;
+                        console.error(msg);
+                        alertError(msg);
+                        continue;
+                    }
                 }
             }
         };
@@ -5303,6 +5309,7 @@ WY|Wyoming|Western|west-nw
 
         return meets;
     }
+
 
     async function getMeetCut(zone, lsc, meetName, age, genderStr, event) {
         let meets = await getLscMeetCuts(zone, lsc);

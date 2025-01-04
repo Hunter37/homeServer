@@ -111,16 +111,15 @@
 
       if (row.startsWith('meet') || row.startsWith('table')) {
         result.push(row
-          .replace(/event/ig, 'EVENT').replace(/10&U/ig, '0-10')
+          .replace(/events?/ig, 'EVENT').replace(/(\d+)&?U/ig, '0-$1')
           .split(':').map(x => x.trim()).join(':'), '\n');
         continue;
       }
 
       row = row
-        .replace(/-+/g, '-').replace('NA', '-').replace(/x+/ig, '-').replace(/\d\*/g, '')
-        .replace(/freestyle/i, 'FR').replace(/backstroke/i, 'BK').replace(/breaststroke/i, 'BR').replace(/butterfly/i, 'FL')
-        .replace(/free/i, 'FR').replace(/back/i, 'BK').replace(/breast/i, 'BR').replace(/fly/i, 'FL')
-        .replace(/individual medley/i, 'IM').replace(/ IM/i, 'IM').replace(/ I\.M\./i, 'IM')
+        .replace(/-+/g, '-').replace('N.?A.?', '-').replace(/x+/ig, '-').replace(/(\d)\*/g, '$1')
+        .replace(/fr[a-z]*/i, 'FR').replace(/ba[a-z]*/i, 'BK').replace(/br[a-z]*/i, 'BR').replace(/bu[a-z]*/i, 'FL')
+        .replace(/bk/i, 'BK').replace(/fly?/i, 'FL').replace(/i[a-z]*\.? ?m[a-z]*\.?/i, 'IM')
         .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
         .replace(/400\s*\/\s*500/i, '400').replace(/800\s*\/\s*1000/i, '800').replace(/1500\s*\/\s*1650/i, '1500')
         .replace(/ :/g, ' ').replace(/^:/, '')
@@ -224,6 +223,12 @@
           age = part;
         } else {
           meet = meets.get(part);
+          if (!meet) {
+            let msg = `Wrong meet name: ${part}, row: ${text}`;
+            console.error(msg);
+            alertError(msg);
+            continue;
+          }
         }
       }
     };
