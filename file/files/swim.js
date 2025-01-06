@@ -1840,8 +1840,8 @@ const G = {};
 
         // show the rank button, need some info for the rank href
         let swimmer = data.swimmer;
-        let params = getRankDataKey(convetToGenderString(swimmer.gender), 1,
-            getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
+        let params = getRankDataKey(convetToGenderString(swimmer.gender), getAgeKey(swimmer.age),
+            1, swimmer.zone, swimmer.lsc, swimmer.clubName);
         TopButton.show('relay', true, params);
         TopButton.show('rank', true, params);
 
@@ -2601,8 +2601,8 @@ const G = {};
 
         // update rank button
         let swimmer = config.swimmerList[0].swimmer;
-        let params = getRankDataKey(convetToGenderString(swimmer.gender), config.event,
-            getAgeKey(swimmer.age), swimmer.zone, swimmer.lsc, swimmer.clubName);
+        let params = getRankDataKey(convetToGenderString(swimmer.gender), getAgeKey(swimmer.age),
+            config.event, swimmer.zone, swimmer.lsc, swimmer.clubName);
         TopButton.show('rank', true, params);
         TopButton.show('relay', true, params);
     }
@@ -3273,7 +3273,7 @@ const G = {};
     async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, cls, zone, lsc, club) {
         let html = [];
 
-        let rankDataKey = getRankDataKey(genderStr, event, ageKey, zone, lsc, club);
+        let rankDataKey = getRankDataKey(genderStr, ageKey, event, zone, lsc, club);
 
         let values = await peekRank(rankDataKey);
         // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
@@ -3929,7 +3929,7 @@ const G = {};
         return values;
     }
 
-    function getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName) {
+    function getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName) {
         return genderStr + '_' + ageKey + '_' + event + '_' + (zone || '') + '_' + (lsc || '') + '_' + (clubName || '');
     }
 
@@ -4143,7 +4143,7 @@ const G = {};
 
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let hide25 = ageKey != '8U' && !show25();
-        html.push(showEventButtons(event, hide25, (event) => `G.go('rank', \`${getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)}\`)`));
+        html.push(showEventButtons(event, hide25, (event) => `G.go('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`));
 
         html.push(showRankTableTitle(key));
 
@@ -4373,8 +4373,8 @@ const G = {};
             }
 
             let rowZone = getLSCZone(row[idx.lsc]);
-            let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], row[idx.clubName]) : '';
-            let rowlscRankKey = rowZone ? getRankDataKey(genderStr, event, ageKey, rowZone, row[idx.lsc], '') : '';
+            let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row[idx.lsc], row[idx.clubName]) : '';
+            let rowlscRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row[idx.lsc], '') : '';
             rowTeamRankKey = rowTeamRankKey == key ? '' : rowTeamRankKey;
             rowlscRankKey = rowlscRankKey == key ? '' : rowlscRankKey;
 
@@ -4409,7 +4409,7 @@ const G = {};
         for (let g of ['Female', 'Male']) {
             values.push([g]);
             for (let ag of ['8U', '10U', '11-12', '13-14', '15-16', '17-18', '13-18', '19O']) {
-                let value = getRankDataKey(g, event, ag, zone, lsc, clubName);
+                let value = getRankDataKey(g, ag, event, zone, lsc, clubName);
                 values.push([ag + ' ' + g, value]);
             }
         }
@@ -4424,7 +4424,7 @@ const G = {};
         for (let newCourse of _courseOrder) {
             let newEvent = fixDistance([dist, stroke, newCourse].join(' '));
             let newEventCode = _eventIndexMap.get(newEvent);
-            values.push([newCourse, getRankDataKey(genderStr, newEventCode, ageKey, zone, lsc, clubName)]);
+            values.push([newCourse, getRankDataKey(genderStr, ageKey, newEventCode, zone, lsc, clubName)]);
         }
 
         let select = new Select('course-select', values, key, onchange);
@@ -4435,18 +4435,18 @@ const G = {};
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let values = [];
 
-        values.push(['USA', getRankDataKey(genderStr, event, ageKey)]);
+        values.push(['USA', getRankDataKey(genderStr, ageKey, event)]);
 
         values.push(['Zone']);
         for (let zoneCode of ['Central', 'Eastern', 'Southern', 'Western']) {
-            values.push([zoneCode, getRankDataKey(genderStr, event, ageKey, zoneCode)])
+            values.push([zoneCode, getRankDataKey(genderStr, ageKey, event, zoneCode)])
         }
 
         if (zone) {
             values.push([zone + ' Zone']);
             for (let [lscCode, [lscName, zoneCode]] of lscMap) {
                 if (zoneCode == zone) {
-                    values.push([lscCode + ' - ' + lscName, getRankDataKey(genderStr, event, ageKey, zone, lscCode)]);
+                    values.push([lscCode + ' - ' + lscName, getRankDataKey(genderStr, ageKey, event, zone, lscCode)]);
                 }
             }
         }
@@ -4456,7 +4456,7 @@ const G = {};
 
             values.push([getLSCName(lsc) + ' (' + lsc + ')']);
             for (let [clubName, clubCode] of clubDict) {
-                values.push([clubCode + ' - ' + clubName, getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName)]);
+                values.push([clubCode + ' - ' + clubName, getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)]);
             }
         }
 
@@ -4481,7 +4481,7 @@ const G = {};
         if (newDist != dist) {
             stroke = stroke == 'IM' ? 'FR' : stroke;
             event = _eventIndexMap.get([newDist, stroke, course].join(' '));
-            window.location.replace('#relay/' + getRankDataKey(genderStr, event, ageKey, zone, lsc, clubName));
+            window.location.replace('#relay/' + getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName));
         }
 
         TopButton.show('relay', true);
@@ -4504,7 +4504,7 @@ const G = {};
         let events = [10, 13, 16, 0].map(evt => evt + (parseInt(eventDelta) || 1));
         let promises = [];
         for (let evt of events) {
-            promises.push(loadRank(getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName)));
+                promises.push(loadRank(getRankDataKey(gStr, ageKey, evt, zone, lsc, clubName)));
         }
 
         let results = await Promise.all(promises);
@@ -4758,7 +4758,7 @@ const G = {};
         let [from, to] = decodeAgeKey(ageKey);
         let meetDate = getMeetDate();
 
-        // build rankings dat for relay calculation
+        // build rankings data for relay calculation
         let rankings = [];
         for (let s of data) {
             let leg = [];
@@ -4885,7 +4885,7 @@ const G = {};
         let values = [];
         let selected;
         for (let [dis, evt] of selections) {
-            let relayKey = getRankDataKey(genderStr, evt, ageKey, zone, lsc, clubName);
+            let relayKey = getRankDataKey(genderStr, ageKey, evt, zone, lsc, clubName);
             values.push([`4x${dis}`, relayKey]);
             if (dis == Number(dist)) {
                 selected = relayKey;
