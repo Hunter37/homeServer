@@ -411,7 +411,8 @@ canvas.height {
     border-radius: 20%;
     user-select: none;
     position: absolute;
-    background: var(--half-clr);
+    /* background: var(--half-clr); */
+    background: color-mix(in srgb, var(--f0-clr) 30%, #7770);
     border: 1px solid var(--f0-clr);
     padding: 0 5px;
 }
@@ -838,6 +839,15 @@ button:hover:not(.disabled),
 .example td {
     width: 60px;
     text-align: center;
+}
+
+.gender {
+    padding: 0 5px 0 0;
+    opacity: .5;
+}
+
+.underline {
+    text-decoration: underline;
 }
 
 /* event colors */

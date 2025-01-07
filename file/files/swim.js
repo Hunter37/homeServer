@@ -184,6 +184,20 @@ const G = {};
         return true;
     }
 
+    let getGlobalName = (() => {
+        let count = 0;
+        let map = new Map();
+        return value => {
+            let name = map.get(value);
+            if (!name) {
+                name = 'F' + count++;
+                map.set(value, name);
+                window[name] = value;
+            }
+            return name;
+        };
+    })();
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // local caches
 
@@ -253,7 +267,6 @@ const G = {};
             return data;
         }
     }
-    G.LocalCache = LocalCache;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // club dictionary
@@ -547,7 +560,7 @@ const G = {};
 
             html.push('<div class="tabs">');
             for (let i = 0; i < this.tabs.length; ++i) {
-                html.push(`<div class="tab clickable${i == index ? ' selected' : ''}" onclick="G.TabView.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
+                html.push(`<div class="tab clickable${i == index ? ' selected' : ''}" onclick="${getGlobalName(TabView)}.tab('${this.id}', ${i})">${this.tabs[i]}</div>`);
             }
             html.push('</div>');
 
@@ -571,7 +584,6 @@ const G = {};
             }
         }
     }
-    G.TabView = TabView;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // expander class
@@ -592,8 +604,8 @@ const G = {};
         }
 
         render() {
-            return `<div class="expander" id="${this.id}"><div class="expand clickable" onclick="G.Expander.get('${this.id}').expand()">${this.expandHeader}</div>` +
-                `<div class="fold clickable hide" onclick="G.Expander.get('${this.id}').fold()">${this.foldHeader}</div><div class="exp-content hide">${this.content}</div></div>`;
+            return `<div class="expander" id="${this.id}"><div class="expand clickable" onclick="${getGlobalName(Expander)}.get('${this.id}').expand()">${this.expandHeader}</div>` +
+                `<div class="fold clickable hide" onclick="${getGlobalName(Expander)}.get('${this.id}').fold()">${this.foldHeader}</div><div class="exp-content hide">${this.content}</div></div>`;
         }
 
         expand() {
@@ -606,7 +618,6 @@ const G = {};
             document.querySelectorAll(`#${this.id}>.fold,#${this.id}>.exp-content`).forEach(e => e.classList.add("hide"));
         }
     }
-    G.Expander = Expander;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // dropdown class
@@ -626,7 +637,7 @@ const G = {};
         }
 
         render() {
-            return `<table id="${this.id}" class="fill drop-layout"><tbody><tr><td onclick="G.Dropdown.get('${this.id}').click()">${this.triggerElem}</td></tr>`
+            return `<table id="${this.id}" class="fill drop-layout"><tbody><tr><td onclick="${getGlobalName(Dropdown)}.get('${this.id}').click()">${this.triggerElem}</td></tr>`
                 + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.content}</div></div></td></tr></tbody></table>`;
         }
 
@@ -657,7 +668,6 @@ const G = {};
             document.querySelector(`#${this.id} .dropdown`).classList.add('hide');
         }
     }
-    G.Dropdown = Dropdown;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // select class
@@ -743,7 +753,7 @@ const G = {};
                     ending = '</div>';
                 } else {
                     let selected = this.valueEqualtoSelection(this.selected, val) ? ' selected' : '';
-                    options.push(`<div onclick="G.Select.get('${this.id}').onclickItem(${i})" class="o${i} option clickable${selected}${cls}">${txt || '&nbsp;'}</div>`);
+                    options.push(`<div onclick="${getGlobalName(Select)}.get('${this.id}').onclickItem(${i})" class="o${i} option clickable${selected}${cls}">${txt || '&nbsp;'}</div>`);
                 }
             }
             options.push(ending, '</div>');
@@ -768,7 +778,7 @@ const G = {};
             let html = [];
             let cls = this.class ? ` class="${this.class}"` : '';
             let ending = '';
-            html.push(`<select${cls} onchange="G.Select.get('${this.id}').onselect(this.value)">`);
+            html.push(`<select${cls} onchange="${getGlobalName(Select)}.get('${this.id}').onselect(this.value)">`);
             for (let [txt, val] of this.values) {
                 if (val === undefined) {
                     html.push(ending);
@@ -789,7 +799,6 @@ const G = {};
             this.onchange(value);
         }
     }
-    G.Select = Select;
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // loading spinner
     class Loading {
@@ -807,7 +816,7 @@ const G = {};
         }
 
         render() {
-            return `<span id="${this.id}" class="clickable no-dec" onclick="G.Loading.get('${this.id}').loading()">${this.content}</span>`;
+            return `<span id="${this.id}" class="clickable no-dec" onclick="${getGlobalName(Loading)}.get('${this.id}').loading()">${this.content}</span>`;
         }
 
         loading() {
@@ -836,7 +845,6 @@ const G = {};
             }
         }
     }
-    G.Loading = Loading;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // double range class
@@ -887,8 +895,8 @@ const G = {};
 
             return [
                 `<div id="${this.id}" class="double-range"><div class="slider-track" style="background:${background}"></div>`,
-                `<input type="range" min="${this.min}" max="${this.max}" value="${this.value1}" oninput="G.DoubleRange.get('${this.id}').slideOne(this)">`,
-                `<input type="range" min="${this.min}" max="${this.max}" value="${this.value2}" oninput="G.DoubleRange.get('${this.id}').slideTwo(this)">`,
+                `<input type="range" min="${this.min}" max="${this.max}" value="${this.value1}" oninput="${getGlobalName(DoubleRange)}.get('${this.id}').slideOne(this)">`,
+                `<input type="range" min="${this.min}" max="${this.max}" value="${this.value2}" oninput="${getGlobalName(DoubleRange)}.get('${this.id}').slideTwo(this)">`,
                 '</div>'].join('');
         }
 
@@ -918,7 +926,6 @@ const G = {};
             this.sliderTrack.style.background = `linear-gradient(to right, var(--b3-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent1}%, var(--ctrl-bk-clr) ${percent2}%, var(--b3-clr) ${percent2}%)`;
         }
     }
-    G.DoubleRange = DoubleRange;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // usa swimming data fetch utility functions
@@ -930,7 +937,6 @@ const G = {};
 
         return (localStorage.getItem('use-proxy') || 'true') == 'true';
     }
-    G.useProxy = useProxy;
 
     async function fetchSwimValues(bodyObj, type) {
         let map = {
@@ -1104,27 +1110,6 @@ const G = {};
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // initial page
 
-    (() => {
-        let drop = new Dropdown('main-search',
-            '<div class="drop clickable"><div style="margin:auto">▽</div></div>',
-            `<button onclick="G.go('search',document.getElementById('input').value+'~19O');G.Dropdown.get('main-search').close();" style="width:100%">SEARCH 19&OVER</button>`);
-
-        let html = ['<div class="center-row search-bar">',
-            `<input type="text" id="input" onkeypress="event.key=='Enter'&&G.go('search',this.value)" autofocus/>`,
-            `<button onclick="G.go('search',document.getElementById('input').value)" class="search">SEARCH</button>`,
-            drop.render(),
-            `<button id="rank-button" onclick="G.TopButton.onClick('rank')" class="hide">RANK</button>`,
-            `<button id="relay-button" onclick="G.TopButton.onClick('relay')" class="hide">RELAY</button>`,
-            `<button id="favorite-button" onclick="G.TopButton.onClick('favorite')" class="sq-btn">${starSVG}</button>`,
-            `<button id="config-button" onclick="G.TopButton.onClick('config')" class="sq-btn">${gearSVG}</button>`,
-            '</div>',
-            '<div id="content" class="container"></div>',
-            '<div id="mloading" class="mback hide"><span class="mloader">Loading</span></div>'
-        ];
-
-        document.body.innerHTML = html.join('');
-    })();
-
     class TopButton {
         static params;
         static onClick(button) {
@@ -1152,7 +1137,27 @@ const G = {};
             }
         }
     }
-    G.TopButton = TopButton;
+
+    (() => {
+        let drop = new Dropdown('main-search',
+            '<div class="drop clickable"><div style="margin:auto">▽</div></div>',
+            `<button onclick="${getGlobalName(go)}('search',document.getElementById('input').value+'~19O');${getGlobalName(Dropdown)}.get('main-search').close();" style="width:100%">SEARCH 19&OVER</button>`);
+
+        let html = ['<div class="center-row search-bar">',
+            `<input type="text" id="input" onkeypress="event.key=='Enter'&&${getGlobalName(go)}('search',this.value)" autofocus/>`,
+            `<button onclick="${getGlobalName(go)}('search',document.getElementById('input').value)" class="search">SEARCH</button>`,
+            drop.render(),
+            `<button id="rank-button" onclick="${getGlobalName(TopButton)}.onClick('rank')" class="hide">RANK</button>`,
+            `<button id="relay-button" onclick="${getGlobalName(TopButton)}.onClick('relay')" class="hide">RELAY</button>`,
+            `<button id="favorite-button" onclick="${getGlobalName(TopButton)}.onClick('favorite')" class="sq-btn">${starSVG}</button>`,
+            `<button id="config-button" onclick="${getGlobalName(TopButton)}.onClick('config')" class="sq-btn">${gearSVG}</button>`,
+            '</div>',
+            '<div id="content" class="container"></div>',
+            '<div id="mloading" class="mback hide"><span class="mloader">Loading</span></div>'
+        ];
+
+        document.body.innerHTML = html.join('');
+    })();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // navigation and routing functions
@@ -1161,7 +1166,6 @@ const G = {};
         value = value ? '/' + encodeURIComponent(value) : '';
         window.location.hash = '#' + action + value;
     }
-    G.go = go;
 
     // function setPageData(data) {
     //     document.getElementById('content').pageData = data;
@@ -1185,8 +1189,13 @@ const G = {};
 
     function createDefaultPage() {
         return [`<div>Please enter the swimmer's name or the club name in the search box.</div>`,
-            // `<div style="margin:12px -18px;height:900px;position:relative;"><img src="https://img.goodfon.com/original/1920x1200/6/81/swimming-pool-water-underwater-olympic-swimming-pool-swimmin.jpg" style="object-fit:cover;width:100%;height:100%;"></div>'
+            // `<div style="margin:12px -18px;height:900px;position:relative;"><img src="https://img.goodfon.com/original/1920x1200/6/81/swimming-pool-water-underwater-olympic-swimming-pool-swimmin.jpg" style="object-fit:cover;width:100%;height:100%;"></div>`
         ].join('');
+    }
+
+    let funcMap = new Map();
+    function setNavigationFunc(func) {
+        funcMap.set(func.name, func);
     }
 
     async function loadContent() {
@@ -1208,7 +1217,7 @@ const G = {};
         let [action, value] = loadingHash.split('/');
         value = value && decodeURIComponent(value);
 
-        let func = G[action];
+        let func = funcMap.get(action);
         if (func) {
             try {
                 await func(value);
@@ -1264,11 +1273,11 @@ const G = {};
         } else {
             html.push('<table class="fill top-margin"><tbody><tr><th></th>');
             for (let e of ['Name', 'Age', 'Club', 'LSC']) {
-                html.push(`<th class="clickable" onclick="G.Favorite.sort('${e}');G.favorite()">${e}</th>`);
+                html.push(`<th class="clickable" onclick="${getGlobalName(Favorite)}.sort('${e}');${getGlobalName(favorite)}()">${e}</th>`);
             }
             html.push('</tr>');
             for (let [pkey, obj] of values.entries()) {
-                html.push(`<tr class="clickable" onclick="G.go('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
+                html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
                     '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
             }
             html.push('</tbody></table>');
@@ -1276,12 +1285,12 @@ const G = {};
 
         updateContent(html.join(''), loadingHash);
     }
-    G.favorite = favorite;
+    setNavigationFunc(favorite);
 
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
             let cls = Favorite.has(pkey) ? ' selected' : '';
-            return createPopup(`<div class="add-fav clickable ${cls}" onclick="G.Favorite.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+            return createPopup(`<div class="add-fav clickable ${cls}" onclick="${getGlobalName(Favorite)}.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
         }
 
         static click(elem, pkey, name, age, clubName, lsc) {
@@ -1326,7 +1335,6 @@ const G = {};
             Favorite._save(sorted);
         }
     }
-    G.Favorite = Favorite;
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // set page
@@ -1335,7 +1343,7 @@ const G = {};
         localStorage.setItem(part[0], part[1]);
         history.back();
     }
-    G.set = set;
+    setNavigationFunc(set);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // config page
@@ -1360,7 +1368,7 @@ const G = {};
 
         updateContent(tabView.render(index), loadingHash);
     }
-    G.config = config;
+    setNavigationFunc(config);
 
     async function buildTokenPage() {
         await ensureToken(true);
@@ -1375,13 +1383,13 @@ const G = {};
     function buildCachePage() {
         return [
             '<div class="top-margin">',
-            createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), 'G.LocalCache.enable(this.checked)'),
+            createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), `${getGlobalName(LocalCache)}.enable(this.checked)`),
             '</div><div class="top-margin">',
             createCheckbox('use-proxy-checkbox',
                 `Proxy <input onchange="localStorage.setItem('proxy-server',this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
-                useProxy(), 'G.useProxy(this.checked)'),
+                useProxy(), `${getGlobalName(useProxy)}(this.checked)`),
             '</div>',
-            '<div class="center-row"><input id="cache-key" /><button onclick="G.clearCache()">Clear App Cache</button><button onclick="G.clearCache(this)">Show Cache</button></div><div id="cache-info"></div>'
+            `<div class="center-row"><input id="cache-key" /><button onclick="${getGlobalName(clearCache)}()">Clear App Cache</button><button onclick="${getGlobalName(clearCache)}(this)">Show Cache</button></div><div id="cache-info"></div>`
         ].join('');
     }
 
@@ -1414,7 +1422,6 @@ const G = {};
         }
         document.getElementById('cache-info').innerText = text;
     }
-    G.clearCache = clearCache;
 
     function buildAboutPage() {
         return ['<div style="padding:30px" style="max-width:800px">',
@@ -1441,13 +1448,13 @@ const G = {};
         let html = ['<div style="padding:30px 10px;max-width:800px">'];
 
         html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), 'G.show25(this.checked)'));
+        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), `${getGlobalName(show25)}(this.checked)`));
         html.push('<span style="padding:0 20px;">(Display 25-yard/meter events for swimmers aged 9 and over)</span></div>');
         html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), 'G.useCustomSelect(this.checked)'));
+        html.push('<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), `${getGlobalName(useCustomSelect)}(this.checked)`));
         html.push('<span style="padding:0 20px;">(Improve select control compatibility on certain browsers)</span></div>');
         html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), 'G.useCustomDatePicker(this.checked)'));
+        html.push('<div class="center-row">', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), `${getGlobalName(useCustomDatePicker)}(this.checked)`));
         html.push('<span style="padding:0 20px;">(Improve date-picker control compatibility on certain browsers)</span></div>');
 
         let colorSelect = new Select('theme-color', [
@@ -1491,7 +1498,6 @@ const G = {};
         }
         localStorage.setItem('show25', show ? '1' : '0');
     }
-    G.show25 = show25;
 
     function useCustomSelect(use) {
         if (use === undefined) {
@@ -1503,7 +1509,6 @@ const G = {};
 
         config();   // refresh config page
     }
-    G.useCustomSelect = useCustomSelect;
 
     function isNarrowWindow() {
         return window.innerWidth < 1000;
@@ -1517,7 +1522,6 @@ const G = {};
 
         localStorage.setItem('custom-date-picker', show ? '1' : '0');
     }
-    G.useCustomDatePicker = useCustomDatePicker;
 
     function isOldBrowser() {
         let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
@@ -1536,7 +1540,7 @@ const G = {};
 
         updateContent(tabView.render(), 'test');
     }
-    G.test = test;
+    setNavigationFunc(test);
 
     function buildAdvancedConfig() {
 
@@ -1574,7 +1578,7 @@ const G = {};
 
         showSearch(values, hash);
     }
-    G.search = search;
+    setNavigationFunc(search);
 
     async function loadSearch(name, all) {
         name = name.trim().replace(/\s+/g, ' ');
@@ -1649,11 +1653,11 @@ const G = {};
         let html = ['<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th>'];
         let idx = values.idx;
         for (let [i, title] of [[idx.name, 'Name'], [idx.age, 'Age'], [idx.clubName, 'Club'], [idx.lsc, 'LSC']]) {
-            html.push(`<th class="clickable" onclick="G.sortSearch(${i})">${title}</th>`);
+            html.push(`<th class="clickable" onclick="${getGlobalName(sortSearch)}(${i})">${title}</th>`);
         }
         html.push('</tr>');
         for (let [i, row] of values.entries()) {
-            html.push(`<tr class="clickable" onclick="G.go('swimmer', ${row[idx.pkey]})"><td>`, i, '</td><td class="left">',
+            html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${row[idx.pkey]})"><td>`, i, '</td><td class="left">',
                 row[idx.name], '</td><td>', row[idx.age], '</td><td class="left">', row[idx.clubName], '</td><td>', row[idx.lsc], '</td></tr>');
         }
         html.push('</tbody></table>');
@@ -1676,7 +1680,6 @@ const G = {};
         sorted.idx = idx;
         showSearch(sorted, table.loadingHash);
     }
-    G.sortSearch = sortSearch;
 
     async function loadClubSearch(value, all) {
         let bodyObj = {
@@ -1847,7 +1850,7 @@ const G = {};
 
         await showDetails(data, 'swimmer/' + pkey);
     }
-    G.swimmer = swimmer;
+    setNavigationFunc(swimmer);
 
     async function loadDetails(pkey) {
         let data = await LocalCache.func('swimmer/' + pkey, async () => {
@@ -2105,7 +2108,7 @@ const G = {};
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data, fastRowList, rowInfo));
         tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
         tabView.addTab('<p>Meets</p>', createMeetTable(data));
-        tabView.addTab(createClickableDiv('Progress Graph', `G.showGraph(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, hide25));
+        tabView.addTab(createClickableDiv('Progress Graph', `${getGlobalName(showGraph)}(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, hide25));
         // tabView.addTab('<p>Ranking</p>', await createRankingTable(data, fastRowList, rowInfo));
         html.push(tabView.render());
 
@@ -2393,7 +2396,7 @@ const G = {};
             let count = data.events.filter(r => r[data.events.idx.event] == event).length;
 
             // build rankings cell
-            html.push(`<td class="full ${cls}">`, createClickableDiv(dist, `G.showGraph(null,{pkey:${swimmer.pkey},event:${event}})`),
+            html.push(`<td class="full ${cls}">`, createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{pkey:${swimmer.pkey},event:${event}})`),
                 `</td><td class="${cls}">`, time, `</td><td class="${cls}">`, formatDate(date), `</td><td class="${cls}">`, count, '</td>',
                 await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc, swimmer.clubName),
                 await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc),
@@ -2479,13 +2482,13 @@ const G = {};
 
     function createProgressGraph(pkey, hide25) {
         let html = ['<div class="content">',
-            showEventButtons(1, hide25, (event) => `G.showGraph(null,{pkey:${pkey},event:${event}})`),
+            showEventButtons(1, hide25, (event) => `${getGlobalName(showGraph)}(null,{pkey:${pkey},event:${event}})`),
             '<h2 id="graph-title" class="top-margin"></h2>'];
 
         let searchDropdown = new Dropdown('add-search',
             '<div class="center-row" onclick="event.stopPropagation()">' +
-            `<input type="text" id="add-input" onkeypress="event.key=='Enter'&&G.addSearch(this.value)">` +
-            '<button onclick="G.addSearch()">Search</button><button onclick="G.addSearch(null, true)">19&Over</button></div>',
+            `<input type="text" id="add-input" onkeypress="event.key=='Enter'&&${getGlobalName(addSearch)}(this.value)">` +
+            `<button onclick="${getGlobalName(addSearch)}()">Search</button><button onclick="${getGlobalName(addSearch)}(null, true)">19&Over</button></div>`,
             '<div id="adding-list" onclick="event.stopPropagation()"></div>');
 
         html.push('<div class="add-search"><div>Compare progress with other swimmers:</div>', searchDropdown.render(), '</div>');
@@ -2494,17 +2497,17 @@ const G = {};
 
         html.push('<div class="top-margin">');
         for (let c of _courseOrder) {
-            html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `G.showGraph(null,{${c}:this.checked})`), createHSpace(10));
+            html.push(createCheckbox('show-' + c.toLocaleLowerCase(), c, true, `${getGlobalName(showGraph)}(null,{${c}:this.checked})`), createHSpace(10));
         }
         html.push('<span style="display:inline-block"><span id="swimmer-list" class="center-row"></span></span></div>');
 
-        html.push('<canvas id="canvas" class="hide" onmousemove="G.onCanvasMouseMove(this, event)" onwheel="G.wheelGraph(this, event)"></canvas>');
+        html.push(`<canvas id="canvas" class="hide" onmousemove="${getGlobalName(onCanvasMouseMove)}(this, event)" onwheel="${getGlobalName(wheelGraph)}(this, event)"></canvas>`);
 
         html.push('<div style="position:relative;margin:0 50px"class="resize-panel">',
-            '<button class="resize clickable hide" style="left:40px;top:-190px" onclick="G.resizeY(-1)">⇧</button>',
-            '<button class="resize clickable hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="G.resizeX(-1)">⇧</button>',
-            '<button class="resize clickable hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="G.resizeX(1)">⇧</button>',
-            '<button class="resize clickable hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="G.resizeY(1)">⇧</button></div>');
+            `<button class="resize clickable hide" style="left:40px;top:-190px" onclick="${getGlobalName(resizeY)}(-1)">⇧</button>`,
+            `<button class="resize clickable hide" style="left:15px;top:-140px;transform:rotate(-90deg)" onclick="${getGlobalName(resizeX)}(-1)">⇧</button>`,
+            `<button class="resize clickable hide" style="left:65px;top:-140px;transform:rotate(90deg)" onclick="${getGlobalName(resizeX)}(1)">⇧</button>`,
+            `<button class="resize clickable hide" style="left:40px;top:-90px;transform:rotate(180deg)" onclick="${getGlobalName(resizeY)}(1)">⇧</button></div>`);
 
         let dateRange = new DoubleRange('date-range', 0, 1000, 0, 1000, 5, rangeChange);
         html.push('<div>', dateRange.render(), '</div>');
@@ -2558,11 +2561,10 @@ const G = {};
     })();
 
     let func = new Map();
-    G.func = func;
     function createCheckbox(id, text, checked, onchange) {
         if (typeof onchange == 'function') {
             func.set(`${id}-onchange`, onchange);
-            onchange = ` onchange="G.func.get('${id}-onchange')(this.checked)"`;
+            onchange = ` onchange="${getGlobalName(func)}.get('${id}-onchange')(this.checked)"`;
         } else {
             onchange = onchange ? ` onchange="${onchange}"` : '';
         }
@@ -2585,7 +2587,6 @@ const G = {};
         let offset = canvas.getBoundingClientRect();
         await showGraph(canvas, { mouseX: e.clientX - offset.left, mouseY: e.clientY - offset.top });
     }
-    G.onCanvasMouseMove = onCanvasMouseMove;
 
     function updateGraphTitle(config) {
         let [dist, stroke, course] = _eventList[config.event].split(' ');
@@ -2633,7 +2634,6 @@ const G = {};
             }
         }
     }
-    G.wheelGraph = wheelGraph;
 
     async function resizeX(delta, canvas) {
         canvas = canvas || document.getElementById('canvas');
@@ -2644,7 +2644,6 @@ const G = {};
         localStorage.setItem('xZoomFactor', factor.toFixed(2));
         await showGraph(canvas, { xZoomFactor: factor });
     }
-    G.resizeX = resizeX;
 
     async function resizeY(delta, canvas) {
         canvas = canvas || document.getElementById('canvas');
@@ -2655,7 +2654,6 @@ const G = {};
         localStorage.setItem('yZoomFactor', factor.toFixed(2));
         await showGraph(canvas, { yZoomFactor: factor });
     }
-    G.resizeY = resizeY;
 
     function updateSlider(config) {
         let idx = config.idx;
@@ -3155,7 +3153,6 @@ const G = {};
         let tipRow = drawCurve(ctx, config);
         drawTip(ctx, tipRow, config);
     }
-    G.showGraph = showGraph;
 
     async function addSearch(value, all) {
         document.getElementById('adding-list').innerHTML = '<div class=""><div class="loader"></div></div>';
@@ -3169,7 +3166,7 @@ const G = {};
             let idx = list.idx;
             html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left"><tbody>');
             for (let row of list) {
-                html.push(`<tr onclick="G.addSwimmer(${row[idx.pkey]})" class="clickable"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
+                html.push(`<tr onclick="${getGlobalName(addSwimmer)}(${row[idx.pkey]})" class="clickable"><td>${row[idx.name]}</td><td>${row[idx.age]}</td><td>${row[idx.lsc]}</td><td>${row[idx.clubName]}</td></tr>`);
             }
             html.push('</tbody></table>');
             html.push('<p class="tip">Click on the row to add the swimmer for comparison.</p>');
@@ -3179,7 +3176,6 @@ const G = {};
 
         document.getElementById('adding-list').innerHTML = html.join('');
     }
-    G.addSearch = addSearch;
 
     async function addSwimmer(pkey) {
         document.getElementById('adding-list').innerHTML = '<div class="loading"><div class="loader"></div></div>';
@@ -3204,7 +3200,6 @@ const G = {};
         let dropdown = Dropdown.get('add-search');
         dropdown.close();
     }
-    G.addSwimmer = addSwimmer;
 
     async function removeSwimmer(pkey) {
         let canvas = document.getElementById('canvas');
@@ -3219,7 +3214,6 @@ const G = {};
 
         await updateSwimmerList(canvas.config);
     }
-    G.removeSwimmer = removeSwimmer;
 
     async function checkSwimmer(elem, pkey) {
         let canvas = document.getElementById('canvas');
@@ -3234,20 +3228,19 @@ const G = {};
 
         await showGraph(canvas);
     }
-    G.checkSwimmer = checkSwimmer;
 
     async function updateSwimmerList(config) {
         let html = [];
 
         if (config.swimmerList.length > 1) {
-            html.push(createPopup(createCheckbox('age-align', 'Align by Age', config.ageAlign, 'G.showGraph(null,{ageAlign:this.checked})'),
+            html.push(createPopup(createCheckbox('age-align', 'Align by Age', config.ageAlign, `${getGlobalName(showGraph)}(null,{ageAlign:this.checked})`),
                 `Compare swimmers' times at the same age.`));
         }
 
         for (let swimmer of config.swimmerList) {
             let id = 's_' + swimmer.swimmer.pkey;
-            html.push(createHSpace(20), createCheckbox(id, swimmer.swimmer.name, !swimmer.hide, `G.checkSwimmer(this,${swimmer.swimmer.pkey})`),
-                `<button class="xbutton" onclick="G.removeSwimmer(${swimmer.swimmer.pkey})">❌</button>`);
+            html.push(createHSpace(20), createCheckbox(id, swimmer.swimmer.name, !swimmer.hide, `${getGlobalName(checkSwimmer)}(this,${swimmer.swimmer.pkey})`),
+                `<button class="xbutton" onclick="${getGlobalName(removeSwimmer)}(${swimmer.swimmer.pkey})">❌</button>`);
         }
 
         document.getElementById('swimmer-list').innerHTML = html.join('');
@@ -3280,10 +3273,10 @@ const G = {};
         // 0        1     2     3     4          5     6        7     8         9     10
         if (values) {
             let rank = calculateRank(values, pkey, timeInt);
-            html.push(`<td class="full rk ${cls}">`, createClickableDiv(rank, `G.go('rank',\`${rankDataKey}\`)`), '</td>');
+            html.push(`<td class="full rk ${cls}">`, createClickableDiv(rank, `${getGlobalName(go)}('rank',\`${rankDataKey}\`)`), '</td>');
         } else {
             let id = rankDataKey + '_' + pkey;
-            html.push(`<td class="full rk ${cls}" id="${id}">`, createClickableDiv('<div class="loader"></div>', `G.go('rank',\`${rankDataKey}\`)`), '</td>');
+            html.push(`<td class="full rk ${cls}" id="${id}">`, createClickableDiv('<div class="loader"></div>', `${getGlobalName(go)}('rank',\`${rankDataKey}\`)`), '</td>');
 
             _backgroundActions.push([getRank, [rankDataKey, timeInt, pkey, id]]);
         }
@@ -3291,8 +3284,8 @@ const G = {};
         return html.join('');
     }
 
-    function createClickableDiv(content, action) {
-        return `<div class="clickable" onclick="${action}">${content}</div>`;
+    function createClickableDiv(content, action, cls) {
+        return `<div class="clickable${cls ? ' ' + cls : ''}" onclick="${action}">${content}</div>`;
     }
 
     async function getRank(params) {
@@ -3315,7 +3308,7 @@ const G = {};
 
         let rank = data ? calculateRank(data.values, pkey, timeInt) : empty;
 
-        element.innerHTML = createClickableDiv(rank, `G.go('rank', \`${mapKey}\`)`);
+        element.innerHTML = createClickableDiv(rank, `${getGlobalName(go)}('rank', \`${mapKey}\`)`);
     }
 
     function calculateRank(values, pkey, timeInt) {
@@ -3379,7 +3372,7 @@ const G = {};
                 html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
             }
 
-            html.push(`<td class="full d${dist} ${stroke}">`, createClickableDiv(dist, `G.showGraph(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
+            html.push(`<td class="full d${dist} ${stroke}">`, createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{pkey:${data.swimmer.pkey},event:${event}})`), '</td>');
             for (let age of uniqueAges) {
                 let bestTimeEvent = findBestTimeEventByAge(data.events, event, age);
                 if (bestTimeEvent) {
@@ -3526,7 +3519,7 @@ const G = {};
         for (let col of columnInfo) {
             for (let i = 1; i < col.length; ++i) {
                 let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
-                let action = `G.showGraph(null,{pkey:${pkey},event:${evt}})`;
+                let action = `${getGlobalName(showGraph)}(null,{pkey:${pkey},event:${evt}})`;
                 html.push('<td class="full">', createClickableDiv(col[i], action), '</td>');
             }
         }
@@ -3685,11 +3678,36 @@ const G = {};
         TopButton.show('rank', true);
 
         await ensureToken();
-        let data = await loadRank(key);
+        let data;
+        if (key.startsWith('Mixed')) {
+            let promises = [loadRank(key.replace('Mixed', 'Female')), loadRank(key.replace('Mixed', 'Male'))];
+            let results = await Promise.all(promises);
+            if (results[0] && results[1]) {
+                data = {
+                    meetDict: new Map([...results[0].meetDict, ...results[1].meetDict]),
+                    values: []
+                }
+                data.meetDict.idx = results[0].meetDict.idx;
+                data.values.idx = results[0].values.idx;
+
+                // data.values.push(...results[1].values);
+                let idx = data.values.idx;
+                for (let [i, g] of [1, -1].entries()) {
+                    for (let row of results[i].values) {
+                        row.intTime = timeToInt(row[idx.time]);
+                        row.gender = g;
+                        data.values.push(row);
+                    }
+                }
+                data.values.sort((a, b) => a.intTime - b.intTime);
+            }
+        } else {
+            data = await loadRank(key);
+        }
 
         await showRank(data, key);
     }
-    G.rank = rank;
+    setNavigationFunc(rank);
 
     let rankDataRequiredVersion = 2;
 
@@ -4143,7 +4161,7 @@ const G = {};
 
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let hide25 = ageKey != '8U' && !show25();
-        html.push(showEventButtons(event, hide25, (event) => `G.go('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`));
+        html.push(showEventButtons(event, hide25, (event) => `${getGlobalName(go)}('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`));
 
         html.push(showRankTableTitle(key));
 
@@ -4151,7 +4169,7 @@ const G = {};
         if (customDatePicker) {
             html.push(`<input id="datepicker" class="clickable" value="${meetDate}">`);
         } else {
-            html.push(`<input type="date" id="datepicker" class="clickable" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
+            html.push(`<input type="date" id="datepicker" class="clickable" value="${meetDate}" onchange="${getGlobalName(onMeetDateChange)}(this.value,'${page}')">`);
         }
         html.push('<p>Meet cut:</p>', await buildStandardSelects(key, customSelect), '</div>');
         html.push('<div id="rank-table" class="top-margin"></div>');
@@ -4267,7 +4285,6 @@ const G = {};
             await updateRelayTables();
         }
     }
-    G.onMeetDateChange = onMeetDateChange;
 
     function getMeetDate() {
         return localStorage.getItem('meetDate') || '';
@@ -4381,12 +4398,12 @@ const G = {};
             let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
                 (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
 
-            html.push(`<tr${color}><td>`, ++index, '</td><td class="left full">', createClickableDiv(row[idx.name], `G.go('swimmer',${row[idx.pkey]})`),
-                '</td><td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
+            html.push(`<tr${color}><td>`, ++index, '</td>', createSwimmerNameTd({ name: row[idx.name], pkey: row[idx.pkey], gender: row.gender }),
+                '<td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
                 '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left full">', loading.render(),
-                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `G.go('rank',\`${rowTeamRankKey}\`)`) : row[idx.clubName],
-                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `G.go('rank','${rowlscRankKey}')`) : row[idx.lsc],
-                '</td><td class="left">', meetDict.get(row[idx.meet])[meetDict.idx.name], '</td></tr>');
+                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row[idx.clubName],
+                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row[idx.lsc],
+                '</td><td class="left">', meetDict.get(row[idx.meet])?.[meetDict.idx.name], '</td></tr>');
         }
         html.push('</tbody></table>');
         return html.join('');
@@ -4406,7 +4423,7 @@ const G = {};
     function createAgeGenderSelect(key, custom, onchange) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let values = [];
-        for (let g of ['Female', 'Male']) {
+        for (let g of ['Female', 'Male', 'Mixed']) {
             values.push([g]);
             for (let ag of ['8U', '10U', '11-12', '13-14', '15-16', '17-18', '13-18', '19O']) {
                 let value = getRankDataKey(g, ag, event, zone, lsc, clubName);
@@ -4492,7 +4509,7 @@ const G = {};
 
         await showRelay(data, key);
     }
-    G.relay = relay;
+    setNavigationFunc(relay);
 
     async function loadRelay(key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
@@ -4503,8 +4520,11 @@ const G = {};
 
         let events = [10, 13, 16, 0].map(evt => evt + (parseInt(eventDelta) || 1));
         let promises = [];
-        for (let evt of events) {
+        let genders = genderStr == 'Mixed' ? ['Female', 'Male'] : [genderStr];
+        for (let gStr of genders) {
+            for (let evt of events) {
                 promises.push(loadRank(getRankDataKey(gStr, ageKey, evt, zone, lsc, clubName)));
+            }
         }
 
         let results = await Promise.all(promises);
@@ -4539,7 +4559,7 @@ const G = {};
         if (customDatePicker) {
             html.push(`<input id="datepicker" value="${meetDate}">`);
         } else {
-            html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="G.onMeetDateChange(this.value,'${page}')">`);
+            html.push(`<input type="date" id="datepicker" value="${meetDate}" onchange="${getGlobalName(onMeetDateChange)}(this.value,'${page}')">`);
         }
         html.push('<p>Distance:</p>', createDistanceSelect(key, customSelect, onchange), '</div>');
 
@@ -4549,11 +4569,15 @@ const G = {};
 
         html.push(`<h3>${genderStr} ${ageKey} ${course} 4x${getRelayDistance(event)} Relay</h3>`);
 
-        let expanderViewHtml = [`<textarea style="width:600px;height:100px" oninput="G.textChange(this.value)" `,
-            `placeholder="Add/Edit swimmers' times in this textbox using the following format:&#10;`,
-            '  {Swimmer Name} {Back Time} {Breast Time} {Fly Time} {Free Time}&#10;Use 0 to skip updating a stroke.&#10;',
-            'Example:&#10;  Michael Phelps 45.50 53.41 45.40 41.93&#10;  Caeleb Dressel 0 0 42.80 39.90&#10;"></textarea>',
-            '<p>Click the TIME in the following table to remove it from the relay selection.</p>',
+        let expanderViewHtml = [
+            '<div>Two methods to customize relay selections:</div>',
+            `<p>1. Add or Edit swimmers' stroke times.</p>`,
+            `<textarea style="width:600px;height:120px" oninput="${getGlobalName(textChange)}(this.value)" `,
+            `placeholder="Add/Edit swimmers' times in this textbox using the following format:\n`,
+            '  {Gender [F|M]} {Swimmer Name} {Back Time} {Breast Time} {Fly Time} {Free Time}\n',
+            'Use 0 to skip updating a stroke. Gender is optional.&#10;',
+            'Example:\n  Gretchen Walsh 48.10 0 47.42 44.83\n  Michael Phelps 45.50 53.41 45.40 41.93\n  M Caeleb Dressel 0 0 42.80 39.90"></textarea>',
+            '<p>2. Click the TIME cell in the following table to remove it from the relay selection.</p>',
             '<div id="selection-table"></div>'];
 
         let expander = new Expander('relay-table', 'Customization ▽', 'Customization △', expanderViewHtml.join(''));
@@ -4576,7 +4600,7 @@ const G = {};
             table.data = data;
             table.nameToPkeyMap = createNameToPkeyMap(data);
             table.key = key;
-            table.excludeData = [new Set(), new Set(), new Set(), new Set()];
+            table.excludeData = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
             table.patchData = [];
             await updateSelectionTable();
             await updateRelayTables();
@@ -4601,6 +4625,14 @@ const G = {};
         return map;
     }
 
+    function createSwimmerNameTd(swimmer, fakeSwimmer) {
+        let genderStr = swimmer.gender ? `<span class="gender">${swimmer.gender == 1 ? '♀' : '♂'}</span>` : '';
+
+        return `<td class="left${fakeSwimmer ? '' : ' full'}">` +
+            (fakeSwimmer ? genderStr + swimmer.name : createClickableDiv(genderStr + '<span class="underline">' + swimmer.name + '</span>', `${getGlobalName(go)}('swimmer',${swimmer.pkey})`, 'no-dec')) +
+            '</td>';
+    }
+
     async function updateSelectionTable() {
         let exclude = document.getElementById('relay-table').excludeData;
         let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
@@ -4609,14 +4641,19 @@ const G = {};
         for (let swimmer of tableData) {
             let realSwimmer = typeof swimmer.pkey == 'number';
 
-            html.push(`<tr><td class="left${realSwimmer ? ' full' : ''}">`,
-                realSwimmer ? createClickableDiv(swimmer.name, `G.go('swimmer',${swimmer.pkey})`) : swimmer.name);
+            html.push('<tr>', createSwimmerNameTd(swimmer, !realSwimmer));
+
             for (let [i, stroke] of _relayOrder.entries()) {
+                i += swimmer.gender < 0 ? 4 : 0; // adjust index for mixed
                 let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
-                html.push(`</td><td class="${swimmer[stroke] ? 'leg-time clickable' : ''}${deselected}" onclick="G.deselect(this,${i},'${swimmer.pkey}')">`, swimmer[stroke]);
+                if (swimmer[stroke]) {
+                    html.push(`<td class="leg-time clickable${deselected}" onclick="${getGlobalName(deselect)}(this,${i},'${swimmer.pkey}')">`, swimmer[stroke], '</td>');
+                } else {
+                    html.push('<td></td>');
+                }
             }
 
-            html.push('</td><td>', swimmer.age);
+            html.push('<td>', swimmer.age);
 
             if (realSwimmer) {
                 let loading = new Loading('bday-' + swimmer.pkey,
@@ -4665,15 +4702,21 @@ const G = {};
                 continue;
             }
 
-            let name = line.substring(0, index - 1);
+            let gender = '';
+            let nameStart = 0;
+            if (line.startsWith('F ') || line.startsWith('M ')) {
+                nameStart = 2;
+                gender = line[0];
+            }
+
+            let name = line.substring(nameStart, index - 1);
             let pkey = pkey2swimmer.get(name.toLowerCase()) || name.toLowerCase();
-            patch.push({ pkey: pkey, name: name, times: times });
+            patch.push({ pkey: pkey, name: name, times: times, gender: gender });
         }
 
         await updateSelectionTable();
         await updateRelayTables();
     }
-    G.textChange = textChange;
 
     async function loadBirthday(params) {
         let [pkey, elemId, callback] = params;
@@ -4700,18 +4743,17 @@ const G = {};
 
         updateRelayTables();
     }
-    G.deselect = deselect;
 
     function buildSelectionTableData() {
         let table = document.getElementById('relay-table');
         let data = table.data;
         let patch = table.patchData;
+        let genderFactor = data.length == 4 ? 0 : 1;
 
         let merged = [];
         let pkey2swimmer = new Map();
 
-        for (let i = 3; i >= 0; --i) {
-            let leg = data[i];
+        for (let [i, leg] of data.entries()) {
             if (!leg) {
                 continue;
             }
@@ -4720,19 +4762,40 @@ const G = {};
                 let pkey = row[idx.pkey];
                 let swimmer = pkey2swimmer.get(pkey);
                 if (!swimmer) {
-                    swimmer = { pkey: row[idx.pkey], name: row[idx.name], age: row[idx.age] };
+                    swimmer = {
+                        pkey: row[idx.pkey],
+                        name: row[idx.name],
+                        age: row[idx.age],
+                        gender: i < 4 ? genderFactor : -genderFactor
+                    };
                     merged.push(swimmer);
                     pkey2swimmer.set(pkey, swimmer);
                 }
-                swimmer[_relayOrder[i]] = row[idx.time];
+                swimmer[_relayOrder[i % 4]] = row[idx.time];
             }
         }
 
+        // calculate the average time for each swimmer, then sort by the average time
+        for (let swimmer of merged) {
+            let count = 0;
+            let totalTime = 0;
+            for (let stroke of _relayOrder) {
+                let time = swimmer[stroke];
+                if (time) {
+                    count++;
+                    totalTime += timeToInt(time);
+                }
+            }
+            swimmer.avgTime = totalTime / count;
+        }
+        merged.sort((a, b) => a.avgTime - b.avgTime);
+
+        // append patch data to the merged data
         for (let patchRow of patch.reverse()) {
             let pkey = patchRow.pkey;
             let swimmer = pkey2swimmer.get(pkey);
             if (!swimmer) {
-                swimmer = { pkey: pkey, name: patchRow.name };
+                swimmer = { pkey: pkey, name: patchRow.name, gender: patchRow.gender == 'M' ? -genderFactor : genderFactor };
                 merged.unshift(swimmer);
                 pkey2swimmer.set(pkey, swimmer);
             }
@@ -4753,6 +4816,7 @@ const G = {};
         let key = table.key;
         let patch = table.patchData;
         let exclude = table.excludeData;
+        let genderFactor = data.length == 4 ? 0 : 1;
 
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
@@ -4760,7 +4824,7 @@ const G = {};
 
         // build rankings data for relay calculation
         let rankings = [];
-        for (let s of data) {
+        for (let [i, s] of data.entries()) {
             let leg = [];
             rankings.push(leg);
             if (!s) {
@@ -4769,7 +4833,13 @@ const G = {};
             let idx = s.values.idx;
             for (let row of s.values) {
                 let time = row[idx.time];
-                let swimmer = { pkey: row[idx.pkey], name: row[idx.name], time: time, timeInt: timeToInt(time) };
+                let swimmer = {
+                    pkey: row[idx.pkey],
+                    name: row[idx.name],
+                    time: time,
+                    timeInt: timeToInt(time),
+                    gender: i < 4 ? genderFactor : -genderFactor
+                };
                 leg.push(swimmer);
             }
         }
@@ -4780,21 +4850,53 @@ const G = {};
 
         rankings = filterByExclusion(rankings, exclude);
 
-        if (rankings.filter(d => d.length).length == 4) {
+        if (rankings.filter(d => d.length).length >= 4) {
             let relays = calculateRelay(rankings);
             updateRelayTable(relays, 'medley');
         }
 
-        let swimmers = rankings[3];
-        if (swimmers) {
-            let relays = [];
+        let relays = pickFreeRelays(rankings);
+        updateRelayTable(relays, 'free');
+    }
+
+    function pickFreeRelays(rankings) {
+        let relays = [];
+
+        if (rankings.length == 4) {
+            let swimmers = rankings[3];
             for (let i = 0; i + 4 <= swimmers.length; i += 4) {
                 let relay = swimmers.slice(i, i + 4);
                 let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
                 relays.push([time, relay]);
             }
-            updateRelayTable(relays, 'free');
+        } else {
+            let swimmers1 = rankings[3];
+            let swimmers2 = rankings[7];
+            let len = Math.min(swimmers1.length, swimmers2.length);
+            for (let i = 0; i + 2 <= len; i += 2) {
+                let relay = [...swimmers1.slice(i, i + 2), ...swimmers2.slice(i, i + 2)];
+                relay.sort((a, b) => a.timeInt - b.timeInt);
+                let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
+                relays.push([time, relay]);
+            }
         }
+
+        return relays;
+    }
+
+    function findSwimmer(rankings, pkey, legIndex) {
+        let swimmer;
+        let startIndex = rankings.length == 8 ? [0, 4] : [0];
+        for (let start of startIndex) {
+            for (let s of rankings[start + legIndex]) {
+                if (s.pkey == pkey) {
+                    swimmer = s;
+                    break;
+                }
+            }
+        }
+
+        return swimmer;
     }
 
     function addPatchData(rankings, patch) {
@@ -4802,12 +4904,10 @@ const G = {};
             let pkey = patchRow.pkey;
             for (let [i, time] of patchRow.times.entries()) {
                 if (time) {
-                    let swimmer = { pkey: pkey, name: patchRow.name };
-                    for (let s of rankings[i]) {
-                        if (s.pkey == pkey) {
-                            swimmer = s;
-                            break;
-                        }
+                    let swimmer = findSwimmer(rankings, pkey, i);
+                    if (!swimmer) {
+                        swimmer = { pkey: pkey, name: patchRow.name, gender: rankings.length == 8 ? (patchRow.gender == 'M' ? -1 : 1) : 0 };
+                        i += swimmer.gender == -1 ? 4 : 0;
                     }
                     if (!swimmer.time) {
                         rankings[i].push(swimmer);
@@ -4908,9 +5008,7 @@ const G = {};
         for (let [time, swimmers] of relays) {
             html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill"><tbody>');
             for (let [i, swimmer] of swimmers.entries()) {
-                html.push('<tr>');
-                html.push('<td class="left full">', createClickableDiv(swimmer.name, `G.go('swimmer',${swimmer.pkey})`),
-                    '</td><td>', swimmer.time, '</td>');
+                html.push('<tr>', createSwimmerNameTd(swimmer), '<td>', swimmer.time, '</td>');
                 if (type == 'medley') {
                     html.push('<td>', _relayOrder[i], '</td>');
                 }
@@ -4940,14 +5038,16 @@ const G = {};
     }
 
     function calculateRelayGroup(rankings, picked) {
-        let top4 = [];
-        for (let leg of rankings) {
-            let top = [];
-            top4.push(top);
+        let top4 = [[], [], [], []];
+        let pickCount = rankings.length == 4 ? 4 : 2;
+
+        for (let [i, leg] of rankings.entries()) {
+            let top = top4[i % 4];
+            let count = 0;
             for (let swimmer of leg) {
                 if (!picked.has(swimmer.pkey)) {
                     top.push(swimmer);
-                    if (top.length == 4) {
+                    if (++count >= pickCount) {
                         break;
                     }
                 }
@@ -4961,6 +5061,10 @@ const G = {};
 
     function dfsSearch(tops, picked, relay, bestRelay) {
         if (tops.length == relay.length) {
+            let genderFactor = relay.reduce((acc, swimmer) => acc + swimmer.gender, 0);
+            if (genderFactor != 0) {
+                return;
+            }
             let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
             if (time < bestRelay[0]) {
                 bestRelay[0] = time;
@@ -5188,7 +5292,7 @@ WT|West Texas|Southern|south-west
 WV|West Virginia|Southern|south-east
 WI|Wisconsin|Central|cent-north
 WY|Wyoming|Western|west-nw
-`;
+                            `;
         let lines = data.split('\n');
         let map = new Map();
         for (let line of lines) {
@@ -5313,6 +5417,9 @@ WY|Wyoming|Western|west-nw
 
     async function getMeetCut(zone, lsc, meetName, age, genderStr, event) {
         let meets = await getLscMeetCuts(zone, lsc);
+        if (genderStr == 'Mixed') {
+            return;
+        }
         return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]);
     }
 
