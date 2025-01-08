@@ -5258,6 +5258,7 @@ WY|Wyoming|Western|west-nw
     function parseMeetCut(data) {
         let firstError = true;
         function alertError(msg) {
+            console.error(msg);
             if (isRunningLocally() && firstError) {
                 alert(msg);
                 firstError = false;
@@ -5278,9 +5279,7 @@ WY|Wyoming|Western|west-nw
                 } else {
                     meet = meets.get(part);
                     if (!meet) {
-                        let msg = `Wrong meet name: ${part}, row: ${text}`;
-                        console.error(msg);
-                        alertError(msg);
+                        alertError(`Wrong meet name: ${part}, row: ${text}`);
                         continue;
                     }
                 }
@@ -5315,9 +5314,7 @@ WY|Wyoming|Western|west-nw
 
             let parts = row.split(' ');
             if (parts.length !== columnNum) {
-                let msg = `ColumnNum = ${columnNum}: not match row: ${row}`;
-                console.error(msg);
-                alertError(msg);
+                alertError(`ColumnNum = ${columnNum}: not match row: ${row}`);
                 continue;
             }
             let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
@@ -5338,16 +5335,12 @@ WY|Wyoming|Western|west-nw
                     ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
                     : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
                 if (!_eventIndexMap.has(event + ' ' + course)) {
-                    let msg = `Unknown event: ${event}, row: ${row}`;
-                    console.error(msg);
-                    alertError(msg);
+                    alertError(`Unknown event: ${event}, row: ${row}`);
                     continue;
                 }
                 let key = event + ' ' + course + ' ' + gender;
                 if (eventMap.has(key)) {
-                    let msg = `Duplicate event: ${key}, row: ${row}`;
-                    console.error(msg);
-                    alertError(msg);
+                    alertError(`Duplicate event: ${key}, row: ${row}`);
                     continue;
                 }
                 eventMap.set(key, [time, timeToInt(time)]);

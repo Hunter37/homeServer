@@ -99,6 +99,11 @@
   });
 
   function cleanup(data) {
+    function alertError(msg) {
+      console.error(msg);
+      throw new Error(msg);
+    }
+
     let result = [];
     let rows = data.split('\n');
     for (let row of rows) {
@@ -110,14 +115,17 @@
       }
 
       if (row.startsWith('meet') || row.startsWith('table')) {
-        result.push(row
-          .replace(/events?/ig, 'EVENT').replace(/(\d+)&?U/ig, '0-$1')
-          .split(':').map(x => x.trim()).join(':'), '\n');
+        if (row.startsWith('table')) {
+          row = row.replace(/events?/ig, 'EVENT').replace(/(\d+)&?U/ig, '0-$1');
+        }
+
+        row = row.split(':').map(x => x.trim()).join(':');
+        result.push(row, '\n');
         continue;
       }
 
       row = row
-        .replace(/-+/g, '-').replace('N.?A.?', '-').replace(/x+/ig, '-').replace(/(\d)\*/g, '$1')
+        .replace(/-+/g, '-').replace(/x+/ig, '-').replace('N.?A.?', '-').replace(/x+/ig, '-').replace(/(\d)\*/g, '$1')
         .replace(/fr[a-z]*/i, 'FR').replace(/ba[a-z]*/i, 'BK').replace(/br[a-z]*/i, 'BR').replace(/bu[a-z]*/i, 'FL')
         .replace(/bk/i, 'BK').replace(/fly?/i, 'FL').replace(/i[a-z]*\.? ?m[a-z]*\.?/i, 'IM')
         .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
@@ -125,7 +133,20 @@
         .replace(/ :/g, ' ').replace(/^:/, '')
         .replace(/ FR-R/i, 'FR-R').replace(/ MED-R/i, 'MED-R');
 
-      result.push(row, '\n');
+      let parts = row.split(' ');
+      for (let i = 0; i < parts.length; ++i) {
+        if (parts[i].search(/[a-z]/i) == -1) {
+          if (parts[i] == '-') {
+            continue;
+          } else if (parts[i].split('.').length == 2 && parts[i].split(':').length <= 2 && parts[i].search(/[^\.\:0-9]/) == -1) {
+            parts[i] = formatTime(timeToInt(parts[i]));
+          } else {
+            alertError(`Invalid time: ${parts[i]}, row: ${row}`);
+          }
+        }
+      }
+
+      result.push(parts.join(' '), '\n');
     }
 
     result = result.join('');
@@ -204,6 +225,7 @@
   function parseMeetCut(data) {
     let firstError = true;
     function alertError(msg) {
+      console.error(msg);
       if (isRunningLocally() && firstError) {
         alert(msg);
         firstError = false;
@@ -224,9 +246,7 @@
         } else {
           meet = meets.get(part);
           if (!meet) {
-            let msg = `Wrong meet name: ${part}, row: ${text}`;
-            console.error(msg);
-            alertError(msg);
+            alertError(`Wrong meet name: ${part}, row: ${text}`);
             continue;
           }
         }
@@ -261,9 +281,7 @@
 
       let parts = row.split(' ');
       if (parts.length !== columnNum) {
-        let msg = `ColumnNum = ${columnNum}: not match row: ${row}`;
-        console.error(msg);
-        alertError(msg);
+        alertError(`ColumnNum = ${columnNum}: not match row: ${row}`);
         continue;
       }
       let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
@@ -284,16 +302,12 @@
           ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
           : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
         if (!_eventIndexMap.has(event + ' ' + course)) {
-          let msg = `Unknown event: ${event}, row: ${row}`;
-          console.error(msg);
-          alertError(msg);
+          alertError(`Unknown event: ${event}, row: ${row}`);
           continue;
         }
         let key = event + ' ' + course + ' ' + gender;
         if (eventMap.has(key)) {
-          let msg = `Duplicate event: ${key}, row: ${row}`;
-          console.error(msg);
-          alertError(msg);
+          alertError(`Duplicate event: ${key}, row: ${row}`);
           continue;
         }
         eventMap.set(key, [time, timeToInt(time)]);
@@ -329,6 +343,13 @@
       result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
     }
     return result;
+  }
+  function formatTime(time) {
+    let min = Math.floor(time / 6000);
+    let sec = time % 6000;
+    let minStr = min ? (min + ':') : '';
+    let secStr = (sec / 100).toFixed(2).padStart(5, '0');
+    return minStr + secStr;
   }
   function isRunningLocally() {
     return location.protocol === 'file:';
