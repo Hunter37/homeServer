@@ -455,21 +455,11 @@ const G = {};
     // birthday dictionary
 
     class BirthdayDictionary {
-        constructor() {
-            this.dict = new Map();
-        }
-
         async load(pkey) {
-            let data = this.dict.get(pkey);
-            if (data) {
-                return data;
-            }
-
-            data = await LocalCache.get('bday/' + pkey, _10YearsInSec);
-            if (data) {
-                this.dict.set(pkey, data);
-                return data;
-            }
+            let key = 'bday/' + pkey;
+            return await RuntimeCache.func(key, async () => {
+                return await LocalCache.get(key, _10YearsInSec);
+            });
         }
 
         calculate(pkey, events, meetDict, age) {
@@ -507,8 +497,9 @@ const G = {};
             }
 
             let range = [left, right];
-            LocalCache.set('bday/' + pkey, range);
-            this.dict.set(pkey, range);
+            let key = 'bday/' + pkey;
+            LocalCache.set(key, range);
+            RuntimeCache.map.set(key, range);
 
             return range;
         }
@@ -1287,7 +1278,7 @@ const G = {};
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
             let cls = Favorite.has(pkey) ? ' selected' : '';
-            return createPopup(`<div class="add-fav clickable ${cls}" onclick="${getGlobalName(Favorite)}.click(this,${pkey},'${name}',${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
+            return createPopup(`<div class="add-fav clickable ${cls}" onclick="${getGlobalName(Favorite)}.click(this,${pkey},\`${name}\`,${age},\`${clubName}\`,'${lsc}')">${starSVG}</div>`, 'Add to Favorite');
         }
 
         static click(elem, pkey, name, age, clubName, lsc) {
@@ -5370,7 +5361,7 @@ WY|Wyoming|Western|west-nw
     }
 
     async function getLscMeetCuts(zone, lsc) {
-        return await RuntimeCache.func(`meet-cut-${lsc}`, async () => {
+        return await RuntimeCache.func(`meet-cut/${lsc}`, async () => {
             let root = getFileRoot();
             let meetCuts = new Map();
 
@@ -5406,7 +5397,7 @@ WY|Wyoming|Western|west-nw
     async function getAgeGroupMotivationTime(meetName, age, genderStr, event, single) {
         let file = single ? 'meet-age-single-motivation.js' : 'meet-age-group-motivation.js';
 
-        let meets = await RuntimeCache.func(file, async () => {
+        let meets = await RuntimeCache.func('file/' + file, async () => {
             try {
                 let root = getFileRoot();
                 let data = await getFileData(`${root}${file}`);
@@ -5437,7 +5428,8 @@ WY|Wyoming|Western|west-nw
         static map = new Map();
         static async func(key, func) {
             let data = RuntimeCache.map.get(key);
-            if (data) {
+            if (data || RuntimeCache.map.has(key)) {
+                // the value could be undefined, so we need to use has() to check
                 return data;
             }
 

@@ -624,13 +624,13 @@ button:hover:not(.disabled),
 
 .dropdown .group {
     padding: 2px;
-    border: 2px solid var(--selected-clr);
+    border: 2px solid var(--ctrl-bk-clr);
 }
 
 .dropdown .group .group-txt {
     padding: 5px;
     cursor: default;
-    background-color: var(--selected-clr);
+    background-color: var(--ctrl-bk-clr);
 }
 
 .dropdown .group>.option {
