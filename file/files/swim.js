@@ -4874,7 +4874,7 @@ const G = {};
     }
 
     function filterByExclusionAndGenerateRankings(swimmers, exclude) {
-        let result = swimmers[0].gender ? [[], [], [], [], [], [], [], []] : [[], [], [], []];
+        let result = swimmers[0]?.gender ? [[], [], [], [], [], [], [], []] : [[], [], [], []];
         for (let swimmer of swimmers) {
             for (let [i, stroke] of _relayOrder.entries()) {
                 if (swimmer[stroke] && !exclude[i].has(swimmer.pkey)) {
