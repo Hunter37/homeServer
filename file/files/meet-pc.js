@@ -94,7 +94,7 @@ table Sr_Open:LCM:11-18 F EVENT M
 3:21.19 200BR 3:04.09
 1:19.99 100FL 1:12.69
 2:55.89 200FL 2:41.49
-3.00.29 200IM 2:45.49
+3:00.29 200IM 2:45.49
 6:18.79 400IM 5:51.59
 
 meet Senior2 [2025 PC Senior 2](https://www.pacswim.org/swim-meet-times/standards)

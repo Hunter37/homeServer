@@ -1,6 +1,5 @@
 (() => {
 G.fileData = `
-
 meet Section [2025 Speedo SZ South Sectionals](https://www.floridaswimming.org/page/times/fl-time-standards)
 
 table Section:11-18 F:LCM F:SCM F:SCY EVENT M:SCY M:SCM M:LCM

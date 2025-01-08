@@ -4284,7 +4284,6 @@ const G = {};
             await updateRankTable();
         } else if (table == 'relay') {
             await updateSelectionTable();
-            await updateRelayTables();
         }
     }
 
@@ -4662,7 +4661,6 @@ const G = {};
         mergePatchData(patch);
 
         await updateSelectionTable();
-        await updateRelayTables();
     }
 
     function parseText(value) {
@@ -4784,10 +4782,7 @@ const G = {};
                 let loading = new Loading('bday-' + swimmer.pkey,
                     BirthdayDictionary.format(range),
                     (id) => {
-                        _backgroundActions.push([loadBirthday, [swimmer.pkey, id, async () => {
-                            await updateSelectionTable();
-                            await updateRelayTables();
-                        }]]);
+                        _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateSelectionTable]]);
                     });
 
                 html.push(`</td><td class="left full${css}">`, loading.render(), '</td></tr>');
@@ -4800,6 +4795,8 @@ const G = {};
 
         let table = document.getElementById('selection-table');
         table.innerHTML = html.join('');
+
+        await updateRelayTables();
     }
 
     async function loadBirthday(params) {

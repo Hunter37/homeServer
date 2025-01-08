@@ -135,15 +135,19 @@
 
       let parts = row.split(' ');
       for (let i = 0; i < parts.length; ++i) {
-        if (parts[i].search(/[a-z]/i) == -1) {
-          if (parts[i] == '-') {
+        let part = parts[i].replace(/(\d+)\.(\d\d)\.(\d\d)/g, '$1:$2.$3').replace(/(\d+)\:(\d\d)\:(\d\d)/g, '$1:$2.$3');
+
+        if (part.search(/[a-z]/i) == -1) {
+          if (part == '-') {
             continue;
-          } else if (parts[i].split('.').length == 2 && parts[i].split(':').length <= 2 && parts[i].search(/[^\.\:0-9]/) == -1) {
-            parts[i] = formatTime(timeToInt(parts[i]));
+          } else if (part.split('.').length == 2 && part.split(':').length <= 2 && part.search(/[^\.\:0-9]/) == -1) {
+            part = formatTime(timeToInt(part));
           } else {
-            alertError(`Invalid time: ${parts[i]}, row: ${row}`);
+            alertError(`Invalid time: ${part}, row: ${row}`);
           }
         }
+
+        parts[i] = part;
       }
 
       result.push(parts.join(' '), '\n');

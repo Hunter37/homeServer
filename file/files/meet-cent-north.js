@@ -19,7 +19,6 @@ table Spr_Sec:11-18 F:LCM F:SCY EVENT M:SCY M:LCM
 2:32.29 2:13.99 200IM 2:01.99 2:20.39
 5:24.39 4:43.99 400IM 4:23.99 5:01.89
 
-
 meet Sum_Sec [CZ SPEEDO NORTH SECTION SUMMER CHAMPIONSHIPS](https://www.gomotionapp.com/team/cenzone/page/cz-events/speedo-sectional-meets) July 10-13, 2025(LCM) Minneapolis, MN
 
 table Sum_Sec:11-18 F:LCM F:SCY EVENT M:SCY M:LCM
