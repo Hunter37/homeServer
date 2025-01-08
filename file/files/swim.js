@@ -2316,7 +2316,8 @@ const G = {};
                 override.age = parseInt(value);
                 tableElem.innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
-            html.push(createHSpace(20), '<span>cuts age:&nbsp;</span>', ageSelect.render(customSelect));
+            ageSelect.class = 'mc';
+            html.push(createHSpace(20), '<span class="mc">cuts age:&nbsp;</span>', ageSelect.render(customSelect));
 
             let lscOpts = [];
             for (let [lsc, details] of lscMap) {
@@ -2330,7 +2331,8 @@ const G = {};
                 override.zone = zone;
                 document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
             });
-            html.push(createHSpace(20), '<span>cuts LSC:&nbsp;</span>', lscSelect.render(customSelect));
+            lscSelect.class = 'mc';
+            html.push(createHSpace(20), '<span class="mc">cuts LSC:&nbsp;</span>', lscSelect.render(customSelect));
         }
 
         html.push('</div><div id="best-time-table">',
@@ -2449,7 +2451,9 @@ const G = {};
         for (let meetInfo of meetList) {
             let mapArray = meetInfo[2];
             for (let eventStr of _eventList) {
-                mapArray.push(await getMeetCut(zone, lsc, meetInfo[0], age, genderStr, eventStr));
+                // skip relay events
+                mapArray.push(eventStr.includes('-R') ? null :
+                    await getMeetCut(zone, lsc, meetInfo[0], age, genderStr, eventStr));
             }
         }
 
@@ -2457,9 +2461,11 @@ const G = {};
             let count = 0;
             let acuts = a[2];
             let bcuts = b[2];
-            for (let i = 0; i < acuts.length; ++i) {
-                if (acuts[i] && bcuts[i]) {
-                    count += (acuts[i][1] < bcuts[i][1] ? 1 : -1);
+            for (let i = 0; i < acuts.length; (i == 27 ? i = 55 : ++i)) {   // skip 28-54 for SCM
+                let acut = acuts[i];
+                let bcut = bcuts[i];
+                if (acut && bcut && acut[1] != bcut[1]) {
+                    count += (acut[1] < bcut[1] ? 1 : -1);
                 }
             }
             return count;
@@ -5350,7 +5356,6 @@ WY|Wyoming|Western|west-nw
 
         return meets;
     }
-
 
     async function getMeetCut(zone, lsc, meetName, age, genderStr, event) {
         let meets = await getLscMeetCuts(zone, lsc);

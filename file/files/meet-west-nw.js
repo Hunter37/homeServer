@@ -61,7 +61,7 @@ table LCM:NW_Reg 15-18:F 14:F 13:F 12:F 11:F 0-10:F EVENT 0-10:M 11:M 12:M 13:M 
 2:38.29 2:35.89 2:41.39 2:47.19 2:59.39 3:11.29 200IM 3:14.79 3:01.09 2:43.19 2:32.79 2:25.29 2:24.69
 5:44.59 5:38.29 5:45.99 6:11.29 6:11.29 - 400IM - 5:56.69 5:56.69 5:28.79 5:14.59 5:19.89
 
-meet Spr_Sec [2025 PN Spring Speedo Sectional](https://www.gomotionapp.com/pnws2/UserFiles/Image/QuickUpload/2025-western-blue-sectional-time-standards-1-_084763.pdf) (3/13-3/16 Boise,ID)
+meet Spr_Sec [2025 Pacific Northwest Spring Speedo Sectional](https://www.gomotionapp.com/pnws2/UserFiles/Image/QuickUpload/2025-western-blue-sectional-time-standards-1-_084763.pdf) (3/13-3/16 Boise,ID)
 
 table SCY:Spr_Sec 11-18:F EVENT 11-18:M
 

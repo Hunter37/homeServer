@@ -1,7 +1,7 @@
 (() => {
 G.fileData = `
 
-meet Spr_Sec [2025 4C Spring Speedo Sectional](https://www.gomotionapp.com/pnws2/UserFiles/Image/QuickUpload/2025-western-blue-sectional-time-standards-1-_084763.pdf) (3/27-3/30 Boise,ID)
+meet Spr_Sec [2025 Four Corners Spring Speedo Sectional](https://www.gomotionapp.com/pnws2/UserFiles/Image/QuickUpload/2025-western-blue-sectional-time-standards-1-_084763.pdf) (3/27-3/30 Austin,TX)
 
 table SCY:Spr_Sec 11-18:F EVENT 11-18:M
 
