@@ -1193,10 +1193,7 @@ const G = {};
         ].join('');
     }
 
-    let funcMap = new Map();
-    function setNavigationFunc(func) {
-        funcMap.set(func.name, func);
-    }
+    let _navFuncMap = new Map();
 
     async function loadContent() {
         _backgroundActions.length = 0;
@@ -1217,7 +1214,7 @@ const G = {};
         let [action, value] = loadingHash.split('/');
         value = value && decodeURIComponent(value);
 
-        let func = funcMap.get(action);
+        let func = _navFuncMap.get(action);
         if (func) {
             try {
                 await func(value);
@@ -1285,7 +1282,7 @@ const G = {};
 
         updateContent(html.join(''), loadingHash);
     }
-    setNavigationFunc(favorite);
+    _navFuncMap.set('favorite', favorite);
 
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
@@ -1343,7 +1340,7 @@ const G = {};
         localStorage.setItem(part[0], part[1]);
         history.back();
     }
-    setNavigationFunc(set);
+    _navFuncMap.set('set', set);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // config page
@@ -1368,7 +1365,7 @@ const G = {};
 
         updateContent(tabView.render(index), loadingHash);
     }
-    setNavigationFunc(config);
+    _navFuncMap.set('config', config);
 
     async function buildTokenPage() {
         await ensureToken(true);
@@ -1540,7 +1537,7 @@ const G = {};
 
         updateContent(tabView.render(), 'test');
     }
-    setNavigationFunc(test);
+    _navFuncMap.set('test', test);
 
     function buildAdvancedConfig() {
 
@@ -1578,7 +1575,7 @@ const G = {};
 
         showSearch(values, hash);
     }
-    setNavigationFunc(search);
+    _navFuncMap.set('search', search);
 
     async function loadSearch(name, all) {
         name = name.trim().replace(/\s+/g, ' ');
@@ -1850,7 +1847,7 @@ const G = {};
 
         await showDetails(data, 'swimmer/' + pkey);
     }
-    setNavigationFunc(swimmer);
+    _navFuncMap.set('swimmer', swimmer);
 
     async function loadDetails(pkey) {
         let data = await LocalCache.func('swimmer/' + pkey, async () => {
@@ -3306,18 +3303,16 @@ const G = {};
             return;
         }
 
-        let rank = data ? calculateRank(data.values, pkey, timeInt) : empty;
+        let rank = data ? calculateRank(data, pkey, timeInt) : empty;
 
         element.innerHTML = createClickableDiv(rank, `${getGlobalName(go)}('rank', \`${mapKey}\`)`);
     }
 
     function calculateRank(values, pkey, timeInt) {
-        // sortkey, name, date, time, eventcode, club, lsccode, meet, eventkey, pkey, age
-        // 0        1     2     3     4          5     6        7     8         9     10
-
         let rank = '';
-        for (let i = 0; i < values.length; ++i) {
-            if (pkey == values[i][values.idx.pkey] || timeInt < timeToInt(values[i][values.idx.time])) {
+        let idx = values.idx || { pkey: 'pkey', time: 'time' };
+        for (let [i, row] of values.entries()) {
+            if (pkey == row[idx.pkey] || timeInt < timeToInt(row[idx.time])) {
                 rank = i + 1;
                 break;
             }
@@ -3683,23 +3678,15 @@ const G = {};
             let promises = [loadRank(key.replace('Mixed', 'Female')), loadRank(key.replace('Mixed', 'Male'))];
             let results = await Promise.all(promises);
             if (results[0] && results[1]) {
-                data = {
-                    meetDict: new Map([...results[0].meetDict, ...results[1].meetDict]),
-                    values: []
-                }
-                data.meetDict.idx = results[0].meetDict.idx;
-                data.values.idx = results[0].values.idx;
-
-                // data.values.push(...results[1].values);
-                let idx = data.values.idx;
+                data = [];
                 for (let [i, g] of [1, -1].entries()) {
-                    for (let row of results[i].values) {
-                        row.intTime = timeToInt(row[idx.time]);
+                    for (let row of results[i]) {
+                        row.timeInt = timeToInt(row.time);
                         row.gender = g;
-                        data.values.push(row);
+                        data.push(row);
                     }
                 }
-                data.values.sort((a, b) => a.intTime - b.intTime);
+                data.sort((a, b) => a.timeInt - b.timeInt);
             }
         } else {
             data = await loadRank(key);
@@ -3707,7 +3694,7 @@ const G = {};
 
         await showRank(data, key);
     }
-    setNavigationFunc(rank);
+    _navFuncMap.set('rank', rank);
 
     let rankDataRequiredVersion = 2;
 
@@ -3770,15 +3757,32 @@ const G = {};
     }
 
     async function postLoadRank(values) {
-        let idx = values.idx;
-        let meets = new Set(values.map(row => row[idx.meet]));
+        let idxMeet = values.idx.meet;
+        let meets = new Set(values.map(row => row[idxMeet]));
+        await _meetDictinary.loadMeets(meets);
 
-        return {
-            values: values,
-            meetDict: await _meetDictinary.loadMeets(meets)
-        };
+        return convertObject(values);
     }
 
+    function convertObject(arr) {
+        let idx = arr.idx;
+        let result = [];
+        for (let row of arr) {
+            let obj = {};
+            for (let key in idx) {
+                obj[key] = row[idx[key]];
+            }
+            if (obj.meet) {
+                let meet = _meetDictinary.dict.get(obj.meet);
+                if (meet) {
+                    obj.meetStart = meet[0];
+                    obj.meetName = meet[1];
+                }
+            }
+            result.push(obj);
+        }
+        return result;
+    }
 
     async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
         let cacheKey = 'club/' + lsc + '_' + clubName + '_' + ageKey;
@@ -4282,6 +4286,7 @@ const G = {};
         if (table == 'rank') {
             await updateRankTable();
         } else if (table == 'relay') {
+            await updateSelectionTable();
             await updateRelayTables();
         }
     }
@@ -4351,31 +4356,22 @@ const G = {};
         }
         standards.sort((a, b) => a[0][1] - b[0][1]);
 
-        let idx = data.values.idx;
-        let meetDict = data.meetDict;
         let html = [];
 
-        if (data.values.length == 0) {
+        if (data.length == 0) {
             html.push('No ranking data found.');
             return html.join('');
         }
 
         html.push('<table class="hilightrow fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
-        let meetDate = getMeetDate();
         let index = 0;
-        for (let row of data.values) {
-            let pkey = row[idx.pkey];
-            let range = await _birthdayDictionary.load(pkey);
-            if (await filterOutSwimmer(meetDate, to, range)) {
-                continue;
-            }
+        for (let row of await filterDataByMeetDate(data, to)) {
 
-            let timeInt = timeToInt(row[idx.time]);
             let maxStd = '';
             let maxStdInt = '';
             for (let std of ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA']) {
                 let [_, stdInt] = await getAgeGroupMotivationTime(std, from, genderStr, _eventList[event]);
-                if (timeInt > stdInt) {
+                if (row.timeInt > stdInt) {
                     break;
                 }
                 maxStd = std;
@@ -4383,33 +4379,35 @@ const G = {};
             }
             let color = '';
             for (let [std, clr] of standards) {
-                if (timeInt <= std[1]) {
+                if (row.timeInt <= std[1]) {
                     color = ` class="${clr}"`;
                     break;
                 }
             }
 
-            let rowZone = getLSCZone(row[idx.lsc]);
-            let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row[idx.lsc], row[idx.clubName]) : '';
-            let rowlscRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row[idx.lsc], '') : '';
+            let rowZone = getLSCZone(row.lsc);
+            let rowTeamRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row.lsc, row.clubName) : '';
+            let rowlscRankKey = rowZone ? getRankDataKey(genderStr, ageKey, event, rowZone, row.lsc, '') : '';
             rowTeamRankKey = rowTeamRankKey == key ? '' : rowTeamRankKey;
             rowlscRankKey = rowlscRankKey == key ? '' : rowlscRankKey;
 
+            let pkey = row.pkey;
+            let range = await _birthdayDictionary.load(pkey);
             let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
                 (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
 
-            html.push(`<tr${color}><td>`, ++index, '</td>', createSwimmerNameTd({ name: row[idx.name], pkey: row[idx.pkey], gender: row.gender }),
-                '<td class="tc">', buildTimeCell(row[idx.time], maxStd, maxStd ? formatDelta(timeInt - maxStdInt) : '&nbsp;'),
-                '</td><td>', formatDate(row[idx.date]), '</td><td>', row[idx.age], '<td class="left full">', loading.render(),
-                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row[idx.clubName], `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row[idx.clubName],
-                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row[idx.lsc], `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row[idx.lsc],
-                '</td><td class="left">', meetDict.get(row[idx.meet])?.[meetDict.idx.name], '</td></tr>');
+            html.push(`<tr${color}><td>`, ++index, '</td>', createSwimmerNameTd(row),
+                '<td class="tc">', buildTimeCell(row.time, maxStd, maxStd ? formatDelta(row.timeInt - maxStdInt) : '&nbsp;'),
+                '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', loading.render(),
+                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
+                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
+                '</td><td class="left">', row.meetName, '</td></tr>');
         }
         html.push('</tbody></table>');
         return html.join('');
     }
 
-    async function filterOutSwimmer(meetDate, maxAge, range) {
+    function filterOutSwimmer(meetDate, maxAge, range) {
         if (range && meetDate) {
             let bday = new Date(range[1]);
             bday.setUTCFullYear(bday.getUTCFullYear() + maxAge + 1);
@@ -4509,7 +4507,7 @@ const G = {};
 
         await showRelay(data, key);
     }
-    setNavigationFunc(relay);
+    _navFuncMap.set('relay', relay);
 
     async function loadRelay(key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
@@ -4529,16 +4527,69 @@ const G = {};
 
         let results = await Promise.all(promises);
 
-        let data = [];
-        for (let result of results) {
-            if (result) {
-                let idx = result.values.idx;
-                result.values = result.values.slice(0, 40);
-                result.values.idx = idx;
+        let pkeyMap = new Map();
+        let swimmers = [];
+        let nameMap = new Map();
+
+        let genderFactor = results.length == 8 ? 1 : 0;
+        let topCount = results.length == 8 ? 20 : 40;
+        for (let [i, result] of results.entries()) {
+            topCount = Math.min(topCount, result.length);
+            for (let j = 0; j < topCount; ++j) {
+                let row = result[j];
+                let pkey = row.pkey;
+                let swimmer = pkeyMap.get(pkey);
+                if (!swimmer) {
+                    swimmer = {
+                        pkey: pkey,
+                        name: row.name,
+                        age: row.age,
+                        gender: i < 4 ? genderFactor : -genderFactor,
+                        clubName: row.clubName,
+                    };
+                    pkeyMap.set(pkey, swimmer);
+                    nameMap.set(row.name.toLowerCase(), swimmer);
+                    swimmers.push(swimmer);
+                }
+                swimmer[_relayOrder[i % 4]] = row.time;
+                swimmer[_relayOrder[i % 4] + 'Int'] = timeToInt(row.time);
             }
-            data.push(result);
         }
-        return data;
+
+        swimmers = sortSwimmers(swimmers);
+
+        return { swimmers, nameMap };
+    }
+
+    function sortSwimmers(swimmers) {
+        let dt = 30000;
+        let group = {};
+        group[0] = [];
+        group[1] = [];
+        group[-1] = [];
+        for (let row of swimmers) {
+            group[row.gender].push(row);
+            row.timeInt = (row.BKInt || dt) + (row.BRInt || dt) + (row.FLInt || dt) + (row.FRInt || dt);
+        }
+        for (let i = -1; i < 2; ++i) {
+            group[i].sort((a, b) => a.timeInt - b.timeInt);
+        }
+
+        if (group[0].length > 0) {
+            return group[0];
+        }
+
+        let mergedGroup = [];
+        let len = Math.max(group[1].length, group[-1].length);
+        for (let i = 0; i < len; i++) {
+            if (i < group[1].length) {
+                mergedGroup.push(group[1][i]);
+            }
+            if (i < group[-1].length) {
+                mergedGroup.push(group[-1][i]);
+            }
+        }
+        return mergedGroup;
     }
 
     async function showRelay(data, key) {
@@ -4572,7 +4623,7 @@ const G = {};
         let expanderViewHtml = [
             '<div>Two methods to customize relay selections:</div>',
             `<p>1. Add or Edit swimmers' stroke times.</p>`,
-            `<textarea style="width:600px;height:120px" oninput="${getGlobalName(textChange)}(this.value)" `,
+            `<textarea style="width:600px;height:120px" oninput="${getGlobalName(updatePatchData)}(this.value)" `,
             `placeholder="Add/Edit swimmers' times in this textbox using the following format:\n`,
             '  {Gender [F|M]} {Swimmer Name} {Back Time} {Breast Time} {Fly Time} {Free Time}\n',
             'Use 0 to skip updating a stroke. Gender is optional.&#10;',
@@ -4595,100 +4646,34 @@ const G = {};
 
         updateContent(html.join(''), loadingHash);
 
-        if (data) {
-            let table = document.getElementById('relay-table');
-            table.data = data;
-            table.nameToPkeyMap = createNameToPkeyMap(data);
-            table.key = key;
-            table.excludeData = [new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set(), new Set()];
-            table.patchData = [];
-            await updateSelectionTable();
-            await updateRelayTables();
-        }
-
         if (customDatePicker) {
             await initDatepicker(page);
         }
-    }
 
-    function createNameToPkeyMap(data) {
-        let map = new Map();
-        for (let leg of data) {
-            if (!leg) {
-                continue;
-            }
-            let idx = leg.values.idx;
-            for (let row of leg.values) {
-                map.set(row[idx.name].toLowerCase(), row[idx.pkey]);
-            }
+        if (data) {
+            let table = document.getElementById('relay-table');
+            table.data = data;
+            data.key = key;
+            data.exclude = [new Set(), new Set(), new Set(), new Set()];
+            await updatePatchData('');
         }
-        return map;
     }
 
-    function createSwimmerNameTd(swimmer, fakeSwimmer) {
-        let genderStr = swimmer.gender ? `<span class="gender">${swimmer.gender == 1 ? '♀' : '♂'}</span>` : '';
+    async function updatePatchData(value) {
+        let patch = parseText(value);
 
-        return `<td class="left${fakeSwimmer ? '' : ' full'}">` +
-            (fakeSwimmer ? genderStr + swimmer.name : createClickableDiv(genderStr + '<span class="underline">' + swimmer.name + '</span>', `${getGlobalName(go)}('swimmer',${swimmer.pkey})`, 'no-dec')) +
-            '</td>';
+        mergePatchData(patch);
+
+        await updateSelectionTable();
+        await updateRelayTables();
     }
 
-    async function updateSelectionTable() {
-        let exclude = document.getElementById('relay-table').excludeData;
-        let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
-
-        let tableData = buildSelectionTableData();
-        for (let swimmer of tableData) {
-            let realSwimmer = typeof swimmer.pkey == 'number';
-
-            html.push('<tr>', createSwimmerNameTd(swimmer, !realSwimmer));
-
-            for (let [i, stroke] of _relayOrder.entries()) {
-                i += swimmer.gender < 0 ? 4 : 0; // adjust index for mixed
-                let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
-                if (swimmer[stroke]) {
-                    html.push(`<td class="leg-time clickable${deselected}" onclick="${getGlobalName(deselect)}(this,${i},'${swimmer.pkey}')">`, swimmer[stroke], '</td>');
-                } else {
-                    html.push('<td></td>');
-                }
-            }
-
-            html.push('<td>', swimmer.age);
-
-            if (realSwimmer) {
-                let loading = new Loading('bday-' + swimmer.pkey,
-                    BirthdayDictionary.format(await _birthdayDictionary.load(swimmer.pkey)),
-                    (id) => { _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateRelayTables]]); });
-
-                html.push('</td><td class="left full">', loading.render(), '</td></tr>');
-            } else {
-                html.push('</td><td></td></tr>');
-            }
-        }
-
-        html.push('</tbody></table>');
-
-        let table = document.getElementById('selection-table');
-        table.innerHTML = html.join('');
-    }
-
-    async function textChange(value) {
-        let findIndexOfFirstNumber = (str) => {
-            for (let i = 0; i < str.length; i++) {
-                if (!isNaN(parseInt(str[i]))) {
-                    return i;
-                }
-            }
-            return -1; // Return -1 if no number is found
-        };
-
-        let table = document.getElementById('relay-table');
-        let patch = table.patchData = [];
-        let pkey2swimmer = table.nameToPkeyMap;
+    function parseText(value) {
+        let patch = [];
 
         for (let line of value.split('\n')) {
             line = line.trim().replace(/\t/g, ' ').replace(/ +/g, ' ');
-            let index = findIndexOfFirstNumber(line);
+            let index = line.search(/\d/);
             if (index <= 0 || line[index - 1] != ' ') {
                 continue;
             }
@@ -4710,12 +4695,114 @@ const G = {};
             }
 
             let name = line.substring(nameStart, index - 1);
-            let pkey = pkey2swimmer.get(name.toLowerCase()) || name.toLowerCase();
-            patch.push({ pkey: pkey, name: name, times: times, gender: gender });
+            let swimmer = { name: name, times: times, gender: gender };
+            patch.push(swimmer);
         }
 
-        await updateSelectionTable();
-        await updateRelayTables();
+        return patch;
+    }
+
+    function mergePatchData(patch) {
+        let data = document.getElementById('relay-table').data;
+        let nameMap = data.nameMap;
+
+        function patchSwimmerData(swimmer, patchRow) {
+            if (swimmer != patchRow) {
+                swimmer = JSON.parse(JSON.stringify(swimmer));
+            }
+
+            for (let [i, stroke] of _relayOrder.entries()) {
+                if (patchRow.times[i]) {
+                    let time = swimmer[stroke + 'Int'] = patchRow.times[i];
+                    swimmer[stroke] = formatTime(time);
+                }
+            }
+            return swimmer;
+        }
+
+        let merged = [];
+        let needToUpdate = new Map();
+        for (let patchRow of patch) {
+            let nameKey = patchRow.name.toLowerCase();
+            let swimmer = nameMap.get(nameKey);
+            if (!swimmer) {
+                patchRow.pkey = nameKey;
+                patchRow.gender = data.swimmers[0]?.gender ? (patchRow.gender == 'M' ? -1 : 1) : 0;
+                merged.push(patchSwimmerData(patchRow, patchRow));
+            } else {
+                needToUpdate.set(swimmer.pkey, patchSwimmerData(swimmer, patchRow));
+            }
+        }
+
+        // replace the needToUpdate swimmers in the data
+        for (let swimmer of data.swimmers) {
+            if (needToUpdate.has(swimmer.pkey)) {
+                merged.push(needToUpdate.get(swimmer.pkey));
+            } else {
+                merged.push(swimmer);
+            }
+        }
+
+        data.merged = merged;
+    }
+
+    function createSwimmerNameTd(swimmer, fakeSwimmer) {
+        let genderStr = swimmer.gender ? `<span class="gender">${swimmer.gender == 1 ? '♀' : '♂'}</span>` : '';
+
+        return `<td class="left${fakeSwimmer ? '' : ' full'}">` +
+            (fakeSwimmer ? genderStr + swimmer.name : createClickableDiv(genderStr + '<span class="underline">' + swimmer.name + '</span>', `${getGlobalName(go)}('swimmer',${swimmer.pkey})`, 'no-dec')) +
+            '</td>';
+    }
+
+    async function updateSelectionTable() {
+        let data = document.getElementById('relay-table').data;
+        let exclude = data.exclude;
+
+        let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(data.key);
+        let [from, to] = decodeAgeKey(ageKey);
+        let meetDate = getMeetDate();
+
+        let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
+
+        for (let swimmer of data.merged) {
+            let realSwimmer = typeof swimmer.pkey == 'number';
+
+            html.push('<tr>', createSwimmerNameTd(swimmer, !realSwimmer));
+
+            for (let [i, stroke] of _relayOrder.entries()) {
+                let deselected = exclude[i].has(swimmer.pkey) ? ' deselected' : '';
+                if (swimmer[stroke]) {
+                    html.push(`<td class="leg-time clickable${deselected}" onclick="${getGlobalName(deselectRelayStroke)}(this,${i},'${swimmer.pkey}')">`, swimmer[stroke], '</td>');
+                } else {
+                    html.push('<td></td>');
+                }
+            }
+
+            html.push('<td>', swimmer.age);
+
+            if (realSwimmer) {
+                let range = await _birthdayDictionary.load(swimmer.pkey);
+                let css = filterOutSwimmer(meetDate, to, range) ? ' deselected' : '';
+
+                let loading = new Loading('bday-' + swimmer.pkey,
+                    BirthdayDictionary.format(range),
+                    (id) => {
+                        _backgroundActions.push([loadBirthday, [swimmer.pkey, id, async () => {
+                            await updateSelectionTable();
+                            await updateRelayTables();
+                        }]]);
+                    });
+
+                html.push(`</td><td class="left full${css}">`, loading.render(), '</td></tr>');
+            } else {
+                html.push('</td><td></td></tr>');
+            }
+        }
+
+        html.push('</tbody></table>');
+
+        let table = document.getElementById('selection-table');
+        table.innerHTML = html.join('');
     }
 
     async function loadBirthday(params) {
@@ -4731,131 +4818,33 @@ const G = {};
         }
     }
 
-    function deselect(elememt, legIndex, pkey) {
+    async function deselectRelayStroke(elememt, legIndex, pkey) {
         pkey = parseInt(pkey) || pkey;
         elememt.classList.toggle('deselected');
-        let exclude = document.getElementById('relay-table').excludeData;
+        let exclude = document.getElementById('relay-table').data.exclude;
         if (exclude[legIndex].has(pkey)) {
             exclude[legIndex].delete(pkey);
         } else {
             exclude[legIndex].add(pkey);
         }
 
-        updateRelayTables();
-    }
-
-    function buildSelectionTableData() {
-        let table = document.getElementById('relay-table');
-        let data = table.data;
-        let patch = table.patchData;
-        let genderFactor = data.length == 4 ? 0 : 1;
-
-        let merged = [];
-        let pkey2swimmer = new Map();
-
-        for (let [i, leg] of data.entries()) {
-            if (!leg) {
-                continue;
-            }
-            let idx = leg.values.idx;
-            for (let row of leg.values) {
-                let pkey = row[idx.pkey];
-                let swimmer = pkey2swimmer.get(pkey);
-                if (!swimmer) {
-                    swimmer = {
-                        pkey: row[idx.pkey],
-                        name: row[idx.name],
-                        age: row[idx.age],
-                        gender: i < 4 ? genderFactor : -genderFactor
-                    };
-                    merged.push(swimmer);
-                    pkey2swimmer.set(pkey, swimmer);
-                }
-                swimmer[_relayOrder[i % 4]] = row[idx.time];
-            }
-        }
-
-        // calculate the average time for each swimmer, then sort by the average time
-        for (let swimmer of merged) {
-            let count = 0;
-            let totalTime = 0;
-            for (let stroke of _relayOrder) {
-                let time = swimmer[stroke];
-                if (time) {
-                    count++;
-                    totalTime += timeToInt(time);
-                }
-            }
-            swimmer.avgTime = totalTime / count;
-        }
-        merged.sort((a, b) => a.avgTime - b.avgTime);
-
-        // append patch data to the merged data
-        for (let patchRow of patch.reverse()) {
-            let pkey = patchRow.pkey;
-            let swimmer = pkey2swimmer.get(pkey);
-            if (!swimmer) {
-                swimmer = { pkey: pkey, name: patchRow.name, gender: patchRow.gender == 'M' ? -genderFactor : genderFactor };
-                merged.unshift(swimmer);
-                pkey2swimmer.set(pkey, swimmer);
-            }
-            for (let [i, stroke] of _relayOrder.entries()) {
-                let time = patchRow.times[i];
-                if (time) {
-                    swimmer[stroke] = formatTime(time);
-                }
-            }
-        }
-
-        return merged;
+        await updateRelayTables();
     }
 
     async function updateRelayTables() {
-        let table = document.getElementById('relay-table');
-        let data = table.data;
-        let key = table.key;
-        let patch = table.patchData;
-        let exclude = table.excludeData;
-        let genderFactor = data.length == 4 ? 0 : 1;
+        let data = document.getElementById('relay-table').data;
 
-        let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+        let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(data.key);
         let [from, to] = decodeAgeKey(ageKey);
-        let meetDate = getMeetDate();
 
-        // build rankings data for relay calculation
-        let rankings = [];
-        for (let [i, s] of data.entries()) {
-            let leg = [];
-            rankings.push(leg);
-            if (!s) {
-                continue;
-            }
-            let idx = s.values.idx;
-            for (let row of s.values) {
-                let time = row[idx.time];
-                let swimmer = {
-                    pkey: row[idx.pkey],
-                    name: row[idx.name],
-                    time: time,
-                    timeInt: timeToInt(time),
-                    gender: i < 4 ? genderFactor : -genderFactor
-                };
-                leg.push(swimmer);
-            }
-        }
+        let filtered = await filterDataByMeetDate(data.merged, to);
 
-        rankings = addPatchData(rankings, patch);
+        let rankings = filterByExclusionAndGenerateRankings(filtered, data.exclude);
 
-        rankings = await filterDataByMeetDate(rankings, meetDate, to);
+        let relays = calculateRelay(rankings);
+        updateRelayTable(relays, 'medley');
 
-        rankings = filterByExclusion(rankings, exclude);
-
-        if (rankings.filter(d => d.length).length >= 4) {
-            let relays = calculateRelay(rankings);
-            updateRelayTable(relays, 'medley');
-        }
-
-        let relays = pickFreeRelays(rankings);
+        relays = pickFreeRelays(rankings);
         updateRelayTable(relays, 'free');
     }
 
@@ -4866,7 +4855,7 @@ const G = {};
             let swimmers = rankings[3];
             for (let i = 0; i + 4 <= swimmers.length; i += 4) {
                 let relay = swimmers.slice(i, i + 4);
-                let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
+                let time = relay.reduce((acc, swimmer) => acc + swimmer.FRInt, 0);
                 relays.push([time, relay]);
             }
         } else {
@@ -4875,8 +4864,8 @@ const G = {};
             let len = Math.min(swimmers1.length, swimmers2.length);
             for (let i = 0; i + 2 <= len; i += 2) {
                 let relay = [...swimmers1.slice(i, i + 2), ...swimmers2.slice(i, i + 2)];
-                relay.sort((a, b) => a.timeInt - b.timeInt);
-                let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
+                relay.sort((a, b) => a.FRInt - b.FRInt);
+                let time = relay.reduce((acc, swimmer) => acc + swimmer.FRInt, 0);
                 relays.push([time, relay]);
             }
         }
@@ -4884,79 +4873,36 @@ const G = {};
         return relays;
     }
 
-    function findSwimmer(rankings, pkey, legIndex) {
-        let swimmer;
-        let startIndex = rankings.length == 8 ? [0, 4] : [0];
-        for (let start of startIndex) {
-            for (let s of rankings[start + legIndex]) {
-                if (s.pkey == pkey) {
-                    swimmer = s;
-                    break;
+    function filterByExclusionAndGenerateRankings(swimmers, exclude) {
+        let result = swimmers[0].gender ? [[], [], [], [], [], [], [], []] : [[], [], [], []];
+        for (let swimmer of swimmers) {
+            for (let [i, stroke] of _relayOrder.entries()) {
+                if (swimmer[stroke] && !exclude[i].has(swimmer.pkey)) {
+                    i += swimmer.gender == -1 ? 4 : 0;
+                    result[i].push(swimmer);
                 }
             }
         }
 
-        return swimmer;
+        for (let [i, swimmer] of result.entries()) {
+            let key = _relayOrder[i % 4] + 'Int';
+            swimmer.sort((a, b) => a[key] - b[key]);
+        }
+
+        return result;
     }
 
-    function addPatchData(rankings, patch) {
-        for (let patchRow of patch) {
-            let pkey = patchRow.pkey;
-            for (let [i, time] of patchRow.times.entries()) {
-                if (time) {
-                    let swimmer = findSwimmer(rankings, pkey, i);
-                    if (!swimmer) {
-                        swimmer = { pkey: pkey, name: patchRow.name, gender: rankings.length == 8 ? (patchRow.gender == 'M' ? -1 : 1) : 0 };
-                        i += swimmer.gender == -1 ? 4 : 0;
-                    }
-                    if (!swimmer.time) {
-                        rankings[i].push(swimmer);
-                    }
-                    swimmer.time = formatTime(time)
-                    swimmer.timeInt = time;
-                }
+    async function filterDataByMeetDate(swimmers, maxAge) {
+        let meetDate = getMeetDate();
+        let result = [];
+        for (let swimmer of swimmers) {
+            let range = await _birthdayDictionary.load(swimmer.pkey);
+            if (filterOutSwimmer(meetDate, maxAge, range)) {
+                continue;
             }
+            result.push(swimmer);
         }
-
-        for (let leg of rankings) {
-            leg.sort((a, b) => a.timeInt - b.timeInt);
-        }
-
-        return rankings;
-    }
-
-    function filterByExclusion(relays, exclude) {
-        if (!exclude) {
-            return relays;
-        }
-        let filtered = [];
-        for (let [i, leg] of relays.entries()) {
-            let ex = exclude[i];
-            let values = [];
-            filtered.push(values);
-            for (let swimmer of leg) {
-                if (!ex.has(swimmer.pkey)) {
-                    values.push(swimmer);
-                }
-            }
-        }
-        return filtered;
-    }
-
-    async function filterDataByMeetDate(relays, meetDate, maxAge) {
-        let filtered = [];
-        for (let leg of relays) {
-            let values = [];
-            filtered.push(values);
-            for (let swimmer of leg) {
-                let range = await _birthdayDictionary.load(swimmer.pkey);
-                if (await filterOutSwimmer(meetDate, maxAge, range)) {
-                    continue;
-                }
-                values.push(swimmer);
-            }
-        }
-        return filtered;
+        return result;
     }
 
     async function initDatepicker(table) {
@@ -5008,11 +4954,12 @@ const G = {};
         for (let [time, swimmers] of relays) {
             html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill"><tbody>');
             for (let [i, swimmer] of swimmers.entries()) {
-                html.push('<tr>', createSwimmerNameTd(swimmer), '<td>', swimmer.time, '</td>');
                 if (type == 'medley') {
-                    html.push('<td>', _relayOrder[i], '</td>');
+                    let stroke = _relayOrder[i];
+                    html.push('<tr>', createSwimmerNameTd(swimmer), '<td>', swimmer[stroke], '</td><td>', stroke, '</td></tr>');
+                } else {
+                    html.push('<tr>', createSwimmerNameTd(swimmer), '<td>', swimmer.FR, '</td></tr>');
                 }
-                html.push('</tr>');
             }
             html.push('</tbody></table>');
         }
@@ -5054,35 +5001,34 @@ const G = {};
             }
         }
 
-        let relay = [Infinity]; // [time, [pkey1, pkey2, pkey3, pkey4]]
-        dfsSearch(top4, picked, [], relay);
+        let relay = [Infinity]; // [timeInt, [swimmer1, swimmer2, swimmer3, swimmer4]]
+        dfsSearch(top4, picked, [], 0, 0, relay);
         return relay;
     }
 
-    function dfsSearch(tops, picked, relay, bestRelay) {
-        if (tops.length == relay.length) {
-            let genderFactor = relay.reduce((acc, swimmer) => acc + swimmer.gender, 0);
-            if (genderFactor != 0) {
+    function dfsSearch(tops, picked, relay, gender, timeInt, bestRelay) {
+        if (4 == relay.length) {
+            if (gender != 0) {
                 return;
             }
-            let time = relay.reduce((acc, swimmer) => acc + swimmer.timeInt, 0);
-            if (time < bestRelay[0]) {
-                bestRelay[0] = time;
+            if (timeInt < bestRelay[0]) {
+                bestRelay[0] = timeInt;
                 bestRelay[1] = [...relay];
             }
             return;
         }
 
-        let leg = tops[relay.length];
+        let strokeIndex = relay.length;
+        let strokeTimeKey = _relayOrder[strokeIndex] + 'Int';
+        let leg = tops[strokeIndex];
 
         for (let swimmer of leg) {
-            let pkey = swimmer.pkey;
-            if (!picked.has(pkey)) {
-                picked.add(pkey);
+            if (!picked.has(swimmer)) {
+                picked.add(swimmer);
                 relay.push(swimmer);
-                dfsSearch(tops, picked, relay, bestRelay);
+                dfsSearch(tops, picked, relay, gender + swimmer.gender, timeInt + swimmer[strokeTimeKey], bestRelay);
                 relay.pop();
-                picked.delete(pkey);
+                picked.delete(swimmer);
             }
         }
     }
