@@ -210,17 +210,17 @@ td {
 }
 
 .gn>td,
-.gn {
+.select-text.gn {
     background-color: color-mix(in srgb, var(--br-clr) 10%, var(--b0-clr));
 }
 
 .bl>td,
-.bl {
+.select-text.bl {
     background-color: color-mix(in srgb, var(--bk-clr) 10%, var(--b0-clr));
 }
 
 .rd>td,
-.rd {
+.select-text.rd {
     background-color: color-mix(in srgb, var(--fr-clr) 10%, var(--b0-clr));
 }
 
@@ -658,6 +658,12 @@ button:hover:not(.disabled),
     font-size: 16px;
 }
 
+#standard0 .dropdown,
+#standard1 .dropdown,
+#standard2 .dropdown {
+    overflow: visible;
+}
+
 /* row container and vertical center align items/ text */
 .center-row {
     display: flex;
@@ -761,7 +767,7 @@ button:hover:not(.disabled),
 
 .search-bar>button {
     margin-left: 10px;
-    width: 90px;
+    width: 80px;
 }
 
 .search-bar .drop {

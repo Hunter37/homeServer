@@ -712,7 +712,7 @@ const G = {};
             }
 
             // set the text
-            document.getElementById(this.id + '-text').innerText = text;
+            document.getElementById(this.id + '-text').innerHTML = text;
             this.dropdown.close();
             this.onchange(value);
         }
@@ -1102,29 +1102,34 @@ const G = {};
     // initial page
 
     class TopButton {
-        static params;
         static onClick(button) {
             if (['relay', 'rank'].includes(button)) {
-                go(button, TopButton.params);
+                let key = localStorage.getItem('last-rank-key');
+                if (key) {
+                    go(button, key);
+                }
             } else {
                 go(button);
             }
         }
-        static show(button, show, params) {
+        static show(button, param) {
             let id = button + '-button';
             let classList = document.getElementById(id).classList;
-            if (show) {
-                if (params) {
-                    if (typeof params != 'boolean') {
-                        TopButton.params = params;
-                    }
-                    classList.remove('disabled');
-                } else {
-                    classList.add('disabled');
+
+            if (['relay', 'rank'].includes(button)) {
+
+                if (typeof param == 'string') {
+                    localStorage.setItem('last-rank-key', param);
+                    param = true;
                 }
-                classList.remove('hide');
+
+                param = param && localStorage.getItem('last-rank-key');
+            }
+
+            if (param) {
+                classList.remove('disabled');
             } else {
-                classList.add('hide');
+                classList.add('disabled');
             }
         }
     }
@@ -1138,8 +1143,8 @@ const G = {};
             `<input type="text" id="input" onkeypress="event.key=='Enter'&&${getGlobalName(go)}('search',this.value)" autofocus/>`,
             `<button onclick="${getGlobalName(go)}('search',document.getElementById('input').value)" class="search">SEARCH</button>`,
             drop.render(),
-            `<button id="rank-button" onclick="${getGlobalName(TopButton)}.onClick('rank')" class="hide">RANK</button>`,
-            `<button id="relay-button" onclick="${getGlobalName(TopButton)}.onClick('relay')" class="hide">RELAY</button>`,
+            `<button id="rank-button" onclick="${getGlobalName(TopButton)}.onClick('rank')">RANK</button>`,
+            `<button id="relay-button" onclick="${getGlobalName(TopButton)}.onClick('relay')">RELAY</button>`,
             `<button id="favorite-button" onclick="${getGlobalName(TopButton)}.onClick('favorite')" class="sq-btn">${starSVG}</button>`,
             `<button id="config-button" onclick="${getGlobalName(TopButton)}.onClick('config')" class="sq-btn">${gearSVG}</button>`,
             '</div>',
@@ -1190,16 +1195,17 @@ const G = {};
         _backgroundActions.length = 0;
         showColor();
 
+        TopButton.show('favorite', true);
+        TopButton.show('config', true);
+        TopButton.show('relay', true);
+        TopButton.show('rank', true);
+
         let loadingHash = window.location.hash.substring(1);
         if (!loadingHash) {
             updateContent(createDefaultPage(), loadingHash);
             return;
         }
 
-        TopButton.show('relay', false);
-        TopButton.show('rank', false);
-        TopButton.show('favorite', true, true);
-        TopButton.show('config', true, true);
         document.getElementById('mloading').classList.remove('hide');
 
         let [action, value] = loadingHash.split('/');
@@ -1248,7 +1254,7 @@ const G = {};
     //🔧⚙🩷♥🩶❤🤍🏳🏴🔧🛠★⛓‍💥❌🔽🔼△▽
 
     async function favorite() {
-        TopButton.show('favorite', true, false);
+        TopButton.show('favorite', false);
 
         let loadingHash = 'favorite';
         let values = Favorite.get();
@@ -1337,8 +1343,9 @@ const G = {};
     // config page
 
     async function config(params) {
+        TopButton.show('config', false);
+
         let loadingHash = 'config' + (params ? '/' + params : '');
-        TopButton.show('config', true, false);
         let index = { about: 1, cache: 2, token: 2 }[params] || 0;
 
         let tabView = new TabView('configTabView');
@@ -1833,8 +1840,9 @@ const G = {};
         let swimmer = data.swimmer;
         let params = getRankDataKey(convetToGenderString(swimmer.gender), getAgeKey(swimmer.age),
             1, swimmer.zone, swimmer.lsc, swimmer.clubName);
-        TopButton.show('relay', true, params);
-        TopButton.show('rank', true, params);
+
+        TopButton.show('relay', params);
+        TopButton.show('rank', params);
 
         await showDetails(data, 'swimmer/' + pkey);
     }
@@ -2222,12 +2230,13 @@ const G = {};
         return _courseOrder.indexOf(course) * 100_000 + _strokeOrder.indexOf(stroke) * 10_000 + Number(dist);
     }
 
-    function createPopup(text, popupText) {
+    function createPopup(text, popupText, style) {
         if (!text) {
             return '';
         }
+        style = style ? ` style="${style}"` : '';
 
-        return ['<span class="bs">', text, '<div class="pop">', popupText, '</div></span>'].join('');
+        return ['<span class="bs">', text, `<div class="pop"${style}>`, popupText, '</div></span>'].join('');
     }
 
     function createBestTimeTableHeader(data, meetList, age) {
@@ -2236,7 +2245,7 @@ const G = {};
 
         let html = ['<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
             '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
-            createPopup('Event<br>Count', 'Total Event Count'), '</th><th class="rk" colspan="4">Rankings</th>'];
+            createPopup('Event<br>Count', 'Total Event Count', 'top:-5px'), '</th><th class="rk" colspan="4">Rankings</th>'];
 
         if (age < 19) {
             if (age > 9) {
@@ -2253,9 +2262,9 @@ const G = {};
             html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th>`);
         }
 
-        html.push('</tr><tr><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName), '</th><th class="rk full">',
-            createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc)), '</th><th class="rk full">',
-            createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
+        html.push('</tr><tr><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName, 'top:-15px'), '</th><th class="rk full">',
+            createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc), 'top:-15px'), '</th><th class="rk full">',
+            createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone', 'top:-15px'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
 
         if (age < 19) {
             if (age > 9) {
@@ -2270,13 +2279,17 @@ const G = {};
         }
 
         for (let meetInfo of meetList) {
-            let name = meetInfo[0].replace(/_/g, ' ');
-            let details = meetInfo[1].replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-            html.push('<th class="mc full">', createPopup(name, details), '</th>');
+            html.push('<th class="mc full">', createMeetNamePop(meetInfo[0], meetInfo[1], 'top:-20px'), '</th>');
         }
 
         html.push('</tr>');
         return html.join('');
+    }
+
+    function createMeetNamePop(name, details, style) {
+        name = name.replace(/_/g, ' ');
+        details = details.replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        return createPopup(name, details, style);
     }
 
     async function createBestTimeTablePage(data, fastRowList, rowInfo) {
@@ -2598,8 +2611,9 @@ const G = {};
         let swimmer = config.swimmerList[0].swimmer;
         let params = getRankDataKey(convetToGenderString(swimmer.gender), getAgeKey(swimmer.age),
             config.event, swimmer.zone, swimmer.lsc, swimmer.clubName);
-        TopButton.show('rank', true, params);
-        TopButton.show('relay', true, params);
+
+        TopButton.show('rank', params);
+        TopButton.show('relay', params);
     }
 
     async function wheelGraph(canvas, e) {
@@ -3666,8 +3680,8 @@ const G = {};
     // rank functions
 
     async function rank(key) {
-        TopButton.show('relay', true, key);
-        TopButton.show('rank', true);
+        TopButton.show('relay', key);
+        TopButton.show('rank', false);
 
         await ensureToken();
         let data;
@@ -3775,6 +3789,9 @@ const G = {};
                     obj.meetStart = meet[0];
                     obj.meetName = meet[1];
                 }
+            }
+            if (obj.time) {
+                obj.timeInt = timeToInt(obj.time);
             }
             result.push(obj);
         }
@@ -4247,11 +4264,12 @@ const G = {};
                 let ageKey = ageRangeToAgeKey(...decodeAgeKey(eventMapInfo.ageRange));
                 let cut = await getMeetCut(zone, lsc, name, age, genderStr, _eventList[event]);
                 if (cut) {
-                    options.push([
-                        `${name.replace('_', ' ')} (${ageKey}) = ${cut[0]}`,
-                        `${name}|${ageKey}`,
-                        cut[1]
-                    ]);
+                    let text = `${name.replace('_', ' ')} (${ageKey}) = ${cut[0]}`;
+                    if (custom) {
+                        text = createMeetNamePop(text, meet.details, 'top:-35px;left:-5px');
+                    }
+
+                    options.push([text, `${name}|${ageKey}`, cut[1]]);
                 }
             }
         }
@@ -4265,6 +4283,11 @@ const G = {};
 
             // load the standard from local storage
             let standard = localStorage.getItem('meetStds' + i) || '';
+            if (values.findIndex(v => v[1] == standard) < 0) {
+                let [meetName, ageRange] = standard.split('|');
+                standard = values.filter(v => v[1].split('|')[0] == meetName)[0]?.[1] || '';
+                localStorage.setItem('meetStds' + i, standard);
+            }
 
             let select = new Select('standard' + i, values, standard, async (value) => {
                 localStorage.setItem('meetStds' + i, value);
@@ -4495,8 +4518,8 @@ const G = {};
             window.location.replace('#relay/' + getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName));
         }
 
-        TopButton.show('relay', true);
-        TopButton.show('rank', true, key);
+        TopButton.show('relay', false);
+        TopButton.show('rank', key);
 
         await ensureToken();
         let data = await loadRelay(key);
