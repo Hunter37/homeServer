@@ -206,10 +206,10 @@ const G = {};
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
-                localStorage.setItem('use-local-cache', yes);
+                setLocalBoolValue('use-local-cache', yes);
             }
 
-            return (localStorage.getItem('use-local-cache') || 'true') == 'true';
+            return getLocalBoolValue('use-local-cache', true);
         }
 
         static set(key, value) {
@@ -923,10 +923,10 @@ const G = {};
 
     function useProxy(yes) {
         if (typeof yes === 'boolean') {
-            localStorage.setItem('use-proxy', yes);
+            setLocalBoolValue('use-proxy', yes);
         }
 
-        return (localStorage.getItem('use-proxy') || 'true') == 'true';
+        return getLocalBoolValue('use-proxy', true);
     }
 
     async function fetchSwimValues(bodyObj, type) {
@@ -1489,18 +1489,16 @@ const G = {};
 
     function show25(show) {
         if (show === undefined) {
-            return localStorage.getItem('show25') != '0';
+            return getLocalBoolValue('show25', true);
         }
-        localStorage.setItem('show25', show ? '1' : '0');
+        setLocalBoolValue('show25', show);
     }
 
     function useCustomSelect(use) {
         if (use === undefined) {
-            use = localStorage.getItem('custom-select');
-            return use ? use == '1' : !isNarrowWindow();
+            return getLocalBoolValue('custom-select', !isNarrowWindow());
         }
-
-        localStorage.setItem('custom-select', use ? '1' : '0');
+        setLocalBoolValue('custom-select', use);
 
         config();   // refresh config page
     }
@@ -1511,11 +1509,9 @@ const G = {};
 
     function useCustomDatePicker(show) {
         if (show === undefined) {
-            show = localStorage.getItem('custom-date-picker');
-            return show ? show == '1' : isOldBrowser();
+            return getLocalBoolValue('custom-date-picker', isOldBrowser());
         }
-
-        localStorage.setItem('custom-date-picker', show ? '1' : '0');
+        setLocalBoolValue('custom-date-picker', show);
     }
 
     function isOldBrowser() {
@@ -1524,33 +1520,25 @@ const G = {};
         return oldBrowser;
     }
 
+    function getLocalBoolValue(name, defaultValue) {
+        let value = localStorage.getItem(name);
+        return value === null ? defaultValue : value !== 'false';
+    }
+
+    function setLocalBoolValue(name, value) {
+        localStorage.setItem(name, value);
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // test page
 
     async function test(params) {
         let tabView = new TabView('configTabView');
-
-        tabView.addTab('<p>Advanced</p>', buildAdvancedConfig());
-        tabView.addTab('<p>About</p>', '--about--');
+        tabView.addTab('<p>About</p>', '<pre>set/xbday=10\nset/cache-ttl=86400\n\nset/use-proxy=true\nset/use-local-cache=true</pre>');
 
         updateContent(tabView.render(), 'test');
     }
     _navFuncMap.set('test', test);
-
-    function buildAdvancedConfig() {
-
-        let dropDown = new Dropdown('testid',
-            '<div style="background-color:blue;">hello</div>',
-            '<div style="background-color:red;">world</div>');
-
-        let select = new Select('my-select', [['', null], ['one', 1], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8], ['group1'], ['two', 2], ['four', 4], ['five', 5], ['group2'], ['eight', 8]], 4, (value) => {
-            console.log(value);
-        });
-
-        let x = new Expander('test-expanders', 'expand', 'fold', '<div>content</div>');
-
-        return '<div style="padding:100px;background-color:red">' + dropDown.render() + select.render() + x.render() + '</div>';
-    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // search functions
@@ -2250,11 +2238,11 @@ const G = {};
         if (age < 19) {
             if (age > 9) {
                 html.push(`<th colspan="${stdName.length}" class="smt full">`,
-                    createPopup(`Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
+                    createPopup(`Single Age Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
                     '</th>');
             }
             html.push(`<th colspan="${stdName.length}" class="mt full">`,
-                createPopup(`Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
+                createPopup(`Age Group Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
                 '</th>');
         }
 
@@ -2296,27 +2284,27 @@ const G = {};
         let swimmer = data.swimmer;
         let customSelect = useCustomSelect();
 
-        let html = ['<div class="content"><h2>Personal Best</h2>',
-            '<div class="center-row">',
-            '<style id="show-rk-style"></style>',
-            createCheckbox('show-rk', 'show rankings', true, `document.getElementById('show-rk-style').innerText = this.checked ? '' : '.rk{display:none}'`),
-            createHSpace(20)
+        function createShowCheckbox(name, label, cls, defaultValue) {
+            let hideText = `.${cls}{display:none}`;
+            let show = getLocalBoolValue(name, defaultValue);
+            let html = [`<style id="${name}-style">${show ? '' : hideText}</style>`,
+            createCheckbox(name, label, show, `${getGlobalName(setLocalBoolValue)}('${name}',this.checked);document.getElementById('${name}-style').innerText=this.checked?'':'${hideText}'`)];
+            return html.join('');
+        }
+
+        let html = ['<div class="content"><h2>Personal Best</h2><div class="center-row">',
+            createShowCheckbox('show-rk', 'show rankings', 'rk', true), createHSpace(20)
         ];
 
         if (swimmer.age < 19) {
             if (swimmer.age > 9) {
-                html.push('<style id="show-smt-style">.smt{display:none}</style>',
-                    createCheckbox('show-smt', 'single age times', false, `document.getElementById('show-smt-style').innerText = this.checked ? '' : '.smt{display:none}'`),
-                    createHSpace(20))
+                html.push(createShowCheckbox('show-smt', 'single age times', 'smt', false), createHSpace(20))
             }
 
-            html.push('<style id="show-mt-style"></style>',
-                createCheckbox('show-mt', 'motivation times', true, `document.getElementById('show-mt-style').innerText = this.checked ? '' : '.mt{display:none}'`),
-                createHSpace(20))
+            html.push(createShowCheckbox('show-mt', 'motivation times', 'mt', true), createHSpace(20));
         }
 
-        html.push('<style id="show-mc-style"></style>',
-            createCheckbox('show-mc', 'meet cuts', true, `document.getElementById('show-mc-style').innerText = this.checked ? '' : '.mc{display:none}'`));
+        html.push(createShowCheckbox('show-mc', 'meet cuts', 'mc', true));
 
         if (swimmer.age < 19) {
             let ageOpts = [];
