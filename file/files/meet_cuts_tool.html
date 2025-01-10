@@ -320,21 +320,21 @@
 
     return meets;
   }
-  const _eventList = ['0 _ _',
-    '50 FR SCY', '100 FR SCY', '200 FR SCY', '500 FR SCY', '1000 FR SCY', '1650 FR SCY', '_ _ _', '_ _ _', '_ _ _', '_ _ _',
-    '50 BK SCY', '100 BK SCY', '200 BK SCY', '50 BR SCY', '100 BR SCY', '200 BR SCY', '50 FL SCY', '100 FL SCY', '200 FL SCY', '100 IM SCY',
-    '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '200 MED-R SCY', '400 MED-R SCY', '50 FR SCM', '100 FR SCM', '200 FR SCM',
-    '400 FR SCM', '800 FR SCM', '1500 FR SCM', '34 _ _', '35 _ _', '36 _ _', '37 _ _', '50 BK SCM', '100 BK SCM', '200 BK SCM',
-    '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM', '200 FR-R SCM',
-    '400 FR-R SCM', '800 FR-R SCM', '200 MED-R SCM', '400 MED-R SCM', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM', '1500 FR LCM',
-    '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM', '200 BR LCM',
-    '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM', '400 MED-R LCM', '25 FR SCY',
-    '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM', '89 _ _', '90 _ _', '91 _ _'];
+  const _eventList = [
+    '0 _ _', '50 FR SCY', '100 FR SCY', '200 FR SCY', '500 FR SCY', '1000 FR SCY', '1650 FR SCY', '7 _ _', '8 _ _', '9 _ _',
+    '10 _ _', '50 BK SCY', '100 BK SCY', '200 BK SCY', '50 BR SCY', '100 BR SCY', '200 BR SCY', '50 FL SCY', '100 FL SCY', '200 FL SCY',
+    '100 IM SCY', '200 IM SCY', '400 IM SCY', '200 FR-R SCY', '400 FR-R SCY', '800 FR-R SCY', '200 MED-R SCY', '400 MED-R SCY', '50 FR SCM', '100 FR SCM',
+    '200 FR SCM', '400 FR SCM', '800 FR SCM', '1500 FR SCM', '34 _ _', '35 _ _', '36 _ _', '37 _ _', '50 BK SCM', '100 BK SCM',
+    '200 BK SCM', '50 BR SCM', '100 BR SCM', '200 BR SCM', '50 FL SCM', '100 FL SCM', '200 FL SCM', '100 IM SCM', '200 IM SCM', '400 IM SCM',
+    '200 FR-R SCM', '400 FR-R SCM', '800 FR-R SCM', '200 MED-R SCM', '400 MED-R SCM', '50 FR LCM', '100 FR LCM', '200 FR LCM', '400 FR LCM', '800 FR LCM',
+    '1500 FR LCM', '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM',
+    '200 BR LCM', '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM',
+    '400 MED-R LCM', '25 FR SCY', '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM']; // length = 89
   const _eventIndexMap = new Map();
   _eventList.forEach((item, index) => {
     _eventIndexMap.set(item, index);
   });
-  const _courseOrder = ['SCY', 'SCM', 'LCM'];
+  const _courseOrder = ['SCY', 'LCM', 'SCM'];
   function timeToInt(stime) {
     let result = 0;
     if (stime) {
@@ -358,6 +358,33 @@
   function isRunningLocally() {
     return location.protocol === 'file:';
   }
+</script>
+
+<script>
+  /////////////////////////////////////////////////////////////////
+  // print event sort key
+  (function printEventSortKey() {
+    const _strokeOrder = ['FR', 'BK', 'BR', 'FL', 'IM'];
+    const _courseOrder = ['SCY', 'LCM', 'SCM'];
+
+    function getEventSortKey(eventStr) {
+
+      let [dist, stroke, course] = eventStr.split(' ');
+      let strokeIndex = _strokeOrder.indexOf(stroke);
+      return _courseOrder.indexOf(course) * 100_000 + (strokeIndex < 0 ? 1000 : strokeIndex) * 10_000 + Number(dist);
+    }
+
+    let arr = _eventList
+      .map((eventStr, index) => [getEventSortKey(eventStr), eventStr, index])
+      .sort((a, b) => a[0] - b[0])
+      .map((row, index) => [...row, index > 60 ? 0 : index + 1])
+      .sort((a, b) => a[2] - b[2]);
+    // console.log(arr);
+
+    console.log('[' + arr.map(row => row[3]).join(', ') + ']');
+
+    console.log('[' + arr.filter(a => a[3]).sort((a, b) => a[3] - b[3]).map(a => a[2]).join(', ') + ']');
+  })();
 </script>
 
 </html>

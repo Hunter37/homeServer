@@ -1,6 +1,6 @@
 (() => {
 G.fileData = `
-meet Futures [2025 Futures Championships](https://www.usaswimming.org/times/time-standards) (7/23/2025)
+meet Futures [2025 Futures Championships](https://www.usaswimming.org/times/time-standards)(7/23-7/26)<br>Sacramento,CA; Ocala,FL; Greensboro,NC; Madison,WI; Justin,TX
 
 table Futures:SCY F:19-99 F:13-18 EVENT M:13-18 M:19-99
 
@@ -36,43 +36,7 @@ table Futures:LCM F:19-99 F:13-18 EVENT M:13-18 M:19-99
 2:20.99 2:26.19 200IM 2:12.79 2:08.19
 4:57.29 5:07.29 400IM 4:42.39 4:33.09
 
-meet Winter 2024 Speedo Winter Junior Championships (12/11/2024)
-
-table Winter:SCY:13-18 F EVENT M
-
-23.29 50FR 20.59
-50.39 100FR 44.99
-1:49.09 200FR 1:38.59
-4:53.59 500FR 4:29.29
-10:11.49 1000FR 9:24.29
-17:02.19 1650FR 15:40.39
-55.09 100BK 49.29
-1:59.39 200BK 1:47.99
-1:03.09 100BR 55.69
-2:17.19 200BR 2:01.89
-54.69 100FL 48.79
-2:01.69 200FL 1:49.29
-2:02.19 200IM 1:49.79
-4:21.69 400IM 3:56.99
-
-table Winter:LCM:13-18 F EVENT M
-
-26.89 50FR 24.09
-58.19 100FR 52.59
-2:04.99 200FR 1:55.29
-4:26.69 400FR 4:05.29
-9:06.79 800FR 8:28.19
-17:26.79 1500FR 16:14.79
-1:04.79 100BK 58.79
-2:19.59 200BK 2:08.29
-1:13.79 100BR 1:05.99
-2:38.59 200BR 2:24.39
-1:02.69 100FL 56.59
-2:18.39 200FL 2:06.39
-2:22.09 200IM 2:09.49
-5:00.29 400IM 4:35.89
-
-meet Junior [2025 Speedo Junior National Championships](https://www.usaswimming.org/times/time-standards) (7/30/2025)
+meet Junior [2025 Speedo Junior National Championships](https://www.usaswimming.org/times/time-standards) (7/30-8/3 Irvine,CA)
 
 table Junior:SCY:13-18 F EVENT M
 
@@ -108,7 +72,7 @@ table Junior:LCM:13-18 F EVENT M
 2:21.29 200IM 2:07.99
 5:00.29 400IM 4:33.09
 
-meet TYR_Pro [2025 TYR Pro Championships](https://www.usaswimming.org/times/time-standards) (8/5/2025)
+meet TYR_Pro [2025 TYR Pro Championships](https://www.usaswimming.org/times/time-standards) (8/5-8/8 Irvine,CA)
 
 table TYR_Pro:SCY:13-99 F EVENT M
 
@@ -144,7 +108,7 @@ table TYR_Pro:LCM:13-99 F EVENT M
 2:17.99 200IM 2:04.19
 4:54.69 400IM 4:26.89
 
-meet National [2025 USA Swimming National Championships](https://www.usaswimming.org/times/time-standards) (6/3/2025)
+meet National [2025 USA Swimming National Championships](https://www.usaswimming.org/times/time-standards) (6/3-6/7)
 
 table National:SCY F:19-99 F:13-18 EVENT M:13-18 M:19-99
 
@@ -180,7 +144,7 @@ table National:LCM F:19-99 F:13-18 EVENT M:13-18 M:19-99
 2:16.89 2:18.19 200IM 2:04.29 2:02.89
 4:51.79 4:51.79 400IM 4:25.19 4:24.69
 
-meet Pro_Ser [2025 TYR Pro Swim Series](https://www.usaswimming.org/times/time-standards)
+meet Pro_Ser [2025 TYR Pro Swim Series](https://www.usaswimming.org/times/time-standards)<br>(Westmont,IL 3/5-3/8)<br>(Sacramento,CA 4/2-4/5)<br>(Ft.Lauderdale,FL 4/30-5/3)
 
 table Pro_Ser:13-99 F:SCY F:LCM EVENT M:LCM M:SCY
 
