@@ -4411,7 +4411,7 @@ const G = {};
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
 
         let [dist, stroke, course] = _eventList[event].split(' ');
-        let eventDelta = _eventIndexMap(dist + ' FR ' + course);
+        let eventDelta = _eventIndexMap.get(dist + ' FR ' + course);
 
         let events = [10, 13, 16, 0].map(evt => evt + (parseInt(eventDelta) || 1));
         let promises = [];
@@ -4822,9 +4822,9 @@ const G = {};
         let [dist, stroke, course] = _eventList[event].split(' ');
         dist = getRelayDistance(event);
         let selections = [
-            [50, _eventIndexMap('50 FR ' + course)],
-            [100, _eventIndexMap('100 FR ' + course)],
-            [200, _eventIndexMap('200 FR ' + course)]];
+            [50, _eventIndexMap.get('50 FR ' + course)],
+            [100, _eventIndexMap.get('100 FR ' + course)],
+            [200, _eventIndexMap.get('200 FR ' + course)]];
         let values = [];
         let selected;
         for (let [dis, evt] of selections) {
