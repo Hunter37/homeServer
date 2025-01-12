@@ -82,8 +82,8 @@ const G = {};
     const _sessionOrder = [0, 2, 3, 6, 5, 4, 1, 7];
     const _sessionNames = ['', 'Prelim', 'SwimOff', 'Final', 'SemiFinal', 'QuarterFinal', 'TimedFinal', 'Time Trial'];   // 0 == 'Unknown',
 
-    const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"/></svg>';
-    const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"/><circle cx="9" cy="9" r="3"/></svg>';
+    const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"></svg>';
+    const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"><circle cx="9" cy="9" r="3"></svg>';
     // const starSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
     // const gearSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
 
@@ -1360,11 +1360,18 @@ const G = {};
     // initial page
 
     class TopButton {
+        static key;
         static onClick(button) {
+            let id = button + '-button';
+            let classList = document.getElementById(id).classList;
+            if (classList.contains('disabled')) {
+                return;
+            }
+
             if (['relay', 'rank'].includes(button)) {
-                let key = localStorage.getItem('last-rank-key');
-                if (key) {
-                    go(button, key);
+                TopButton.key = TopButton.key || localStorage.getItem('last-rank-key');
+                if (TopButton.key) {
+                    go(button, TopButton.key);
                 }
             } else {
                 go(button);
@@ -1375,8 +1382,8 @@ const G = {};
             let classList = document.getElementById(id).classList;
 
             if (['relay', 'rank'].includes(button)) {
-
                 if (typeof param == 'string') {
+                    TopButton.key = param;
                     localStorage.setItem('last-rank-key', param);
                     param = true;
                 }
@@ -1398,7 +1405,7 @@ const G = {};
             `<button onclick="${getGlobalName(go)}('search',document.getElementById('input').value+'~19O');${getGlobalName(Dropdown)}.get('main-search').close();" style="width:100%">SEARCH 19&OVER</button>`);
 
         let html = ['<div class="center-row search-bar">',
-            `<input type="text" id="input" onkeypress="event.key=='Enter'&&${getGlobalName(go)}('search',this.value)" autofocus/>`,
+            `<input type="text" id="input" onkeypress="event.key=='Enter'&&${getGlobalName(go)}('search',this.value)" autofocus>`,
             `<button onclick="${getGlobalName(go)}('search',document.getElementById('input').value)" class="search">SEARCH</button>`,
             drop.render(),
             `<button id="rank-button" onclick="${getGlobalName(TopButton)}.onClick('rank')">RANK</button>`,
@@ -1470,7 +1477,7 @@ const G = {};
             } catch (e) {
                 let message = e.stack;
                 if (e.name == 'TimeoutError') {
-                    message = 'Please refresh the page.<br/><br/>' + message;
+                    message = 'Please refresh the page.<br><br>' + message;
                 }
                 updateContent(message, loadingHash);
             }
@@ -1518,21 +1525,41 @@ const G = {};
             html.push('<p>No favorites yet. Go to the swimmer page and tap <span style="display:inline-block;fill:#CCC;width:24px;transform:translateY(7px)">',
                 starSVG, '</span> next to a swimmer\'s name to add.</p>');
         } else {
-            html.push('<table class="fill top-margin"><tbody><tr><th></th>');
-            for (let e of ['Name', 'Age', 'Club', 'LSC']) {
-                html.push(`<th class="clickable" onclick="${getGlobalName(Favorite)}.sort('${e}');${getGlobalName(favorite)}()">${e}</th>`);
-            }
-            html.push('</tr>');
-            for (let [pkey, obj] of values.entries()) {
-                html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
-                    '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
-            }
-            html.push('</tbody></table>');
+            html.push('<div class="fav-content">',
+                `<input id="fav-filter" type="text" placeholder="search in favorites" oninput="${getGlobalName(filterFavorite)}(this.value)">`,
+                '<div id="fav-table">', createFavoriteTable(values), '</div></div>');
         }
 
         updateContent(html.join(''), loadingHash);
     }
     _navFuncMap.set('favorite', favorite);
+
+    function createFavoriteTable(values) {
+        let html = ['<table class="fill top-margin"><tbody><tr><th></th>'];
+        for (let e of ['Name', 'Age', 'Club', 'LSC']) {
+            html.push(`<th class="clickable" onclick="${getGlobalName(Favorite)}.sort('${e}');${getGlobalName(filterFavorite)}()">${e}</th>`);
+        }
+        html.push('</tr>');
+        for (let [pkey, obj] of values) {
+            html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
+                '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
+        }
+        html.push('</tbody></table>');
+
+        return html.join('');
+    }
+
+    function filterFavorite(filter) {
+        filter = filter || document.getElementById('fav-filter').value;
+
+        let values = Favorite.get();
+
+        if (filter && (filter = filter.trim())) {
+            values = new Map([...values].filter(([pkey, obj]) => obj.name.toLowerCase().includes(filter.toLowerCase())));
+        }
+
+        document.getElementById('fav-table').innerHTML = createFavoriteTable(values);
+    }
 
     class Favorite {
         static createButton(pkey, name, age, clubName, lsc) {
@@ -1635,10 +1662,10 @@ const G = {};
             createCheckbox('use-local-cache-checkbox', 'Local Cache', LocalCache.enable(), `${getGlobalName(LocalCache)}.enable(this.checked)`),
             '</div><div class="top-margin">',
             createCheckbox('use-proxy-checkbox',
-                `Proxy <input onchange="localStorage.setItem('proxy-server',this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}"/>`,
+                `Proxy <input oninput="localStorage.setItem('proxy-server',this.value)" value="${localStorage.getItem('proxy-server') || window.location.origin}">`,
                 useProxy(), `${getGlobalName(useProxy)}(this.checked)`),
             '</div>',
-            `<div class="center-row"><input id="cache-key" /><button onclick="${getGlobalName(clearCache)}()">Clear App Cache</button><button onclick="${getGlobalName(clearCache)}(this)">Show Cache</button></div><div id="cache-info"></div>`
+            `<div class="center-row"><input id="cache-key"><button onclick="${getGlobalName(clearCache)}()">Clear App Cache</button><button onclick="${getGlobalName(clearCache)}(this)">Show Cache</button></div><div id="cache-info"></div>`
         ].join('');
     }
 
@@ -1709,13 +1736,13 @@ const G = {};
         let courseSelect = new Select('course-order', [
             ['SCY LCM SCM', 'SCY LCM SCM'],
             ['LCM SCY SCM', 'LCM SCY SCM'],
-            ['SCM LCM SCY', 'SCM LCM SCY'],
             ['SCY SCM LCM', 'SCY SCM LCM'],
+            ['SCM SCY LCM', 'SCM SCY LCM'],
             ['LCM SCM SCY', 'LCM SCM SCY'],
-            ['SCM SCY LCM', 'SCM SCY LCM']], courseOrder(), courseOrder);
+            ['SCM LCM SCY', 'SCM LCM SCY']], courseOrder(), courseOrder);
 
         html.push(createVSpace(30),
-            '<div class="center-row">',
+            '<div class="center-row">Course Order: &nbsp;',
             courseSelect.render(useCustomSelect()),
             '<span style="padding:0 20px;">(Select the display course order)</span></div>');
 
@@ -2074,7 +2101,8 @@ const G = {};
 
     async function postLoadDetails(data) {
         data.events = (await convertObject(data.events))
-            .sort((a, b) => a.date == b.date ? _sessionOrder[a.session] - _sessionOrder[b.session] : a.date < b.date ? -1 : 1);
+            .sort((a, b) => a.date != b.date ? (a.data < b.data ? -1 : 1) :
+                a.meet != b.meet ? a.meet - b.meet : _sessionOrder[a.session] - _sessionOrder[b.session]);
 
         let swimmer = data.swimmer;
         swimmer.birthday = _birthdayDictionary.calculate(swimmer.pkey, data.events, swimmer.age);
@@ -2733,7 +2761,7 @@ const G = {};
                 for (let dist of distList) {
                     let evt = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
                     let action = `${getGlobalName(showGraph)}(null,{event:${evt}})`;
-                    html.push('<td class="full">', createClickableDiv(dist, action), '</td>');
+                    html.push(`<td class="full d${dist} ${stroke}">`, createClickableDiv(dist, action), '</td>');
                 }
             }
             html.push('</tr>');
@@ -2741,9 +2769,9 @@ const G = {};
             let leading = `<td class="age" rowspan="${ageMap.rowCount}">${course}</td>`;
             for (let [age, meetMap] of ageMap) {
                 leading += `<td class="age" rowspan="${meetMap.size}">${age}</td>`;
-                for (let [meet, eventList] of meetMap) {
-                    let firstRow = eventList[0];
-                    let meetInfo = firstRow.meetInfo;
+                for (let [meet, eventMap] of meetMap) {
+                    let oneEvent = eventMap.oneEvent;
+                    let meetInfo = oneEvent.meetInfo;
                     html.push('<tr>', leading, `<td>${formatDate(meetInfo.date)}</td>`);
 
                     for (let [stroke, distList] of ageMap.strokeMap) {
@@ -2752,7 +2780,7 @@ const G = {};
                             html.push(`<td class="d${dist} ${stroke} tc">`);
 
                             let event = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
-                            let splashList = eventList.eventMap.get(event);
+                            let splashList = eventMap.get(event);
                             if (splashList) {
                                 let row = splashList.reduce((acc, row) => row.timeInt < acc.timeInt ? row : splashList[0]);
 
@@ -2774,7 +2802,7 @@ const G = {};
                         }
                     }
 
-                    html.push(`<td class="left">${meetInfo.name}</td><td class="left">${firstRow.clubName}</td></tr>`);
+                    html.push(`<td class="left" data-meet="${oneEvent.meet}">${meetInfo.name}</td><td class="left">${oneEvent.clubName}</td></tr>`);
                     leading = '';
                 }
             }
@@ -2799,10 +2827,8 @@ const G = {};
             // build meets map for table rows
             let ageMap = meetsMap.get(course) || meetsMap.set(course, new Map()).get(course);
             let meetMap = ageMap.get(age) || ageMap.set(age, new Map()).get(age);
-            let eventList = meetMap.get(meet) || meetMap.set(meet, []).get(meet);
-            eventList.push(row);
-
-            let eventMap = eventList.eventMap = eventList.eventMap || new Map();
+            let eventMap = meetMap.get(meet) || meetMap.set(meet, new Map()).get(meet);
+            eventMap.oneEvent = row;
             let splashList = eventMap.get(event) || eventMap.set(event, []).get(event);
             splashList.push(row);
 

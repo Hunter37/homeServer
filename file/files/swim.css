@@ -868,6 +868,15 @@ button:hover:not(.disabled),
     text-decoration: underline;
 }
 
+.fav-content {
+    min-width: 400px;
+}
+
+#fav-filter {
+    float: right;
+    margin-bottom: 12px;
+}
+
 /* event colors */
 
 .FR.d25::after {
