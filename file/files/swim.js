@@ -11,16 +11,17 @@ const G = {};
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // shared const
 
-    const _courseOrder = ['SCY', 'LCM', 'SCM'];
-    const _strokeOrder = ['FR', 'BK', 'BR', 'FL', 'IM'];
+    let _courseOrder;
+    let _courseIndexMap;
+    courseOrder();
     const _relayOrder = ['BK', 'BR', 'FL', 'FR'];
-    const _storkeMap = {
-        'FR': 'Free',
-        'BK': 'Back',
-        'BR': 'Breast',
-        'FL': 'Fly',
-        'IM': 'IM'
-    };
+    const _storkeMap = new Map([
+        ['FR', 'Free'],
+        ['BK', 'Back'],
+        ['BR', 'Breast'],
+        ['FL', 'Fly'],
+        ['IM', 'IM']]);
+    const _strokeIndexMap = new Map(_storkeMap.keys().map((item, index) => [item, index]));
     const _meetShortNames = {
         "Futures (LCM)": "FU",
         "Winter Juniors (SCY)": "WJ",
@@ -51,7 +52,6 @@ const G = {};
         '1500 FR LCM', '61 _ _', '62 _ _', '63 _ _', '64 _ _', '50 BK LCM', '100 BK LCM', '200 BK LCM', '50 BR LCM', '100 BR LCM',
         '200 BR LCM', '50 FL LCM', '100 FL LCM', '200 FL LCM', '200 IM LCM', '400 IM LCM', '200 FR-R LCM', '400 FR-R LCM', '800 FR-R LCM', '200 MED-R LCM',
         '400 MED-R LCM', '25 FR SCY', '25 BK SCY', '25 BR SCY', '25 FL SCY', '25 FR SCM', '25 BK SCM', '25 BR SCM', '25 FL SCM']; // length = 89
-    const _eventSortKey = [0, 2, 3, 4, 5, 6, 7, 0, 0, 0, 0, 9, 10, 11, 13, 14, 15, 17, 18, 19, 20, 21, 22, 0, 0, 0, 0, 0, 41, 42, 43, 44, 45, 46, 0, 0, 0, 0, 48, 49, 50, 52, 53, 54, 56, 57, 58, 59, 60, 61, 0, 0, 0, 0, 0, 23, 24, 25, 26, 27, 28, 0, 0, 0, 0, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 0, 0, 0, 0, 0, 1, 8, 12, 16, 40, 47, 51, 55];
     const _eventOrderMap = new Map([
         ['SCY', [81, 1, 2, 3, 4, 5, 6, 82, 11, 12, 13, 83, 14, 15, 16, 84, 17, 18, 19, 20, 21, 22]],
         ['SCM', [85, 28, 29, 30, 31, 32, 33, 86, 38, 39, 40, 87, 41, 42, 43, 88, 44, 45, 46, 47, 48, 49]],
@@ -1436,17 +1436,30 @@ const G = {};
     }
 
     function buildConfigPage() {
-        let html = ['<div style="padding:30px 10px;max-width:800px">'];
+        let html = [
+            '<div style="padding:30px 10px;max-width:800px">',
+            createVSpace(30),
+            '<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), `${getGlobalName(show25)}(this.checked)`),
+            '<span style="padding:0 20px;">(Display 25-yard/meter events for swimmers aged 9 and over)</span></div>',
+            createVSpace(30),
+            '<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), `${getGlobalName(useCustomSelect)}(this.checked)`),
+            '<span style="padding:0 20px;">(Improve select control compatibility on certain browsers)</span></div>',
+            createVSpace(30),
+            '<div class="center-row">', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), `${getGlobalName(useCustomDatePicker)}(this.checked)`),
+            '<span style="padding:0 20px;">(Improve date-picker control compatibility on certain browsers)</span></div>'];
 
-        html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('show-25', 'Show 25-Yard Events', show25(), `${getGlobalName(show25)}(this.checked)`));
-        html.push('<span style="padding:0 20px;">(Display 25-yard/meter events for swimmers aged 9 and over)</span></div>');
-        html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('custom-select', 'Use Custom Select Control', useCustomSelect(), `${getGlobalName(useCustomSelect)}(this.checked)`));
-        html.push('<span style="padding:0 20px;">(Improve select control compatibility on certain browsers)</span></div>');
-        html.push(createVSpace(30));
-        html.push('<div class="center-row">', createCheckbox('custom-date-picker', 'Use Custom Date Picker', useCustomDatePicker(), `${getGlobalName(useCustomDatePicker)}(this.checked)`));
-        html.push('<span style="padding:0 20px;">(Improve date-picker control compatibility on certain browsers)</span></div>');
+        let courseSelect = new Select('course-order', [
+            ['SCY LCM SCM', 'SCY LCM SCM'],
+            ['LCM SCY SCM', 'LCM SCY SCM'],
+            ['SCM LCM SCY', 'SCM LCM SCY'],
+            ['SCY SCM LCM', 'SCY SCM LCM'],
+            ['LCM SCM SCY', 'LCM SCM SCY'],
+            ['SCM SCY LCM', 'SCM SCY LCM']], courseOrder(), courseOrder);
+
+        html.push(createVSpace(30),
+            '<div class="center-row">',
+            courseSelect.render(useCustomSelect()),
+            '<span style="padding:0 20px;">(Select the display course order)</span></div>');
 
         let colorSelect = new Select('theme-color', [
             ['Stroke Colors', 'light-mode,default-color'],
@@ -1458,14 +1471,28 @@ const G = {};
             ['Dark Mode', 'dark-mode'],
         ], showColor(), showColor);
 
-        html.push(createVSpace(30));
-        html.push('<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()));
-        html.push(
-            '<table style="margin:0 30px" class="example"><tr><td class="d50 FR">Free</td><td class="d50 BK">Back</td><td class="d50 BR">Breast</td><td class="d50 FL">Fly</td><td class="d100 IM">IM</td></tr></table>',
+        html.push(createVSpace(30),
+            '<div class="center-row">Color Themes: &nbsp;', colorSelect.render(useCustomSelect()),
+            '<table style="margin:0 30px" class="example"><tr><td class="d50 FR">Free</td><td class="d50 BK">Back</td><td class="d50 BR">Breast</td>',
+            '<td class="d50 FL">Fly</td><td class="d100 IM">IM</td></tr></table></div>',
             '</div>');
 
-        html.push('</div>');
         return html.join('');
+    }
+
+    function courseOrder(order) {
+        if (!order) {
+            let val = localStorage.getItem('course-order') || 'SCY LCM SCM';
+            if (!_courseOrder) {
+                _courseOrder = val.split(' ');
+                _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
+            }
+            return val;
+        }
+
+        localStorage.setItem('course-order', order);
+        _courseOrder = order.split(' ');
+        _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
     }
 
     function showColor(color) {
@@ -1830,7 +1857,10 @@ const G = {};
         TopButton.show('relay', params);
         TopButton.show('rank', params);
 
+        let t0 = performance.now();
         await showDetails(data, 'swimmer/' + pkey);
+        let t1 = performance.now();
+        console.log('Swimmer details render time:', t1 - t0, 'ms');
     }
     _navFuncMap.set('swimmer', swimmer);
 
@@ -2029,8 +2059,8 @@ const G = {};
 
         let hide25 = data.swimmer.age > 8 && !show25();
         if (hide25) {
-            //data.events = data.events.filter(e => !_eventList[e[idx.event]].startsWith('25'));
-            data.events = data.events.filter(e => e.event < 81);
+            let scy25free = 81; //_eventIndexMap.get('25 FR SCY');
+            data.events = data.events.filter(e => e.event < scy25free);
         }
 
         let html = [];
@@ -2043,40 +2073,87 @@ const G = {};
             return;
         }
 
-        let fastRowList = getFastRowByEvent(data.events);
-
-        // build the row info for first two tables
-        let rowInfo = new Array(fastRowList.length);
-        let courseCounter = 0;
-        let strokeCounter = 0;
-        for (let i = fastRowList.length - 1; i >= 0; --i) {
-            let info = [];
-            rowInfo[i] = info;
-            ++courseCounter;
-            ++strokeCounter;
-
-            let [d, s, c] = i == 0 ? ['', '', ''] : fastRowList[i - 1].eventStr.split(' ');
-            let [_, stroke, course] = fastRowList[i].eventStr.split(' ');
-
-            if (course != c) {
-                info.push(strokeCounter, courseCounter);
-                courseCounter = strokeCounter = 0;
-            } else if (stroke != s) {
-                info.push(strokeCounter);
-                strokeCounter = 0;
-            }
-        }
+        // create deep map for course -> stroke -> distance -> [ events ]
+        let [courseMap, ageList] = createTableData(data);
 
         let tabView = new TabView('swimmerTabView');
-        tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data, fastRowList, rowInfo));
-        tabView.addTab('<p>Age Best</p>', await createAgeBestTimeTable(data, fastRowList, rowInfo));
-        tabView.addTab('<p>Meets</p>', createMeetTable(data));
-        tabView.addTab(createClickableDiv('Progress Graph', `${getGlobalName(showGraph)}(null,{pkey:${data.swimmer.pkey}})`), createProgressGraph(data.swimmer.pkey, hide25));
+        tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data.swimmer, courseMap));
+        tabView.addTab('<p>Age Best</p>', createAgeBestTimeTable(courseMap, ageList));
+        tabView.addTab('<p>Meets</p>', createMeetTable(data, courseMap));
+        tabView.addTab(createClickableDiv('Progress Graph', `${getGlobalName(showGraph)}()`), createProgressGraph(data.swimmer.pkey, hide25));
         html.push(tabView.render());
 
         updateContent(html.join(''), loadingHash);
 
         initGraphConfig(data);
+    }
+
+    Map.prototype.sort = function (compare) {
+        let sorted = new Map([...this].sort(compare));
+        for (let key of Object.keys(this)) {
+            sorted[key] = this[key];
+        }
+        return sorted;
+    };
+
+    Map.prototype.reverse = function () {
+        let reversed = new Map([...this].reverse());
+        for (let key of Object.keys(this)) {
+            reversed[key] = this[key];
+        }
+        return reversed;
+    };
+
+    function createTableData(data) {
+        let ageSet = new Set();
+        let courseMap = new Map();
+
+        for (let row of data.events) {
+            let age = row.age;
+            let [dist, stroke, course] = row.eventStr.split(' ');
+            dist = Number(dist);
+
+            // build ageSet
+            ageSet.add(age);
+
+            // build courseMap
+            let strokeMap = courseMap.get(course) || courseMap.set(course, new Map()).get(course);
+            let distMap = strokeMap.get(stroke) || strokeMap.set(stroke, new Map()).get(stroke);
+            let eventList = distMap.get(dist) || distMap.set(dist, []).get(dist);
+            eventList.push(row);
+
+            // buld best of each event
+            if (!eventList.best || row.timeInt < eventList.best.timeInt) {
+                eventList.best = row;
+            }
+
+            // build age best for each event
+            let ageBestMap = eventList.ageBestMap = eventList.ageBestMap || new Map();
+            let ageBest = ageBestMap.get(age);
+            if (!ageBest || row.timeInt < ageBest.timeInt) {
+                ageBestMap.set(age, row);
+            }
+        }
+
+        // sort the map by course, storkes and distances
+        courseMap = courseMap.sort((a, b) => _courseIndexMap.get(a[0]) - _courseIndexMap.get(b[0]));
+        for (let [course, strokeMap] of courseMap) {
+            strokeMap = strokeMap.sort((a, b) => _strokeIndexMap.get(a[0]) - _strokeIndexMap.get(b[0]));
+            courseMap.set(course, strokeMap);
+
+            strokeMap.rowCount = 0;
+
+            for (let [stroke, distMap] of strokeMap) {
+                distMap = distMap.sort((a, b) => a[0] - b[0]);
+                strokeMap.set(stroke, distMap);
+
+                strokeMap.rowCount += distMap.size;
+            }
+        }
+
+        let ageList = [...ageSet].sort((a, b) => a - b);
+
+        return [courseMap, ageList];
     }
 
     function initGraphConfig(data) {
@@ -2184,20 +2261,6 @@ const G = {};
         return html.join('');
     }
 
-    function getFastRowByEvent(events) {
-        // find the fast time for each event
-        let fastRowMap = new Map();
-        for (let row of events) {
-            let eventKey = row.event;
-            let fastRow = fastRowMap.get(eventKey);
-            if (!fastRow || row.timeInt <= fastRow.timeInt) {
-                fastRowMap.set(eventKey, row);
-            }
-        }
-
-        return [...fastRowMap.values()].sort((a, b) => _eventSortKey[a.event] - _eventSortKey[b.event]);
-    }
-
     function createPopup(text, popupText, style, additional) {
         if (!text) {
             return '';
@@ -2207,62 +2270,7 @@ const G = {};
         return [`<span class="bs"${additional}>`, text, `<div class="pop"${style}>`, popupText, '</div></span>'].join('');
     }
 
-    function createBestTimeTableHeader(data, meetList, age) {
-        let ageKey = getAgeKey(age);
-        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-
-        let html = ['<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
-            '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
-            createPopup('Event<br>Count', 'Total Event Count', 'top:-5px'), '</th><th class="rk" colspan="4">Rankings</th>'];
-
-        if (age < 19) {
-            if (age > 9) {
-                html.push(`<th colspan="${stdName.length}" class="smt full">`,
-                    createPopup(`Single Age Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
-                    '</th>');
-            }
-            html.push(`<th colspan="${stdName.length}" class="mt full">`,
-                createPopup(`Age Group Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
-                '</th>');
-        }
-
-        if (meetList.length > 0) {
-            html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th>`);
-        }
-
-        html.push('</tr><tr><th class="rk full">', createPopup(data.swimmer.club, data.swimmer.clubName, 'top:-15px'), '</th><th class="rk full">',
-            createPopup(data.swimmer.lsc, getLSCName(data.swimmer.lsc), 'top:-15px'), '</th><th class="rk full">',
-            createPopup(data.swimmer.zone[0] + 'Z', data.swimmer.zone + ' Zone', 'top:-15px'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
-
-        if (age < 19) {
-            if (age > 9) {
-                for (let std of stdName) {
-                    html.push('<th class="smt">', std, '</th>');
-                }
-            }
-
-            for (let std of stdName) {
-                html.push('<th class="mt">', std, '</th>');
-            }
-        }
-
-        for (let meetInfo of meetList) {
-            let lines = meetInfo[1].split('<br>').length;
-            html.push('<th class="mc full">', createMeetNamePop(meetInfo[0], meetInfo[1], `top:-${lines * 19}px`), '</th>');
-        }
-
-        html.push('</tr>');
-        return html.join('');
-    }
-
-    function createMeetNamePop(name, details, style) {
-        name = name.replace(/_/g, ' ');
-        details = details.replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
-        return createPopup(name, details, style);
-    }
-
-    async function createBestTimeTablePage(data, fastRowList, rowInfo) {
-        let swimmer = data.swimmer;
+    async function createBestTimeTablePage(swimmer, courseMap) {
         let customSelect = useCustomSelect();
 
         function createShowCheckbox(name, label, cls, defaultValue) {
@@ -2294,7 +2302,7 @@ const G = {};
             let tableElem = document.getElementById('best-time-table');
             let override = tableElem.override = tableElem.override || {};
             override.age = parseInt(value);
-            tableElem.innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
+            tableElem.innerHTML = await createBestTimeTable(swimmer, courseMap, override);
         });
         ageSelect.class = 'mc';
         html.push(createHSpace(20), '<span class="mc">cuts age:&nbsp;</span>', ageSelect.render(customSelect));
@@ -2309,20 +2317,19 @@ const G = {};
             let override = tableElem.override = tableElem.override || {};
             override.lsc = lsc;
             override.zone = zone;
-            document.getElementById('best-time-table').innerHTML = await createBestTimeTable(data, fastRowList, rowInfo, override);
+            document.getElementById('best-time-table').innerHTML = await createBestTimeTable(swimmer, courseMap, override);
         });
         lscSelect.class = 'mc';
         html.push(createHSpace(20), '<span class="mc">cuts LSC:&nbsp;</span>', lscSelect.render(customSelect));
 
         html.push('</div><div id="best-time-table">',
-            await createBestTimeTable(data, fastRowList, rowInfo),
+            await createBestTimeTable(swimmer, courseMap),
             '</div></div>');
 
         return html.join('');
     }
 
-    async function createBestTimeTable(data, fastRowList, rowInfo, override) {
-        let swimmer = data.swimmer;
+    async function createBestTimeTable(swimmer, courseMap, override) {
         let rankAgeKey = getAgeKey(swimmer.age);
         let age = override?.age || swimmer.age;
         let zone = override?.zone || swimmer.zone;
@@ -2333,81 +2340,75 @@ const G = {};
         let html = ['<table class="fill top-margin color-table"><tbody>'];
 
         // create the table header
-        let header = createBestTimeTableHeader(data, meetList, age);
-        html.push(header);
+        let header = createBestTimeTableHeader(swimmer, meetList, age);
 
-        // create the best time table body
-        for (let [i, row] of fastRowList.entries()) {
-            let event = row.event;
-            let timeInt = row.timeInt;
-            let eventStr = row.eventStr;
-            let [dist, stroke, course] = eventStr.split(' ');
-            let cls = `d${dist} ${stroke}`;
+        for (let [course, strokeMap] of courseMap) {
+            html.push(header);
 
-            if (rowInfo[i].length == 2 && i > 0) {
-                // html.push('<tr><td colspan="100" style="background:#FFF"></td></tr>')
-                html.push(header);
-            }
+            let leading = `<td class="age" rowspan="${strokeMap.rowCount}">${course}</td>`;
 
-            html.push(`<tr>`);
-            if (rowInfo[i].length == 2) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
-            }
-            if (rowInfo[i].length > 0) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
-            }
+            for (let [stroke, distMap] of strokeMap) {
+                leading += `<td class="age" rowspan="${distMap.size}">${_storkeMap.get(stroke)}</td>`;
 
-            // count the event for the swimmer
-            let count = data.events.reduce((acc, cur) => cur.event == event ? ++acc : acc, 0);
+                for (let [dist, eventList] of distMap) {
+                    let row = eventList.best;
+                    let event = row.event;
+                    let timeInt = row.timeInt;
+                    let eventStr = row.eventStr;
+                    let cls = `d${dist} ${stroke}`;
+                    let count = eventList.length;
 
-            // build rankings cell
-            html.push(`<td class="full ${cls}">`, createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{pkey:${swimmer.pkey},event:${event}})`),
-                `</td><td class="${cls}">`, row.time, `</td><td class="${cls}">`, formatDate(row.date), `</td><td class="${cls}">`, count, '</td>',
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc, swimmer.clubName),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone),
-                await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls));
+                    html.push('<tr>', leading,
+                        `<td class="full ${cls}">`, createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{event:${event}})`),
+                        `</td><td class="${cls}">`, row.time, `</td><td class="${cls}">`, formatDate(row.date), `</td><td class="${cls}">`, count, '</td>',
+                        await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc, swimmer.clubName),
+                        await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc),
+                        await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone),
+                        await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls));
 
-            let stds = [];
+                    let stds = [];
 
-            let singleTimeCount = 0;
-            if (age < 19) {
-                let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+                    let singleTimeCount = 0;
+                    if (age < 19) {
+                        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
-                if (age > 9) {
-                    for (let std of stdName) {
-                        stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr, true));
+                        if (age > 9) {
+                            for (let std of stdName) {
+                                stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr, true));
+                            }
+                        }
+                        singleTimeCount = stds.length;
+
+                        for (let std of stdName) {
+                            stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr));
+                        }
                     }
-                }
-                singleTimeCount = stds.length;
+                    let motivationTimeCount = stds.length;
 
-                for (let std of stdName) {
-                    stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr));
+                    for (let meetName of meetList) {
+                        stds.push(meetName[2][event] || ['', 0]);
+                    }
+
+                    // build standard cell
+                    let preTime;
+                    for (let [i, [stdStr, stdInt]] of stds.entries()) {
+                        let css = i < singleTimeCount ? 'smt' : i < motivationTimeCount ? 'mt' : 'mc';
+                        if (!stdInt) {
+                            html.push(`<td class="${css} ${cls}"></td>`);
+                            continue;
+                        }
+                        preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
+                        let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
+                        percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent));
+                        let updowncls = timeInt <= stdInt ? 'dp' : 'ad';
+                        html.push(`<td class="${css} ${cls} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), updowncls, percent), '</td>');
+                        preTime = stdInt;
+                    }
+
+                    html.push('</tr>');
+                    leading = '';
                 }
             }
-            let motivationTimeCount = stds.length;
-
-            for (let meetName of meetList) {
-                stds.push(meetName[2][event] || ['', 0]);
-            }
-
-            // build standard cell
-            let preTime;
-            for (let [i, [stdStr, stdInt]] of stds.entries()) {
-                let css = i < singleTimeCount ? 'smt' : i < motivationTimeCount ? 'mt' : 'mc';
-                if (!stdInt) {
-                    html.push(`<td class="${css} ${cls}"></td>`);
-                    continue;
-                }
-                preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
-                let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
-                percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent));
-                let updowncls = timeInt <= stdInt ? 'dp' : 'ad';
-                html.push(`<td class="${css} ${cls} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), updowncls, percent), '</td>');
-                preTime = stdInt;
-            }
-
-            html.push('</tr>');
         }
 
         html.push('</tbody></table>');
@@ -2447,6 +2448,287 @@ const G = {};
         });
 
         return meetList;
+    }
+
+    function createBestTimeTableHeader(swimmer, meetList, age) {
+        let ageKey = getAgeKey(age);
+        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
+
+        let html = ['<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
+            '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
+            createPopup('Event<br>Count', 'Total Event Count', 'top:-5px'), '</th><th class="rk" colspan="4">Rankings</th>'];
+
+        if (age < 19) {
+            if (age > 9) {
+                html.push(`<th colspan="${stdName.length}" class="smt full">`,
+                    createPopup(`Single Age Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
+                    '</th>');
+            }
+            html.push(`<th colspan="${stdName.length}" class="mt full">`,
+                createPopup(`Age Group Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
+                '</th>');
+        }
+
+        if (meetList.length > 0) {
+            html.push(`<th colspan="${meetList.length}" class="mc">Meet Standards</th>`);
+        }
+
+        html.push('</tr><tr><th class="rk full">', createPopup(swimmer.club, swimmer.clubName, 'top:-15px'), '</th><th class="rk full">',
+            createPopup(swimmer.lsc, getLSCName(swimmer.lsc), 'top:-15px'), '</th><th class="rk full">',
+            createPopup(swimmer.zone[0] + 'Z', swimmer.zone + ' Zone', 'top:-15px'), '</th><th class="rk full">', createPopup('US', 'USA Swimming'), '</th>');
+
+        if (age < 19) {
+            if (age > 9) {
+                for (let std of stdName) {
+                    html.push('<th class="smt">', std, '</th>');
+                }
+            }
+
+            for (let std of stdName) {
+                html.push('<th class="mt">', std, '</th>');
+            }
+        }
+
+        for (let meetInfo of meetList) {
+            let lines = meetInfo[1].split('<br>').length;
+            html.push('<th class="mc full">', createMeetNamePop(meetInfo[0], meetInfo[1], `top:-${lines * 19}px`), '</th>');
+        }
+
+        html.push('</tr>');
+        return html.join('');
+    }
+
+    function createMeetNamePop(name, details, style) {
+        name = name.replace(/_/g, ' ');
+        details = details.replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        return createPopup(name, details, style);
+    }
+
+    function createAgeBestTimeTable(courseMap, ageList) {
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table"><tbody>'];
+
+        let header = '<tr><th>Course</th><th>Stroke</th><th>Distance</th>' + ageList.map(age => `<th>${age}</th>`).reverse().join('') + '</tr>';
+
+        for (let [course, strokeMap] of courseMap) {
+            html.push(header);
+            let leading = `<td class="age" rowspan="${strokeMap.rowCount}">${course}</td>`;
+
+            for (let [stroke, distMap] of strokeMap) {
+                leading += `<td class="age" rowspan="${distMap.size}">${_storkeMap.get(stroke)}</td>`;
+
+                for (let [dist, eventList] of distMap) {
+                    let cls = 'd' + dist + ' ' + stroke;
+                    let event = eventList[0].event;
+                    let ageBestMap = eventList.ageBestMap;
+
+                    // build cells in reverse order, for quicker getting pre best time
+                    let cells = [];
+                    let preBest = null;
+                    for (let age of ageList) {
+                        let best = ageBestMap.get(age);
+                        if (best) {
+                            let std = formatStandard(best.std);
+                            let short = formatStandard(std, true);
+                            let date = formatDate(best.date);
+                            let innerCls = !preBest ? '' : best.timeInt < preBest ? 'dp' : 'ad';
+                            cells.push(`<td class="tc ${cls}">` + buildTimeCell(best.time, createPopup(short, std), date, innerCls) + '</td>');
+                            preBest = best.timeInt;
+                        } else {
+                            cells.push(`<td class="${cls}"></td>`);
+                        }
+                    }
+                    cells.reverse();
+
+                    html.push('<tr>', leading, `<td class="full ${cls}">`,
+                        createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{event:${event}})`),
+                        '</td>', ...cells, '</tr>');
+                    leading = '';
+                }
+            }
+        }
+
+        html.push('</tbody></table></div>');
+
+        return html.join('');
+    }
+
+    function createMeetTable(data, courseMap) {
+        let meetsMap = createMeetTableData(data, courseMap);
+
+        let html = ['<div class="content"><h2>Meets</h2>'];
+
+        for (let [course, ageMap] of meetsMap) {
+
+            html.push('<div class="header">', course, ' Event Count: ', ageMap.eventCount,
+                '</div><table class="fill color-table"><tbody>');
+
+            // create the table header (2 rows)
+            html.push('<tr><th rowspan="2"></th><th rowspan="2">Age</th><th rowspan="2">Date</th>');
+            for (let [stroke, distList] of ageMap.strokeMap) {
+                html.push(`<th colspan="${distList.length}">${_storkeMap.get(stroke)}</th>`);
+            }
+            html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr>');
+            for (let [stroke, distList] of ageMap.strokeMap) {
+                for (let dist of distList) {
+                    let evt = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
+                    let action = `${getGlobalName(showGraph)}(null,{event:${evt}})`;
+                    html.push('<td class="full">', createClickableDiv(dist, action), '</td>');
+                }
+            }
+            html.push('</tr>');
+
+            let leading = `<td class="age" rowspan="${ageMap.rowCount}">${course}</td>`;
+            for (let [age, meetMap] of ageMap) {
+                leading += `<td class="age" rowspan="${meetMap.size}">${age}</td>`;
+                for (let [meet, eventList] of meetMap) {
+                    let firstRow = eventList[0];
+                    let meetInfo = firstRow.meetInfo;
+                    html.push('<tr>', leading, `<td>${formatDate(meetInfo.date)}</td>`);
+
+                    for (let [stroke, distList] of ageMap.strokeMap) {
+                        for (let dist of distList) {
+
+                            html.push(`<td class="d${dist} ${stroke} tc">`);
+
+                            let event = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
+                            let splashList = eventList.eventMap.get(event);
+                            if (splashList) {
+                                let row = splashList.reduce((acc, row) => row.timeInt < acc.timeInt ? row : splashList[0]);
+
+                                let delta = row.delta;
+                                let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
+                                let time = row.time;
+                                let std = formatStandard(row.std);
+                                let short = formatStandard(std, true);
+
+                                if (splashList.length > 1) {
+                                    let popStyle = `top:-${splashList.length * 18 + 12}px;right:-7px`;
+                                    let pop = splashList.map(r => (r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session]) + ' ' + r.time).join('<br>')
+                                    time = createPopup(time, pop, popStyle, ` data-pop="${splashList.length}"`);
+                                }
+
+                                html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
+                            }
+                            html.push('</td>');
+                        }
+                    }
+
+                    html.push(`<td class="left">${meetInfo.name}</td><td class="left">${firstRow.clubName}</td></tr>`);
+                    leading = '';
+                }
+            }
+
+            html.push('</tbody></table>');
+        }
+
+        html.push('</div>');
+
+        return html.join('');
+    }
+
+    function createMeetTableData(data, courseMap) {
+        let meetsMap = new Map();
+        for (let row of data.events) {
+            let age = row.age;
+            let meet = row.meet;
+            let event = row.event;
+            let [dist, stroke, course] = row.eventStr.split(' ');
+            dist = Number(dist);
+
+            // build meets map for table rows
+            let ageMap = meetsMap.get(course) || meetsMap.set(course, new Map()).get(course);
+            let meetMap = ageMap.get(age) || ageMap.set(age, new Map()).get(age);
+            let eventList = meetMap.get(meet) || meetMap.set(meet, []).get(meet);
+            eventList.push(row);
+
+            let eventMap = eventList.eventMap = eventList.eventMap || new Map();
+            let splashList = eventMap.get(event) || eventMap.set(event, []).get(event);
+            splashList.push(row);
+
+            // build course total event count
+            ageMap.eventCount = (ageMap.eventCount || 0) + 1;
+
+            // build column info
+            let strokeMap = ageMap.strokeMap = ageMap.strokeMap || new Map();
+            let distSet = strokeMap.get(stroke) || strokeMap.set(stroke, new Set()).get(stroke);
+            distSet.add(dist);
+        }
+
+        // sort the map by course, age and meet date
+        meetsMap = meetsMap.sort((a, b) => _courseIndexMap.get(a[0]) - _courseIndexMap.get(b[0]));
+        for (let [course, ageMap] of meetsMap) {
+
+            // sort the age map to older first
+            ageMap = ageMap.reverse();
+            meetsMap.set(course, ageMap);
+
+            let rowCount = 0;
+
+            for (let [age, meetMap] of ageMap) {
+                // sort the meet map to newer first
+                meetMap = meetMap.reverse();
+                ageMap.set(age, meetMap);
+
+                rowCount += meetMap.size;
+            }
+
+            ageMap.rowCount = rowCount;
+
+            ageMap.strokeMap = ageMap.strokeMap.sort((a, b) => _strokeIndexMap.get(a[0]) - _strokeIndexMap.get(b[0]));
+            for (let [stroke, distSet] of ageMap.strokeMap) {
+                ageMap.strokeMap.set(stroke, [...distSet].sort((a, b) => a - b));
+            }
+        }
+
+        // calculate the event delta from previous best time for each event
+        for (let [course, strokeMap] of courseMap) {
+            for (let [stroke, distMap] of strokeMap) {
+                for (let [dist, eventList] of distMap) {
+
+                    let meetMap = eventList.meetMap = new Map();
+                    for (let row of eventList) {
+                        let meet = row.meet;
+                        let splashList = meetMap.get(meet) || [];
+                        meetMap.set(meet, splashList);
+                        splashList.push(row);
+                    }
+
+                    let preBest = null;
+                    for (let [meet, splashList] of meetMap) {
+                        let meetBest = splashList[0];
+                        for (let row of splashList) {
+                            if (preBest) {
+                                row.delta = row.timeInt - preBest.timeInt;
+                            }
+                            if (row.timeInt < meetBest.timeInt) {
+                                meetBest = row;
+                            }
+                        }
+                        if (!preBest || meetBest.timeInt < preBest.timeInt) {
+                            preBest = meetBest;
+                        }
+                    }
+                }
+            }
+        }
+        return meetsMap;
+    }
+
+    function buildTimeCell(time, std, delta, color, percent) {
+        if (!time) {
+            return '<div>&nbsp;</div><div class="st">&nbsp;</div>';
+        }
+
+        let html = [`<div class="${color || ''}">${time}</div>`];
+        if (std) {
+            html.push(`<div class="st">${std}</div><div class="dd ${color || ''}">${delta}</div>`);
+        } else {
+            html.push(`<div class="ds ${color || ''}">${delta === '' ? '&nbsp;' : delta}</div>`);
+        }
+        if (percent < 100) {
+            html.push(`<div class="r" style="left:${percent}%"></div>`);
+        }
+        return html.join('');
     }
 
     function createProgressGraph(pkey, hide25) {
@@ -2495,39 +2777,37 @@ const G = {};
         showGraph(null, { slideLeft: left, slideRight: right });
     }
 
-    (() => {
-        document.body.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                let canvas = document.getElementById('canvas');
-                if (canvas && !canvas.classList.contains('width')) {
-                    canvas.classList.add('width');
-                }
+    document.body.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && !canvas.classList.contains('width')) {
+                canvas.classList.add('width');
             }
+        }
 
-            if (e.shiftKey) {
-                let canvas = document.getElementById('canvas');
-                if (canvas && !canvas.classList.contains('height')) {
-                    canvas.classList.add('height');
-                }
+        if (e.shiftKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && !canvas.classList.contains('height')) {
+                canvas.classList.add('height');
             }
-        });
+        }
+    });
 
-        document.body.addEventListener('keyup', (e) => {
-            if (!(e.ctrlKey || e.metaKey)) {
-                let canvas = document.getElementById('canvas');
-                if (canvas && canvas.classList.contains('width')) {
-                    canvas.classList.remove('width');
-                }
+    document.body.addEventListener('keyup', (e) => {
+        if (!(e.ctrlKey || e.metaKey)) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && canvas.classList.contains('width')) {
+                canvas.classList.remove('width');
             }
+        }
 
-            if (!e.shiftKey) {
-                let canvas = document.getElementById('canvas');
-                if (canvas && canvas.classList.contains('height')) {
-                    canvas.classList.remove('height');
-                }
+        if (!e.shiftKey) {
+            let canvas = document.getElementById('canvas');
+            if (canvas && canvas.classList.contains('height')) {
+                canvas.classList.remove('height');
             }
-        });
-    })();
+        }
+    });
 
     let func = new Map();
     function createCheckbox(id, text, checked, onchange) {
@@ -2561,7 +2841,7 @@ const G = {};
         let [dist, stroke, course] = _eventList[config.event].split(' ');
 
         const map = { 500: "400/500", 1000: "800/1000", 1650: "1500/1650" };
-        document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap[stroke]}`;
+        document.getElementById('graph-title').innerText = `${map[dist] || dist} ${_storkeMap.get(stroke)}`;
 
         let selected = document.querySelector('button.evt.selected');
         if (selected) {
@@ -3259,301 +3539,6 @@ const G = {};
         return rank;
     }
 
-    function createAgeBestTimeTableHeader(uniqueAges) {
-        let html = ['<tr><th>Course</th><th>Stroke</th><th>Distance</th>'];
-        for (let age of [...uniqueAges].map(e => e[0]).sort((a, b) => a - b)) {
-            html.push('<th>', age, '</th>');
-        }
-        html.push('</tr>');
-        return html.join('');
-    }
-
-    function createAgeBestTimeTable(data, fastRowList, rowInfo) {
-        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table"><tbody>'];
-
-        // get all age column, sort by age (older first)
-        let uniqueAges = data.events.reduce((acc, cur) => {
-            let events = acc.get(cur.age) || [];
-            acc.set(cur.age, events);
-            events.push(cur);
-            return acc;
-        }, new Map());
-
-        // create the table header
-        let header = createAgeBestTimeTableHeader(uniqueAges);
-        html.push(header);
-
-        // reverse generate the cell for quicker getting pre best time, then reverse the row
-        for (let [i, row] of fastRowList.entries()) {
-            let event = row.event;
-            let [dist, stroke, course] = row.eventStr.split(' ');
-            let cls = 'd' + dist + ' ' + stroke;
-
-            if (rowInfo[i].length == 2 && i > 0) {
-                html.push(header);
-            }
-
-            html.push(`<tr>`);
-            if (rowInfo[i].length == 2) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][1]}">${course}</td>`);
-            }
-            if (rowInfo[i].length > 0) {
-                html.push(`<td class="age" rowspan="${rowInfo[i][0]}">${_storkeMap[stroke]}</td>`);
-            }
-
-            html.push(`<td class="full ${cls}">`,
-                createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{pkey:${data.swimmer.pkey},event:${event}})`),
-                '</td>',
-                createAgeBestTds(uniqueAges, event, cls),
-                '</tr>');
-        }
-
-        html.push('</tbody></table></div>');
-
-        return html.join('');
-    }
-
-    function createAgeBestTds(uniqueAges, event, cls) {
-        let html = [];
-        let preBest = null;
-        for (let [age, events] of uniqueAges) {
-            events = events.filter(e => e.event == event);
-            // cannot merge those two lines, because the reduce need to use events[0] and init value.
-            let best = events.reduce((acc, cur) => acc.timeInt < cur.timeInt ? acc : cur, events[0]);
-            if (best) {
-                let std = formatStandard(best.std);
-                let short = formatStandard(std, true);
-                let date = formatDate(best.date);
-                let innerCls = !preBest ? '' : best.timeInt < preBest ? 'dp' : 'ad';
-                html.push(`<td class="tc ${cls}">` + buildTimeCell(best.time, createPopup(short, std), date, innerCls) + '</td>');
-                preBest = best.timeInt;
-            } else {
-                html.push(`<td class="${cls}"></td>`);
-            }
-        }
-        return html.reverse().join('');
-    }
-
-    function createMeetTable(data) {
-        // group meet by course
-        let courses = data.events.reduce((acc, row) => {
-            let course = row.eventStr.split(' ')[2];
-            acc[course] = acc[course] || [];
-            acc[course].push(row);
-            return acc;
-        }, {});
-
-        let html = ['<div class="content"><h2>Meets</h2>'];
-
-        // create the meet tables
-        for (let course of _courseOrder) {
-            let evts = courses[course];
-            if (evts) {
-                html.push(createMeetTableByCourse(course, evts, data.swimmer.pkey));
-            }
-        }
-
-        html.push('</div>');
-
-        return html.join('');
-    }
-
-    function createMeetTableByCourse(course, events, pkey) {
-        let html = ['<div class="header"><span>', course, ' Event Count: ', events.length,
-            '</span></div><table class="fill color-table"><tbody>'];
-
-        // remove dup event in one meet
-        let meetEvents = new Map();
-        for (let row of events) {
-            let meetEventKey = row.meet + '-' + row.event;
-            let evt = meetEvents.get(meetEventKey);
-            if (!evt || row.timeInt < evt.timeInt) {
-                meetEvents.set(meetEventKey, row);
-            }
-        }
-
-        // sort by meet date (oldest first)
-        let eventList = [...meetEvents.values()];
-        eventList.sort((a, b) => a.date < b.date ? -1 : 1);
-
-        // calculate event time delta
-        let eventBestTime = new Map();
-        for (let row of eventList) {
-            let event = row.event;
-            let timeInt = row.timeInt;
-
-            let preBestTime = eventBestTime.get(event);
-            if (!preBestTime) {
-                eventBestTime.set(event, timeInt);
-            } else {
-                row.delta = timeInt - preBestTime;
-                if (timeInt < preBestTime) {
-                    eventBestTime.set(event, timeInt);
-                }
-            }
-        }
-
-        // talbe column info & row info
-        let columnInfo = countEventTypeByStroke(eventList);
-        let rowInfo = countMeetByAge(eventList);
-
-        // calculate the total count
-        let rowCount = 0;
-        for (let rows of rowInfo) {
-            rowCount += rows.length - 1;
-        }
-
-        // create the table header (2 rows)
-        html.push('<tr><th rowspan="2"></th><th rowspan="2">Age</th><th rowspan="2">Date</th>');
-        for (let col of columnInfo) {
-            html.push(`<th colspan="${col.length - 1}">${_storkeMap[col[0]]}</th>`);
-        }
-        html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr>');
-        for (let col of columnInfo) {
-            for (let i = 1; i < col.length; ++i) {
-                let evt = _eventIndexMap.get(`${col[i]} ${col[0]} ${course}`);
-                let action = `${getGlobalName(showGraph)}(null,{pkey:${pkey},event:${evt}})`;
-                html.push('<td class="full">', createClickableDiv(col[i], action), '</td>');
-            }
-        }
-        html.push('</tr>');
-
-        // create the cell info map (meetKey + dist + stroke + course) -> row
-        let cellInfo = new Map();
-        for (let row of eventList) {
-            let cellKey = row.meet + '-' + row.eventStr;
-            cellInfo[cellKey] = row;
-        }
-        // append the duplicate event to the cell info map
-        for (let row of events) {
-            let cellKey = row.meet + '-' + row.eventStr;
-            let cell = cellInfo[cellKey];
-            cell.more = cell.more || [];
-            cell.more.push(row);
-        }
-
-        // create the meet table body
-        let first = true;
-        for (let rows of rowInfo) {
-            for (let i = 0; i < rows.length; ++i) {
-                html.push('<tr>');
-                if (first) {
-                    first = false;
-                    html.push(`<td rowspan="${rowCount}" class="age">${course}</td>`);
-                }
-
-                if (i == 0) {
-                    html.push(`<td rowspan="${rows.length - 1}" class="age">${rows[0]}</td>`);
-                    ++i;
-                }
-
-                let info = rows[i];
-                let meetKey = info.meet;
-                html.push('<td>', formatDate(info.meetInfo.date), '</td>');
-                for (let cols of columnInfo) {
-                    let stroke = cols[0];
-                    for (let j = 1; j < cols.length; ++j) {
-                        let dist = cols[j];
-                        html.push(`<td class="d${dist} ${stroke} tc">`);
-
-                        let cellKey = meetKey + '-' + dist + ' ' + stroke + ' ' + course;
-                        let cell = cellInfo[cellKey];
-                        if (cell) {
-                            let delta = cell.delta;
-                            let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
-                            let time = cell.time;
-                            let std = formatStandard(cell.std);
-                            let short = formatStandard(std, true);
-
-                            if (cell.more.length > 1) {
-                                let popStyle = `top:-${cell.more.length * 18 + 12}px;right:-7px`;
-                                let pop = cell.more.map(r => (r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session]) + ' ' + r.time).join('<br>')
-                                time = createPopup(time, pop, popStyle, ` data-pop="${cell.more.length}"`);
-                            }
-
-                            html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
-                        }
-                        html.push('</td>');
-                    }
-                }
-
-                html.push('<td class="left">', info.meetInfo.name, '</td><td class="left">', info.clubName, '</td></tr>');
-            }
-        }
-
-        html.push('</tbody></table>');
-
-        return html.join('');
-    }
-
-    function buildTimeCell(time, std, delta, color, percent) {
-        if (!time) {
-            return '<div>&nbsp;</div><div class="st">&nbsp;</div>';
-        }
-
-        let html = [`<div class="${color || ''}">${time}</div>`];
-        if (std) {
-            html.push(`<div class="st">${std}</div><div class="dd ${color || ''}">${delta}</div>`);
-        } else {
-            html.push(`<div class="ds ${color || ''}">${delta === '' ? '&nbsp;' : delta}</div>`);
-        }
-        if (percent < 100) {
-            html.push(`<div class="r" style="left:${percent}%"></div>`);
-        }
-        return html.join('');
-    }
-
-    function countMeetByAge(eventList) {
-        // group meet by age
-        let ages = new Map();
-        for (let row of eventList) {
-            let age = row.age;
-            let set = ages.get(age);
-            if (!set) {
-                set = new Map();
-                ages.set(age, set);
-            }
-            set.set(row.meet, row);
-        }
-
-        // sort ages (oldest first)
-        let ageList = [...ages].sort((a, b) => b[0] - a[0]);
-
-        let result = [];
-        for (let [age, meets] of ageList) {
-            let meetArray = [...meets].map(m => m[1]).sort((a, b) => a.meetInfo.date > b.meetInfo.date ? -1 : 1);
-            result.push([age, ...meetArray]);
-        }
-
-        return result;
-    }
-
-    function countEventTypeByStroke(eventList) {
-        let result = new Map();
-        for (let row of eventList) {
-            let [dist, stroke, course] = row.eventStr.split(' ');
-            let set = result.get(stroke);
-            if (!set) {
-                set = new Set();
-                result.set(stroke, set);
-            }
-
-            set.add(Number(dist));
-        }
-
-        let resultArray = [];
-        for (let stroke of _strokeOrder) {
-            let set = result.get(stroke);
-            if (set) {
-                let array = [...set];
-                array.sort((a, b) => a - b);
-                resultArray.push([stroke, ...array]);
-            }
-        }
-
-        return resultArray;
-    }
-
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // rank functions
 
@@ -4200,7 +4185,7 @@ const G = {};
 
     function showEventButtons(selectedEvent, hide25, onclick) {
         let html = [];
-        let course = _eventList[selectedEvent].split(' ')[2];
+        let course = _eventList[selectedEvent].slice(-3);
 
         html.push('<div class="match-size top-margin">');
         for (let event of _eventOrderMap.get(course)) {
@@ -4429,9 +4414,9 @@ const G = {};
         let nameMap = new Map();
 
         let genderFactor = results.length == 8 ? 1 : 0;
-        let topCount = results.length == 8 ? 20 : 40;
+        let maxTopCount = results.length == 8 ? 20 : 40;
         for (let [i, result] of results.entries()) {
-            topCount = Math.min(topCount, result.length);
+            topCount = Math.min(maxTopCount, result.length);
             for (let j = 0; j < topCount; ++j) {
                 let row = result[j];
                 let pkey = row.pkey;
