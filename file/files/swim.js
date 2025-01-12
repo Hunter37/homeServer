@@ -2,18 +2,31 @@ const G = {};
 
 (() => {
 
-    Date.prototype.toDateInputValue = (function () {
+    Date.prototype.toDateInputValue = function () {
         let local = new Date(this);
         local.setMinutes(this.getMinutes() - this.getTimezoneOffset());
         return local.toJSON().slice(0, 10);
-    });
+    };
+
+    Map.prototype.sort = function (compare) {
+        let sorted = new Map([...this].sort(compare));
+        for (let key of Object.keys(this)) {
+            sorted[key] = this[key];
+        }
+        return sorted;
+    };
+
+    Map.prototype.reverse = function () {
+        let reversed = new Map([...this].reverse());
+        for (let key of Object.keys(this)) {
+            reversed[key] = this[key];
+        }
+        return reversed;
+    };
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // shared const
 
-    let _courseOrder;
-    let _courseIndexMap;
-    courseOrder();
     const _relayOrder = ['BK', 'BR', 'FL', 'FR'];
     const _storkeMap = new Map([
         ['FR', 'Free'],
@@ -21,7 +34,7 @@ const G = {};
         ['BR', 'Breast'],
         ['FL', 'Fly'],
         ['IM', 'IM']]);
-    const _strokeIndexMap = new Map(_storkeMap.keys().map((item, index) => [item, index]));
+    const _strokeIndexMap = new Map([..._storkeMap.keys()].map((item, index) => [item, index]));
     const _meetShortNames = {
         "Futures (LCM)": "FU",
         "Winter Juniors (SCY)": "WJ",
@@ -77,6 +90,10 @@ const G = {};
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // page utility functions
 
+    let _courseOrder;
+    let _courseIndexMap;
+    courseOrder();
+
     function isRunningLocally() {
         return location.protocol === 'file:';
     }
@@ -95,6 +112,28 @@ const G = {};
 
     function formatDate(date) {
         return date.substring(5, 7) + '/' + date.substring(8, 10) + '/' + date.substring(2, 4);
+    }
+
+    function timeToInt(stime) {
+        let result = 0;
+        if (stime) {
+            let parts = stime.split(':');
+            if (parts.length == 2) {
+                result = parseInt(parts[0]) * 6000;
+                parts[0] = parts[1];
+            }
+            parts = (parts[0] + '.00').split('.');
+            result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
+        }
+        return result;
+    }
+
+    function formatTime(time) {
+        let min = Math.floor(time / 6000);
+        let sec = time % 6000;
+        let minStr = min ? (min + ':') : '';
+        let secStr = (sec / 100).toFixed(2).padStart(5, '0');
+        return minStr + secStr;
     }
 
     function formatStandard(standard, short) {
@@ -175,6 +214,42 @@ const G = {};
         return stable.map(v => v[0]);
     }
 
+    async function convertObject(arr) {
+        if (!arr) {
+            return;
+        }
+
+        let result = [];
+
+        let meets = new Set();
+
+        let idx = arr.idx;
+        for (let row of arr) {
+            let obj = {};
+            for (let key in idx) {
+                obj[key] = row[idx[key]];
+            }
+            if (obj.meet) {
+                meets.add(obj.meet);
+            }
+            if (obj.time) {
+                obj.timeInt = timeToInt(obj.time);
+            }
+            if (obj.event) {
+                obj.eventStr = _eventList[obj.event];
+            }
+            result.push(obj);
+        }
+
+        await MeetDictionary.loadMeets(meets);
+
+        for (let obj of result) {
+            obj.meetInfo = MeetDictionary.get(obj.meet);
+        }
+
+        return result;
+    }
+
     function arrayEqual(a, b, eq) {
         if (a.length != b.length) {
             return false;
@@ -200,6 +275,197 @@ const G = {};
             return name;
         };
     })();
+
+    function fixDistance(eventStr) {
+        let map = {
+            "400 FR SCY": "500 FR SCY",
+            "500 FR SCM": "400 FR SCM",
+            "500 FR LCM": "400 FR LCM",
+            "800 FR SCY": "1000 FR SCY",
+            "1000 FR SCM": "800 FR SCM",
+            "1000 FR LCM": "800 FR LCM",
+            "1500 FR SCY": "1650 FR SCY",
+            "1650 FR SCM": "1500 FR SCM",
+            "1650 FR LCM": "1500 FR LCM",
+        };
+        return map[eventStr] || eventStr;
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // local storage functions
+
+    function courseOrder(order) {
+        if (!order) {
+            let val = localStorage.getItem('course-order') || 'SCY LCM SCM';
+            if (!_courseOrder) {
+                _courseOrder = val.split(' ');
+                _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
+            }
+            return val;
+        }
+
+        localStorage.setItem('course-order', order);
+        _courseOrder = order.split(' ');
+        _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
+    }
+
+    function showColor(color) {
+        if (color === undefined) {
+            color = localStorage.getItem('theme-color') || 'light-mode,default-color';
+        } else {
+            localStorage.setItem('theme-color', color);
+        }
+
+        let colors = new Set(color.split(','));
+        for (let elem of document.querySelectorAll('.theme')) {
+            elem.disabled = !colors.has(elem.id);
+        }
+
+        return color;
+    }
+
+    function show25(show) {
+        if (show === undefined) {
+            return getLocalBoolValue('show25', true);
+        }
+        setLocalBoolValue('show25', show);
+    }
+
+    function useCustomSelect(use) {
+        if (use === undefined) {
+            return getLocalBoolValue('custom-select', !isNarrowWindow());
+        }
+        setLocalBoolValue('custom-select', use);
+
+        config();   // refresh config page
+    }
+
+    function isNarrowWindow() {
+        return window.innerWidth < 1000;
+    }
+
+    function useCustomDatePicker(show) {
+        if (show === undefined) {
+            return getLocalBoolValue('custom-date-picker', isOldBrowser());
+        }
+        setLocalBoolValue('custom-date-picker', show);
+    }
+
+    function isOldBrowser() {
+        let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
+        //oldBrowser = true;
+        return oldBrowser;
+    }
+
+    function getLocalBoolValue(name, defaultValue) {
+        let value = localStorage.getItem(name);
+        return value === null ? defaultValue : value !== 'false';
+    }
+
+    function setLocalBoolValue(name, value) {
+        localStorage.setItem(name, value);
+    }
+
+    function getMeetDate() {
+        return localStorage.getItem('meetDate') || '';
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // UI utility functions
+
+    function createHSpace(px) {
+        return `<div style="width:${px}px;display:inline-block"></div>`;
+    }
+
+    function createVSpace(px) {
+        return `<div style="height:${px}px"></div>`;
+    }
+
+    function createClickableDiv(content, action, cls) {
+        return `<div class="clickable${cls ? ' ' + cls : ''}" onclick="${action}">${content}</div>`;
+    }
+
+    function createPopup(text, popupText, style, additional) {
+        if (!text) {
+            return '';
+        }
+        style = style ? ` style="${style}"` : '';
+
+        return [`<span class="bs"${additional}>`, text, `<div class="pop"${style}>`, popupText, '</div></span>'].join('');
+    }
+
+    let func = new Map();
+    function createCheckbox(id, text, checked, onchange) {
+        if (typeof onchange == 'function') {
+            func.set(`${id}-onchange`, onchange);
+            onchange = ` onchange="${getGlobalName(func)}.get('${id}-onchange')(this.checked)"`;
+        } else {
+            onchange = onchange ? ` onchange="${onchange}"` : '';
+        }
+        checked = checked ? ' checked' : '';
+
+        return '<span style="display:inline-block"><span class="checkbox-wrapper">' +
+            `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
+    }
+
+    function loadScript(src) {
+        let id = encodeURIComponent(src);
+        let script = document.getElementById(id);
+        if (script) {
+            return script;
+        }
+
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            script.id = id;
+
+            script.onload = () => {
+                resolve(script);
+            };
+
+            script.onerror = () => {
+                reject(new Error(`Failed to load script: ${src}`));
+            };
+
+            document.head.appendChild(script);
+        });
+    }
+
+    function loadCSS(href) {
+        let id = encodeURIComponent(href);
+        if (document.getElementById(id)) {
+            return;
+        }
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = href;
+        link.id = id;
+
+        document.head.appendChild(link);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    // runtime cache
+
+    class RuntimeCache {
+        static map = new Map();
+        static async func(key, func) {
+            let data = RuntimeCache.map.get(key);
+            if (data || RuntimeCache.map.has(key)) {
+                // the value could be undefined, so we need to use has() to check
+                return data;
+            }
+
+            data = await func();
+
+            RuntimeCache.map.set(key, data);
+            return data;
+        }
+    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // local caches
@@ -1155,14 +1421,6 @@ const G = {};
         window.location.hash = '#' + action + value;
     }
 
-    // function setPageData(data) {
-    //     document.getElementById('content').pageData = data;
-    // }
-
-    // function getPageData() {
-    //     return document.getElementById('content').pageData;
-    // }
-
     function updateContent(html, loadingHash) {
         if (window.location.hash.substring(1) == loadingHash) {
             document.getElementById('content').innerHTML = html;
@@ -1480,78 +1738,6 @@ const G = {};
         return html.join('');
     }
 
-    function courseOrder(order) {
-        if (!order) {
-            let val = localStorage.getItem('course-order') || 'SCY LCM SCM';
-            if (!_courseOrder) {
-                _courseOrder = val.split(' ');
-                _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
-            }
-            return val;
-        }
-
-        localStorage.setItem('course-order', order);
-        _courseOrder = order.split(' ');
-        _courseIndexMap = new Map(_courseOrder.map((item, index) => [item, index]));
-    }
-
-    function showColor(color) {
-        if (color === undefined) {
-            color = localStorage.getItem('theme-color') || 'light-mode,default-color';
-        } else {
-            localStorage.setItem('theme-color', color);
-        }
-
-        let colors = new Set(color.split(','));
-        for (let elem of document.querySelectorAll('.theme')) {
-            elem.disabled = !colors.has(elem.id);
-        }
-
-        return color;
-    }
-
-    function show25(show) {
-        if (show === undefined) {
-            return getLocalBoolValue('show25', true);
-        }
-        setLocalBoolValue('show25', show);
-    }
-
-    function useCustomSelect(use) {
-        if (use === undefined) {
-            return getLocalBoolValue('custom-select', !isNarrowWindow());
-        }
-        setLocalBoolValue('custom-select', use);
-
-        config();   // refresh config page
-    }
-
-    function isNarrowWindow() {
-        return window.innerWidth < 1000;
-    }
-
-    function useCustomDatePicker(show) {
-        if (show === undefined) {
-            return getLocalBoolValue('custom-date-picker', isOldBrowser());
-        }
-        setLocalBoolValue('custom-date-picker', show);
-    }
-
-    function isOldBrowser() {
-        let oldBrowser = !(navigator.userAgent.indexOf('Chrome/120.') < 0);
-        //oldBrowser = true;
-        return oldBrowser;
-    }
-
-    function getLocalBoolValue(name, defaultValue) {
-        let value = localStorage.getItem(name);
-        return value === null ? defaultValue : value !== 'false';
-    }
-
-    function setLocalBoolValue(name, value) {
-        localStorage.setItem(name, value);
-    }
-
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // test page
 
@@ -1857,10 +2043,10 @@ const G = {};
         TopButton.show('relay', params);
         TopButton.show('rank', params);
 
-        let t0 = performance.now();
+        // let t0 = performance.now();
         await showDetails(data, 'swimmer/' + pkey);
-        let t1 = performance.now();
-        console.log('Swimmer details render time:', t1 - t0, 'ms');
+        // let t1 = performance.now();
+        // console.log('Swimmer details render time:', t1 - t0, 'ms');
     }
     _navFuncMap.set('swimmer', swimmer);
 
@@ -2088,22 +2274,6 @@ const G = {};
         initGraphConfig(data);
     }
 
-    Map.prototype.sort = function (compare) {
-        let sorted = new Map([...this].sort(compare));
-        for (let key of Object.keys(this)) {
-            sorted[key] = this[key];
-        }
-        return sorted;
-    };
-
-    Map.prototype.reverse = function () {
-        let reversed = new Map([...this].reverse());
-        for (let key of Object.keys(this)) {
-            reversed[key] = this[key];
-        }
-        return reversed;
-    };
-
     function createTableData(data) {
         let ageSet = new Set();
         let courseMap = new Map();
@@ -2259,15 +2429,6 @@ const G = {};
         }, [swimmer.pkey, swimmer.name, swimmer.age, swimmer.clubName, swimmer.lsc]]);
 
         return html.join('');
-    }
-
-    function createPopup(text, popupText, style, additional) {
-        if (!text) {
-            return '';
-        }
-        style = style ? ` style="${style}"` : '';
-
-        return [`<span class="bs"${additional}>`, text, `<div class="pop"${style}>`, popupText, '</div></span>'].join('');
     }
 
     async function createBestTimeTablePage(swimmer, courseMap) {
@@ -2808,20 +2969,6 @@ const G = {};
             }
         }
     });
-
-    let func = new Map();
-    function createCheckbox(id, text, checked, onchange) {
-        if (typeof onchange == 'function') {
-            func.set(`${id}-onchange`, onchange);
-            onchange = ` onchange="${getGlobalName(func)}.get('${id}-onchange')(this.checked)"`;
-        } else {
-            onchange = onchange ? ` onchange="${onchange}"` : '';
-        }
-        checked = checked ? ' checked' : '';
-
-        return '<span style="display:inline-block"><span class="checkbox-wrapper">' +
-            `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
-    }
 
     // function isTouchDevice() {
     //     return (('ontouchstart' in window) ||
@@ -3462,22 +3609,6 @@ const G = {};
         await showGraph();
     }
 
-    function createHSpace(px) {
-        return `<div style="width:${px}px;display:inline-block"></div>`;
-    }
-
-    function createVSpace(px) {
-        return `<div style="height:${px}px"></div>`;
-    }
-
-    function formatTime(time) {
-        let min = Math.floor(time / 6000);
-        let sec = time % 6000;
-        let minStr = min ? (min + ':') : '';
-        let secStr = (sec / 100).toFixed(2).padStart(5, '0');
-        return minStr + secStr;
-    }
-
     async function buildRankingCell(pkey, timeInt, genderStr, event, ageKey, cls, zone, lsc, club) {
         let html = [];
 
@@ -3497,10 +3628,6 @@ const G = {};
         }
 
         return html.join('');
-    }
-
-    function createClickableDiv(content, action, cls) {
-        return `<div class="clickable${cls ? ' ' + cls : ''}" onclick="${action}">${content}</div>`;
     }
 
     async function getRank(params) {
@@ -3574,7 +3701,6 @@ const G = {};
     _navFuncMap.set('rank', rank);
 
     let rankDataRequiredVersion = 2;
-
     async function peekRank(key) {
         return await LocalCache.get('rank/' + key, null, rankDataRequiredVersion);
     }
@@ -3623,42 +3749,6 @@ const G = {};
         }, null, rankDataRequiredVersion);
 
         return await convertObject(values);
-    }
-
-    async function convertObject(arr) {
-        if (!arr) {
-            return;
-        }
-
-        let result = [];
-
-        let meets = new Set();
-
-        let idx = arr.idx;
-        for (let row of arr) {
-            let obj = {};
-            for (let key in idx) {
-                obj[key] = row[idx[key]];
-            }
-            if (obj.meet) {
-                meets.add(obj.meet);
-            }
-            if (obj.time) {
-                obj.timeInt = timeToInt(obj.time);
-            }
-            if (obj.event) {
-                obj.eventStr = _eventList[obj.event];
-            }
-            result.push(obj);
-        }
-
-        await MeetDictionary.loadMeets(meets);
-
-        for (let obj of result) {
-            obj.meetInfo = MeetDictionary.get(obj.meet);
-        }
-
-        return result;
     }
 
     async function loadClubAgeSwimmerList(lsc, clubName, ageKey) {
@@ -4069,46 +4159,6 @@ const G = {};
         }
     }
 
-    function loadScript(src) {
-        let id = encodeURIComponent(src);
-        let script = document.getElementById(id);
-        if (script) {
-            return script;
-        }
-
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            script.id = id;
-
-            script.onload = () => {
-                resolve(script);
-            };
-
-            script.onerror = () => {
-                reject(new Error(`Failed to load script: ${src}`));
-            };
-
-            document.head.appendChild(script);
-        });
-    }
-
-    function loadCSS(href) {
-        let id = encodeURIComponent(href);
-        if (document.getElementById(id)) {
-            return;
-        }
-
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.type = 'text/css';
-        link.href = href;
-        link.id = id;
-
-        document.head.appendChild(link);
-    }
-
     async function buildStandardSelects(key, custom) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
 
@@ -4172,10 +4222,6 @@ const G = {};
         } else if (table == 'relay') {
             await updateSelectionTable();
         }
-    }
-
-    function getMeetDate() {
-        return localStorage.getItem('meetDate') || '';
     }
 
     async function updateRankTable() {
@@ -4914,35 +4960,7 @@ const G = {};
         }
     }
 
-    function fixDistance(eventStr) {
-        let map = {
-            "400 FR SCY": "500 FR SCY",
-            "500 FR SCM": "400 FR SCM",
-            "500 FR LCM": "400 FR LCM",
-            "800 FR SCY": "1000 FR SCY",
-            "1000 FR SCM": "800 FR SCM",
-            "1000 FR LCM": "800 FR LCM",
-            "1500 FR SCY": "1650 FR SCY",
-            "1650 FR SCM": "1500 FR SCM",
-            "1650 FR LCM": "1500 FR LCM",
-        };
-        return map[eventStr] || eventStr;
-    }
-
-    function timeToInt(stime) {
-        let result = 0;
-        if (stime) {
-            let parts = stime.split(':');
-            if (parts.length == 2) {
-                result = parseInt(parts[0]) * 6000;
-                parts[0] = parts[1];
-            }
-            parts = (parts[0] + '.00').split('.');
-            result += parseInt(parts[0]) * 100 + parseInt(parts[1].padEnd(2, '0'));
-        }
-        return result;
-    }
-
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     //https://github.com/DVLP/localStorageDB
     (function () {
         var win = typeof window !== 'undefined' ? window : {}
@@ -5305,19 +5323,4 @@ WY|Wyoming|Western|west-nw`;
         }, _1DayInSec, 4);
     }
 
-    class RuntimeCache {
-        static map = new Map();
-        static async func(key, func) {
-            let data = RuntimeCache.map.get(key);
-            if (data || RuntimeCache.map.has(key)) {
-                // the value could be undefined, so we need to use has() to check
-                return data;
-            }
-
-            data = await func();
-
-            RuntimeCache.map.set(key, data);
-            return data;
-        }
-    }
 })();
