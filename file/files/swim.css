@@ -662,6 +662,21 @@ button:hover:not(.disabled),
     background-color: var(--b3-clr);
 }
 
+tr.high-light {
+    background-color: var(--b3-clr);
+    animation: highlightAnimation 2s ease-in;
+}
+
+@keyframes highlightAnimation {
+    0% {
+        background-color: var(--hover-clr);
+    }
+
+    100% {
+        background-color: var(--b3-clr);
+    }
+}
+
 .select-text {
     min-width: 50px;
     border-radius: 5px;

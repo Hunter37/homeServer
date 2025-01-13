@@ -344,6 +344,10 @@ const G = {};
         return window.innerWidth < 1000;
     }
 
+    // function isSafari() {
+    //     return  window.safari !== undefined;
+    // }
+
     function useCustomDatePicker(show) {
         if (show === undefined) {
             return getLocalBoolValue('custom-date-picker', isOldBrowser());
@@ -1361,6 +1365,7 @@ const G = {};
 
     class TopButton {
         static key;
+        static pkey;
         static onClick(button) {
             let id = button + '-button';
             let classList = document.getElementById(id).classList;
@@ -1371,12 +1376,17 @@ const G = {};
             if (['relay', 'rank'].includes(button)) {
                 TopButton.key = TopButton.key || localStorage.getItem('last-rank-key');
                 if (TopButton.key) {
-                    go(button, TopButton.key);
+                    if ('rank' == button) {
+                        goRankWithPkey(TopButton.key, TopButton.pkey);
+                    } else {
+                        go(button, TopButton.key);
+                    }
                 }
             } else {
                 go(button);
             }
         }
+
         static show(button, param) {
             let id = button + '-button';
             let classList = document.getElementById(id).classList;
@@ -2070,6 +2080,7 @@ const G = {};
         document.title = _title + ' - ' + swimmer.name;
         TopButton.show('relay', params);
         TopButton.show('rank', params);
+        TopButton.pkey = Number(pkey);
 
         // let t0 = performance.now();
         await showDetails(data, 'swimmer/' + pkey);
@@ -3652,7 +3663,7 @@ const G = {};
         // 0        1     2     3     4          5     6        7     8         9     10
         if (values) {
             let rank = calculateRank(values, pkey, timeInt);
-            html.push(`<td class="full rk ${cls}">`, createClickableDiv(rank, `${getGlobalName(go)}('rank',\`${rankDataKey}\`)`), '</td>');
+            html.push(`<td class="full rk ${cls}">`, createClickableDiv(rank, `${getGlobalName(goRankWithPkey)}(\`${rankDataKey}\`,${pkey})`), '</td>');
         } else {
             let id = rankDataKey + '_' + pkey;
             html.push(`<td class="full rk ${cls}" id="${id}">`, createClickableDiv('<div class="loader"></div>', `${getGlobalName(go)}('rank',\`${rankDataKey}\`)`), '</td>');
@@ -3661,6 +3672,13 @@ const G = {};
         }
 
         return html.join('');
+    }
+
+    let _scroolToPkey;
+    let _highLightPkey;
+    function goRankWithPkey(param, pkey) {
+        _scroolToPkey = _highLightPkey = pkey;
+        go('rank', param);
     }
 
     async function getRank(params) {
@@ -4190,6 +4208,14 @@ const G = {};
         if (customDatePicker) {
             await initDatepicker(page);
         }
+
+        if (_scroolToPkey) {
+            let highlightElem = document.querySelector('.high-light');
+            if (highlightElem) {
+                highlightElem.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+            }
+            _scroolToPkey = null;
+        }
     }
 
     async function buildStandardSelects(key, custom) {
@@ -4280,8 +4306,10 @@ const G = {};
 
     function showRankTableTitle(key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
+        let parts = _eventList[event].split(' ');
+        parts[1] = _storkeMap.get(parts[1]);
 
-        return [showRankTableMainTitle(key), '<h3>', _eventList[event], ' &nbsp &nbsp ', ageKey, ' ', genderStr, '</h3>'].join('');
+        return [showRankTableMainTitle(key), '<h3>', parts.join(' '), ' &nbsp &nbsp ', ageKey, ' ', genderStr, '</h3>'].join('');
     }
 
     function showRankTableMainTitle(key) {
@@ -4357,7 +4385,9 @@ const G = {};
             let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
                 (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
 
-            html.push(`<tr${color}><td>`, ++index, '</td>', createSwimmerNameTd(row),
+            let hightlightPkey = pkey == _highLightPkey ? ` class="high-light"` : '';
+
+            html.push(`<tr${color}${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row),
                 '<td class="tc">', buildTimeCell(row.time, maxStd, maxStd ? formatDelta(row.timeInt - maxStdInt) : '&nbsp;'),
                 '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', loading.render(),
                 `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
