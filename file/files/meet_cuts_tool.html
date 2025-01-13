@@ -115,8 +115,11 @@
       }
 
       if (row.startsWith('meet') || row.startsWith('table')) {
+
         if (row.startsWith('table')) {
-          row = row.replace(/events?/ig, 'EVENT').replace(/(\d+)&?U/ig, '0-$1');
+          row = row.substring(0, 5) + row.substring(5)
+            .replace(/[a-z]/g, x => x.toUpperCase())
+            .replace(/EVENTS?/, 'EVENT').replace(/(\d+)&?U/g, '0-$1');
         }
 
         row = row.split(':').map(x => x.trim()).join(':');
@@ -125,20 +128,19 @@
       }
 
       row = row
-        .replace(/-+/g, '-').replace(/x+/ig, '-').replace('N.?A.?', '-').replace(/x+/ig, '-').replace(/(\d)\*/g, '$1')
-        .replace(/fr[a-z]*/i, 'FR').replace(/ba[a-z]*/i, 'BK').replace(/br[a-z]*/i, 'BR').replace(/bu[a-z]*/i, 'FL')
-        .replace(/bk/i, 'BK').replace(/fly?/i, 'FL').replace(/i[a-z]*\.? ?m[a-z]*\.?/i, 'IM')
-        .replace(/Me[dly]* r[elay]*/i, 'MED-R').replace(/Fr[e]* r[elay]*/i, 'FR-R')
-        .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
-        .replace(/400\s*\/\s*500/i, '400').replace(/800\s*\/\s*1000/i, '800').replace(/1500\s*\/\s*1650/i, '1500')
-        .replace(/ :/g, ' ').replace(/^:/, '')
-        .replace(/ FR-R/i, 'FR-R').replace(/ MED-R/i, 'MED-R');
+        .replace(/[a-z]/g, x => x.toUpperCase()).replace(/(\d)[SLY\*]/g, '$1')
+        .replace(/-+/g, '-').replace(/X+/g, '-').replace(/N\.?\/?A\.?/g, '-')
+        .replace(/FR[A-Z]*/, 'FR').replace(/BA[A-Z]*/, 'BK').replace(/BR[A-Z]*/, 'BR').replace(/BU[A-Z]*/, 'FL').replace(/FLY?/, 'FL')
+        .replace(/I[A-Z]*\.? ?M[A-Z]*\.?/, 'IM').replace(/M[A-Z]* R[ELAY]*/, 'MED-R').replace(/F[RE]* R[ELAY]*/, 'FR-R')
+        .replace(/(\d) ([A-Z][A-Z])/, '$1$2').replace(/ FR-R/, 'FR-R').replace(/ MED-R/, 'MED-R')
+        .replace(/400 *\/ *500/, '400').replace(/800 *\/ *1000/, '800').replace(/1500 *\/ *1650/, '1500')
+        .replace(/ :/g, ' ').replace(/^:/, '');
 
       let parts = row.split(' ');
       for (let i = 0; i < parts.length; ++i) {
         let part = parts[i].replace(/(\d+)\.(\d\d)\.(\d\d)/g, '$1:$2.$3').replace(/(\d+)\:(\d\d)\:(\d\d)/g, '$1:$2.$3');
 
-        if (part.search(/[a-z]/i) == -1) {
+        if (part.search(/[A-Z]/) == -1) {
           if (part == '-') {
             continue;
           } else if (part.split('.').length == 2 && part.split(':').length <= 2 && part.search(/[^\.\:0-9]/) == -1) {
@@ -163,7 +165,7 @@
     let html = [];
     let text = [];
     for (let [name, meet] of meets) {
-      html.push(`<h3>${name.replace('_', ' ')}</h3>`);
+      html.push(`<h3>${name.replace(/_/g, ' ')}</h3>`);
       html.push(`<p>${meet.details}</p><table><tr>`);
       text.push(`meet ${name} ${meet.details}\n`);
 

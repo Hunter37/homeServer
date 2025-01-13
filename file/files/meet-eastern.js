@@ -1,6 +1,6 @@
 (() => {
 G.fileData = `
-meet EZ_AGC [2025 EZ SC Age Group Championships](https://www.easternzoneswimming.org/page/meets) (4/2-4/5 Webster, NY)
+meet EZ_AGC [2025 Eastern Zone SC Age Group Championships](https://www.easternzoneswimming.org/page/meets) (4/2-4/5 Webster, NY)
 
 table EZ_AGC:SCY:0-10 EVENT F M
 
@@ -53,8 +53,9 @@ table EZ_AGC:SCY:13-14 EVENT F M
 400IM 4:51.09 4:33.09
 
 # EZ North & EZ South & Entire Zone have the same standards
+# looks like the SC and LC standards are the same https://www.ctswim.org/Meets/Time-Standards/
 
-meet Section [2025 EZ SC Speedo Sectional](https://www.easternzoneswimming.org/page/meets) (3/27-3/30)
+meet Section [2025 Eastern Zone SC Speedo Sectional](https://www.easternzoneswimming.org/page/meets) (3/27-3/30)
 
 table Section:11-18 F:LCM F:SCM F:SCY EVENT M:SCY M:SCM M:LCM
 
