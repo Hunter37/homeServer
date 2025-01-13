@@ -5343,8 +5343,7 @@ WY|Wyoming|Western|west-nw`;
     }
 
     async function getFileData(file) {
-        let cacheKey = "file/" + file;
-        return await LocalCache.func(cacheKey, async () => {
+        let _getFileData = async () => {
             try {
                 let script = await loadScript(file);
                 script.data = script.data || G.fileData;
@@ -5353,7 +5352,14 @@ WY|Wyoming|Western|west-nw`;
             } catch (e) {
                 console.error(e.stack);
             }
-        }, _1DayInSec, 4);
+        };
+
+        if (isRunningLocally()) {
+            return await _getFileData();
+        }
+
+        let cacheKey = "file/" + file;
+        return await LocalCache.func(cacheKey, _getFileData, _1DayInSec, 4);
     }
 
 })();

@@ -128,6 +128,7 @@
         .replace(/-+/g, '-').replace(/x+/ig, '-').replace('N.?A.?', '-').replace(/x+/ig, '-').replace(/(\d)\*/g, '$1')
         .replace(/fr[a-z]*/i, 'FR').replace(/ba[a-z]*/i, 'BK').replace(/br[a-z]*/i, 'BR').replace(/bu[a-z]*/i, 'FL')
         .replace(/bk/i, 'BK').replace(/fly?/i, 'FL').replace(/i[a-z]*\.? ?m[a-z]*\.?/i, 'IM')
+        .replace(/Me[dly]* r[elay]*/i, 'MED-R').replace(/Fr[e]* r[elay]*/i, 'FR-R')
         .replace(/ FR/i, 'FR').replace(/ BK/i, 'BK').replace(/ BR/i, 'BR').replace(/ FL/i, 'FL').replace(/ IM/i, 'IM')
         .replace(/400\s*\/\s*500/i, '400').replace(/800\s*\/\s*1000/i, '800').replace(/1500\s*\/\s*1650/i, '1500')
         .replace(/ :/g, ' ').replace(/^:/, '')
