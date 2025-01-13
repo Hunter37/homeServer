@@ -3,6 +3,7 @@ G.fileData = `
 # southern (east / west / south sections)
 # https://www.gomotionapp.com/szlsc/UserFiles/Image/QuickUpload/southern-zone-p-p-2022---092022_034792.pdf
 
+# pdf file from nc swimming: https://www.swimnc.com/wp-content/uploads/2024/11/2025-AG-Sectional-Championship-Standards.pdf
 meet ESSZ_AGC [2025 ESSZ Age Group Sectional Championship](https://www.gomotionapp.com/team/essz/page/time-standards)
 
 table ESSZ_AGC EVENT F:SCY:0-10 F:SCY:11-12 F:SCY:13-14 M:SCY:0-10 M:SCY:11-12 M:SCY:13-14 F:LCM:0-10 F:LCM:11-12 F:LCM:13-14 M:LCM:0-10 M:LCM:11-12 M:LCM:13-14
@@ -26,6 +27,8 @@ table ESSZ_AGC EVENT F:SCY:0-10 F:SCY:11-12 F:SCY:13-14 M:SCY:0-10 M:SCY:11-12 M
 200IM 2:46.59 2:26.29 2:18.09 2:46.09 2:28.29 2:10.49 3:08.19 2:45.89 2:36.49 3:07.59 2:47.79 2:28.09
 400IM - 5:08.79 4:49.49 - 5:20.49 4:36.29 - 5:49.19 5:27.79 - 6:02.19 5:13.09
 
+
+# pdf file from nc swimming: https://www.swimnc.com/wp-content/uploads/2024/11/2025-SR-SECTIONAL-CUTS-EASTERN-SECTION-OF-THE-SOUTHERN-ZONE.pdf
 meet Spr_Sec [2025 SZ Eastern Spring Sectional Championships](https://www.gomotionapp.com/team/essz/page/time-standards)
 meet Sum_Sec [2025 SZ Eastern Summer Sectional Championships](https://www.gomotionapp.com/team/essz/page/time-standards)
 

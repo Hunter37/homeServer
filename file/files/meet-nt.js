@@ -1,6 +1,6 @@
 (() => {
 G.fileData = `
-meet NT_AGC [2025 NT Age Group Champs](https://www.gomotionapp.com/team/ntslsc/page/times/time-standards)
+meet NT_AGC [2025 North Texas Age Group Champs](https://www.gomotionapp.com/team/ntslsc/page/times/time-standards)
 
 table NT_AGC:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 

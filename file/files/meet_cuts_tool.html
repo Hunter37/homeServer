@@ -106,7 +106,7 @@
 
     let result = [];
     let rows = data.split('\n');
-    for (let row of rows) {
+    for (let [rowNumber, row] of rows.entries()) {
       row = row.trim().replace(/\s+/g, ' ');
 
       if (row.startsWith('#') || row === '') {
@@ -128,8 +128,9 @@
       }
 
       row = row
-        .replace(/[a-z]/g, x => x.toUpperCase()).replace(/(\d)[SLY\*]/g, '$1')
+        .replace(/[a-z]/g, x => x.toUpperCase()).replace(/(\d)[SLY\+\-\*]+/g, '$1')
         .replace(/-+/g, '-').replace(/X+/g, '-').replace(/N\.?\/?A\.?/g, '-')
+        .replace(' SCY', '').replace(' LCM', '').replace(' SCM', '')
         .replace(/FR[A-Z]*/, 'FR').replace(/BA[A-Z]*/, 'BK').replace(/BR[A-Z]*/, 'BR').replace(/BU[A-Z]*/, 'FL').replace(/FLY?/, 'FL')
         .replace(/I[A-Z]*\.? ?M[A-Z]*\.?/, 'IM').replace(/M[A-Z]* R[ELAY]*/, 'MED-R').replace(/F[RE]* R[ELAY]*/, 'FR-R')
         .replace(/(\d) ([A-Z][A-Z])/, '$1$2').replace(/ FR-R/, 'FR-R').replace(/ MED-R/, 'MED-R')
@@ -146,7 +147,7 @@
           } else if (part.split('.').length == 2 && part.split(':').length <= 2 && part.search(/[^\.\:0-9]/) == -1) {
             part = formatTime(timeToInt(part));
           } else {
-            alertError(`Invalid time: ${part}, row: ${row}`);
+            alertError(`Invalid time: ${part}, row[${rowNumber}]: ${row}`);
           }
         }
 
@@ -260,7 +261,7 @@
       }
     };
 
-    for (let row of data.split('\n')) {
+    for (let [rowNumber, row] of data.split('\n').entries()) {
       if (row.startsWith('#') || row === '') {
         continue;
       }
@@ -288,7 +289,7 @@
 
       let parts = row.split(' ');
       if (parts.length !== columnNum) {
-        alertError(`ColumnNum = ${columnNum}: not match row: ${row}`);
+        alertError(`ColumnNum = ${columnNum}: not match row[${rowNumber}]: ${row}`);
         continue;
       }
       let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
@@ -309,12 +310,12 @@
           ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
           : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
         if (!_eventIndexMap.has(event + ' ' + course)) {
-          alertError(`Unknown event: ${event}, row: ${row}`);
+          alertError(`Unknown event: ${event}, row[${rowNumber}]: ${row}`);
           continue;
         }
         let key = event + ' ' + course + ' ' + gender;
         if (eventMap.has(key)) {
-          alertError(`Duplicate event: ${key}, row: ${row}`);
+          alertError(`Duplicate event: ${key}, row[${rowNumber}]: ${row}`);
           continue;
         }
         eventMap.set(key, [time, timeToInt(time)]);

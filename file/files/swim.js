@@ -5220,7 +5220,7 @@ WY|Wyoming|Western|west-nw`;
             }
         };
 
-        for (let row of data.split('\n')) {
+        for (let [rowNumber, row] of data.split('\n').entries()) {
             if (row.startsWith('#') || row === '') {
                 continue;
             }
@@ -5248,7 +5248,7 @@ WY|Wyoming|Western|west-nw`;
 
             let parts = row.split(' ');
             if (parts.length !== columnNum) {
-                alertError(`ColumnNum = ${columnNum}: not match row: ${row}`);
+                alertError(`ColumnNum = ${columnNum}: not match row[${rowNumber}]: ${row}`);
                 continue;
             }
             let event = parts[eventIndex].replace(/^(\d+)(.+)$/, '$1 $2');
@@ -5269,12 +5269,12 @@ WY|Wyoming|Western|west-nw`;
                     ? event.replace(/^400 FR$/, '500 FR').replace(/^800 FR$/, '1000 FR').replace(/^1500 FR$/, '1650 FR')
                     : event.replace(/^500 FR$/, '400 FR').replace(/^1000 FR$/, '800 FR').replace(/^1650 FR$/, '1500 FR');
                 if (!_eventIndexMap.has(event + ' ' + course)) {
-                    alertError(`Unknown event: ${event}, row: ${row}`);
+                    alertError(`Unknown event: ${event}, row[${rowNumber}]: ${row}`);
                     continue;
                 }
                 let key = event + ' ' + course + ' ' + gender;
                 if (eventMap.has(key)) {
-                    alertError(`Duplicate event: ${key}, row: ${row}`);
+                    alertError(`Duplicate event: ${key}, row[${rowNumber}]: ${row}`);
                     continue;
                 }
                 eventMap.set(key, [time, timeToInt(time)]);
