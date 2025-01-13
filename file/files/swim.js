@@ -82,8 +82,8 @@ const G = {};
     const _sessionOrder = [0, 2, 3, 6, 5, 4, 1, 7];
     const _sessionNames = ['', 'Prelim', 'SwimOff', 'Final', 'SemiFinal', 'QuarterFinal', 'TimedFinal', 'Time Trial'];   // 0 == 'Unknown',
 
-    const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"></svg>';
-    const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"><circle cx="9" cy="9" r="3"></svg>';
+    const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"/></svg>';
+    const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"/><circle cx="9" cy="9" r="3"/></svg>';
     // const starSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
     // const gearSVG = '<style>@font-face{font-family:"Icons";src:url(https://res.cdn.office.net/owamail/hashed-v1/resources/fonts/FluentSystemIcons-Resizable-hash-c766c80a.m.woff2)}</style><div style="font-family:Icons;display:inline-block"></div>';
 
@@ -1555,7 +1555,8 @@ const G = {};
         let values = Favorite.get();
 
         if (filter && (filter = filter.trim())) {
-            values = new Map([...values].filter(([pkey, obj]) => obj.name.toLowerCase().includes(filter.toLowerCase())));
+            filter = filter.toLowerCase();
+            values = new Map([...values].filter(([pkey, obj]) => obj.name.toLowerCase().includes(filter)));
         }
 
         document.getElementById('fav-table').innerHTML = createFavoriteTable(values);
@@ -3504,6 +3505,12 @@ const G = {};
         for (let key in newConfig) {
             config[key] = newConfig[key];
         }
+
+        let eventStr = _eventList[config.event];
+        let [dist, stroke, course] = eventStr.split(' ');
+        eventStr = fixDistance(`${dist} ${stroke} SCY`);
+        config.event = _eventIndexMap.get(eventStr);
+
         return config;
     }
 

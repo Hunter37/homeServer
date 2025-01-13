@@ -3,6 +3,10 @@
     --ctrl-bk-clr: #7DF;
     --selected-clr: #79F;
     --hover-clr: #57E;
+
+    --im-clr-factor: 10%;
+    --bbf-clr-factor: 8%;
+    --fr-clr-factor: 4%;
 }
 
 * {
@@ -880,62 +884,62 @@ button:hover:not(.disabled),
 /* event colors */
 
 .FR.d25::after {
-    opacity: .28;
+    opacity: calc(7 * var(--fr-clr-factor));
 }
 
 .FR.d50::after {
-    opacity: .24;
+    opacity: calc(6 * var(--fr-clr-factor));
 }
 
 .FR.d100::after {
-    opacity: .2;
+    opacity: calc(5 * var(--fr-clr-factor));
 }
 
 .FR.d200::after {
-    opacity: .16;
+    opacity: calc(4 * var(--fr-clr-factor));
 }
 
 .FR.d400::after,
 .FR.d500::after {
-    opacity: .12;
+    opacity: calc(3 * var(--fr-clr-factor));
 }
 
 .FR.d800::after,
 .FR.d1000::after {
-    opacity: .08;
+    opacity: calc(2 * var(--fr-clr-factor));
 }
 
 .FR.d1500::after,
 .FR.d1650::after {
-    opacity: .04;
+    opacity: calc(1 * var(--fr-clr-factor));
 }
 
 .d25::after {
-    opacity: .32;
+    opacity: calc(4 * var(--bbf-clr-factor));
 }
 
 .d50::after {
-    opacity: .24;
+    opacity: calc(3 * var(--bbf-clr-factor));
 }
 
 .d100::after {
-    opacity: .16;
+    opacity: calc(2 * var(--bbf-clr-factor));
 }
 
 .d200::after {
-    opacity: .08;
+    opacity: calc(1 * var(--bbf-clr-factor));
 }
 
 .IM.d100::after {
-    opacity: .3;
+    opacity: calc(3 * var(--im-clr-factor));
 }
 
 .IM.d200::after {
-    opacity: .2;
+    opacity: calc(2 * var(--im-clr-factor));
 }
 
 .IM.d400::after {
-    opacity: .1;
+    opacity: calc(1 * var(--im-clr-factor));
 }
 
 .FR,
