@@ -2758,7 +2758,7 @@ const G = {};
                             let date = formatDate(best.date);
                             let innerCls = !preBest ? '' : best.timeInt < preBest ? 'dp' : 'ad';
                             cells.push(`<td class="tc ${cls}">` + buildTimeCell(best.time, createPopup(short, std), date, innerCls) + '</td>');
-                            preBest = best.timeInt;
+                            preBest = Math.min(preBest || Infinity, best.timeInt);
                         } else {
                             cells.push(`<td class="${cls}"></td>`);
                         }
@@ -2922,15 +2922,13 @@ const G = {};
                         let meetBest = splashList[0];
                         for (let row of splashList) {
                             if (preBest) {
-                                row.delta = row.timeInt - preBest.timeInt;
+                                row.delta = row.timeInt - preBest;
                             }
                             if (row.timeInt < meetBest.timeInt) {
                                 meetBest = row;
                             }
                         }
-                        if (!preBest || meetBest.timeInt < preBest.timeInt) {
-                            preBest = meetBest;
-                        }
+                        preBest = Math.min(preBest || Infinity, meetBest.timeInt);
                     }
                 }
             }
