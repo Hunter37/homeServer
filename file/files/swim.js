@@ -1824,6 +1824,11 @@ const G = {};
             all = true;
         }
 
+        let index = name.indexOf(',');
+        if (index > 0) {
+            name = name.substring(index + 1) + ' ' + name.substring(0, index);
+        }
+
         await ensureToken();
         let data = await loadSearch(name, all);
 
