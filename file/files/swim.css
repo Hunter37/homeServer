@@ -664,16 +664,12 @@ button:hover:not(.disabled),
 
 tr.high-light {
     background-color: var(--b3-clr);
-    animation: highlightAnimation 2s ease-in;
+    animation: highlightAnimation 2s ease;
 }
 
 @keyframes highlightAnimation {
-    0% {
+    25% {
         background-color: var(--hover-clr);
-    }
-
-    100% {
-        background-color: var(--b3-clr);
     }
 }
 
