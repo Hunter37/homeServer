@@ -73,9 +73,9 @@ table B:SCY:0-8 F EVENT M
 28.80 25BR 28.00
 25.60 25FL 25.60
 
-meet Spr_AGC_&_Elite 2025 SCS Spring Age Group Championships (3/13 - 3/16)<br>2025 SCS Elite Age Group Championships (7/17 - 7/20)
+meet Spr_AGC<br>&_Elite 2025 SCS Spring Age Group Championships (3/13 - 3/16)<br>2025 SCS Elite Age Group Championships (7/17 - 7/20)
 
-table Spr_AGC_&_Elite:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
+table Spr_AGC<br>&_Elite:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 
 26.20 27.80 31.70 50FR 31.40 27.40 24.60
 56.90 1:00.30 1:09.70 100FR 1:08.90 59.30 53.20
@@ -96,7 +96,7 @@ table Spr_AGC_&_Elite:SCY F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 2:20.50 2:29.70 2:51.60 200IM 2:49.90 2:27.60 2:12.10
 4:58.60 - - 400IM - - 4:45.00
 
-table Spr_AGC_&_Elite:LCM F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
+table Spr_AGC<br>&_Elite:LCM F:13-14 F:11-12 F:0-10 EVENT M:0-10 M:11-12 M:13-14
 
 29.90 31.70 36.00 50FR 35.70 31.20 28.10
 1:04.80 1:08.60 1:19.00 100FR 1:18.10 1:07.40 1:00.70
