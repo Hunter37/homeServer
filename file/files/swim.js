@@ -48,6 +48,7 @@ const G = {};
         "Olympic Trials Wave I": "OT1",
         "Olympic Trials Wave II": "OT2",
     };
+    const _1HourInSec = 60 * 60;
     const _1DayInSec = 24 * 60 * 60;
     const _1WeekInSec = 7 * _1DayInSec;
     const _10YearsInSec = 10 * 365 * _1DayInSec;
@@ -1276,17 +1277,27 @@ const G = {};
         };
 
         let getIpAddress = async () => {
-            // for (let url of ['https://icanhazip.com', 'https://api.ipify.org', 'https://ifconfig.me/ip']) {
-            for (let url of ['https://api.ipify.org', 'https://ipv4.icanhazip.com']) {
-                try {
-                    let response = await fetch(url);
-                    if (response.ok) {
-                        return await response.text();
-                    }
-                } catch (_) { }
-            }
-            return '169.254.130.1';
-        };
+
+            // use 1 week old ip address if available
+            let ip = await LocalCache.get('ip', _1WeekInSec);
+
+            // but alway try to get the latest ip address in the background within 1 hour
+            let promise = LocalCache.func('ip', async () => {
+                // for (let url of ['https://icanhazip.com', 'https://api.ipify.org', 'https://ifconfig.me/ip']) {
+                for (let url of ['https://api.ipify.org', 'https://ipv4.icanhazip.com']) {
+                    try {
+                        let response = await fetch(url);
+                        //await (new Promise(r => setTimeout(r, _1DayInMilliSeconds))); // test api call delay
+                        if (response.ok) {
+                            return (await response.text()).trim();
+                        }
+                    } catch (_) { }
+                }
+                return '169.254.130.1';
+            }, _1HourInSec);
+
+            return ip || await promise;
+        }
 
         let MurmurHash = a => {
             const t = a.length & 3
@@ -1337,7 +1348,7 @@ const G = {};
 
         let ip2dec = ip => ip.split('.').reduce((s, i) => (s << 8) + parseInt(i), 0) >>> 0;
 
-        let ip = (await getIpAddress()).trim();
+        let ip = await getIpAddress();
         let deviceId = MurmurHash(ip + location.toString() + navigator.userAgent);
         let hostId = btoa(ip2dec(ip));
 
@@ -5322,9 +5333,14 @@ WY|Wyoming|Western|west-nw`;
         return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]);
     }
 
+    function getMeetCutFileRoot() {
+        return isRunningLocally() ? 'meet-cut/' : 'https://usaswimming.blob.core.windows.net/meet-cut/';
+    }
+
     async function getLscMeetCuts(zone, lsc) {
+        // meet dictionary is cached in the runtime cache but the meed file is cached in the local cache
         return await RuntimeCache.func(`meet-cut/${lsc}`, async () => {
-            let root = getFileRoot();
+            let root = getMeetCutFileRoot();
             let meetCuts = new Map();
 
             async function loadMeetsFromFile(file) {
@@ -5359,9 +5375,10 @@ WY|Wyoming|Western|west-nw`;
     async function getAgeGroupMotivationTime(meetName, age, genderStr, event, single) {
         let file = single ? 'meet-age-single-motivation.js' : 'meet-age-group-motivation.js';
 
-        let meets = await RuntimeCache.func('file/' + file, async () => {
+        // meet dictionary is cached in the runtime cache but the meed file is cached in the local cache
+        let meets = await RuntimeCache.func('meet-cut/' + file, async () => {
             try {
-                let root = getFileRoot();
+                let root = getMeetCutFileRoot();
                 let data = await getFileData(`${root}${file}`);
                 return parseMeetCut(data);
             } catch (e) {
