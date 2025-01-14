@@ -85,7 +85,7 @@ button.disabled {
 }
 
 a {
-    color: var(--selected-clr);
+    color: var(--hover-clr);
 }
 
 td .dp {

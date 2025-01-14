@@ -24,6 +24,12 @@ const G = {};
         return reversed;
     };
 
+    Array.prototype.stableSort = function (cmp) {
+        let stable = this.map((v, i) => [v, i]);
+        stable.sort((a, b) => cmp(a[0], b[0]) || a[1] - b[1]);
+        return stable.map(v => v[0]);
+    };
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // shared const
 
@@ -207,12 +213,6 @@ const G = {};
 
     function convertToGenderCode(genderStr) {
         return genderStr == 'Male' ? 2 : 1;
-    }
-
-    function statbleSort(arr, cmp) {
-        let stable = arr.map((v, i) => [v, i]);
-        stable.sort((a, b) => cmp(a[0], b[0]) || a[1] - b[1]);
-        return stable.map(v => v[0]);
     }
 
     async function convertObject(arr) {
@@ -1627,9 +1627,9 @@ const G = {};
             by = by.toLowerCase();
             let values = Favorite.get();
             values = [...values];
-            let sorted = statbleSort(values, (a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] > b[1][by] ? 1 : -1);
+            let sorted = values.stableSort((a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] > b[1][by] ? 1 : -1);
             if (arrayEqual(sorted, values, (a, b) => a[0] == b[0])) {
-                sorted = statbleSort(values, (a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] < b[1][by] ? 1 : -1);
+                sorted = values.stableSort((a, b) => a[1][by] == b[1][by] ? 0 : a[1][by] < b[1][by] ? 1 : -1);
             }
 
             Favorite._save(sorted);
@@ -1925,9 +1925,9 @@ const G = {};
         let table = document.getElementById('search-table');
         let values = table.values;
 
-        let sorted = statbleSort(values, (a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] > b[sortby] ? 1 : -1);
+        let sorted = values.stableSort((a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] > b[sortby] ? 1 : -1);
         if (arrayEqual(sorted, values, (a, b) => a == b)) {
-            sorted = statbleSort(values, (a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] < b[sortby] ? 1 : -1);
+            sorted = values.stableSort((a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] < b[sortby] ? 1 : -1);
         }
         showSearch(sorted, table.loadingHash);
     }
@@ -2719,8 +2719,8 @@ const G = {};
         return html.join('');
     }
 
-    function createMeetNamePop(name, details, style) {
-        name = name.replace(/_/g, ' ');
+    function createMeetNamePop(name, details, style, changeNameNewlineTo) {
+        name = name.replace(/_/g, ' ').replace(/<br>/g, changeNameNewlineTo || '<br>');
         details = details.replace(/\[(.+)\]\((https:\/\/[^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
         return createPopup(name, details, style);
     }
@@ -4259,7 +4259,7 @@ const G = {};
                     let text = `${name.replace('_', ' ')} (${ageKey}) = ${cut[0]}`;
                     if (custom) {
                         let lines = meet.details.split('<br>').length;
-                        text = createMeetNamePop(text, meet.details, `top:-${17 + lines * 18}px;left:-5px`);
+                        text = createMeetNamePop(text, meet.details, `top:-${17 + lines * 18}px;left:-5px`, ' ');
                     }
 
                     options.push([text, `${name}|${ageKey}`, cut[1]]);
