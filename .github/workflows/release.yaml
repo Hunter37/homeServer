@@ -33,6 +33,7 @@ jobs:
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-html' -s 'file/html' --pattern '*.html'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-html' -s 'file/html' --pattern '*.json'
           az storage blob upload-batch --account-name homeserverdata --auth-mode key --overwrite true -d 'file-files' -s 'file/files'
+          az storage blob upload-batch --account-name usaswimming --auth-mode key --overwrite true -d 'meet-cut' -s 'file/files/meet-cut'
 
     - name: Deploy web app
       uses: azure/webapps-deploy@v2

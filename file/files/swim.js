@@ -1218,10 +1218,12 @@ const G = {};
                 }
             }
 
+            let fetchTimeout = parseInt(localStorage.getItem('fetch-timeout')) || 10_000;
+
             response = await fetch(url, {
                 method: 'POST',
                 headers: headers,
-                signal: AbortSignal.timeout(10_000),
+                signal: AbortSignal.timeout(fetchTimeout),
                 body: JSON.stringify(bodyObj)
             });
 
@@ -1259,13 +1261,15 @@ const G = {};
             // fetch token must use proxy, otherwise it will be blocked by CORS
             url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
+            let fetchTimeout = parseInt(localStorage.getItem('fetch-timeout')) || 5_000;
+
             let response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Cache-TTL': 10,
                 },
-                signal: AbortSignal.timeout(5_000),
+                signal: AbortSignal.timeout(fetchTimeout),
                 body: JSON.stringify(bodyObj)
             });
 
@@ -1633,13 +1637,29 @@ const G = {};
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // set page
+    // set / del page
     async function set(params) {
         let part = params.split('=');
         localStorage.setItem(part[0], part[1]);
         history.back();
     }
     _navFuncMap.set('set', set);
+
+    async function del(params) {
+        localStorage.removeItem(params);
+        history.back();
+    }
+    _navFuncMap.set('del', del);
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    // test page
+    async function test(params) {
+        let tabView = new TabView('configTabView');
+        tabView.addTab('<p>About</p>', '<pre>set/xbday=10\nset/cache-ttl=86400\n\nset/use-proxy=true\nset/use-local-cache=true\nset/fetch-timeout=10000</pre>');
+
+        updateContent(tabView.render(), 'test');
+    }
+    _navFuncMap.set('test', test);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // config page
@@ -1786,17 +1806,6 @@ const G = {};
 
         return html.join('');
     }
-
-    ///////////////////////////////////////////////////////////////////////////////////////////////
-    // test page
-
-    async function test(params) {
-        let tabView = new TabView('configTabView');
-        tabView.addTab('<p>About</p>', '<pre>set/xbday=10\nset/cache-ttl=86400\n\nset/use-proxy=true\nset/use-local-cache=true</pre>');
-
-        updateContent(tabView.render(), 'test');
-    }
-    _navFuncMap.set('test', test);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // search functions
