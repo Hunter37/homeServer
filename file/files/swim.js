@@ -5343,7 +5343,7 @@ WY|Wyoming|Western|west-nw`;
     }
 
     function getMeetCutFileRoot() {
-        return isRunningLocally() ? 'meet-cut/' : 'https://usaswimming.blob.core.windows.net/meet-cut/';
+        return isRunningLocally() ? '../meet-cut/' : 'https://usaswimming.blob.core.windows.net/meet-cut/';
     }
 
     async function getLscMeetCuts(zone, lsc) {

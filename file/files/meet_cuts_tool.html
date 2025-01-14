@@ -117,9 +117,7 @@
       if (row.startsWith('meet') || row.startsWith('table')) {
 
         if (row.startsWith('table')) {
-          row = row.substring(0, 5) + row.substring(5)
-            .replace(/[a-z]/g, x => x.toUpperCase())
-            .replace(/EVENTS?/, 'EVENT').replace(/(\d+)&?U/g, '0-$1');
+          row = row.replace(/EVENTS?/i, 'EVENT').replace(/(\d+)&?U/ig, '0-$1').replace(/scy|lcm|scm|event/ig, x => x.toUpperCase());
         }
 
         row = row.split(':').map(x => x.trim()).join(':');

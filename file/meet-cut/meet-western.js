@@ -49,9 +49,9 @@ table WZ_AGC:13-14 F:SCY F:SCM F:LCM EVENT M:LCM M:SCM M:SCY
 2:13.39 2:28.89 2:33.89 200IM 2:25.09 2:18.89 2:05.69
 4:45.69 5:17.59 5:26.49 400IM 5:08.59 4:56.79 4:28.29
 
-meet WZ_SC [2025 Western Zone Senior Championships](https://www.pacswim.org/swim-meet-times/standards)
+meet WZ_SRC [2025 Western Zone Senior Championships](https://www.pacswim.org/swim-meet-times/standards)
 
-table WZ_SC:SCY:11-18 F EVENT M
+table WZ_SRC:SCY:11-18 F EVENT M
 
 26.09 50FR 23.29
 56.59 100FR 51.19
@@ -68,7 +68,7 @@ table WZ_SC:SCY:11-18 F EVENT M
 2:16.99 200IM 2:04.69
 4:52.29 400IM 4:28.59
 
-table WZ_SC:LCM:11-18 F EVENT M
+table WZ_SRC:LCM:11-18 F EVENT M
 
 29.89 50FR 26.79
 1:04.99 100FR 59.19
