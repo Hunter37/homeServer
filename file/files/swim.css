@@ -191,6 +191,10 @@ tr:nth-child(2n+1) {
 
 .st {
     float: left;
+    margin-right: 30px;
+}
+
+table.agebest .st {
     margin-right: 50px;
 }
 

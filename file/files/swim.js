@@ -2731,7 +2731,7 @@ const G = {};
     }
 
     function createAgeBestTimeTable(courseMap, ageList) {
-        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table agebest"><tbody>'];
 
         let header = '<tr><th>Course</th><th>Stroke</th><th>Distance</th>' + ageList.map(age => `<th>${age}</th>`).reverse().join('') + '</tr>';
 

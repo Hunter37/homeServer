@@ -36,7 +36,7 @@ debugger;
     }
 
     for (let [name, text] of meets) {
-        html.push(`\nmeet:${name}:${text}`);
+        html.push(`\nmeet ${name} ${text}`);
     }
 
     let ageMap = new Map([
