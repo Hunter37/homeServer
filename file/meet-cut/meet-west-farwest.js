@@ -2,7 +2,7 @@
 G.fileData = `
 #https://www.pacswim.org/swim-meet-times/standards
 
-meet Far_West [2025 Far Western](https://www.pacswim.org/swim-meet-times/standards)
+meet Far_West [2025 Spring/Summer Far Western Championships](https://www.pacswim.org/swim-meet-times/standards)
 
 table Far_West:F EVENT 0-10:SCY 0-10:LCM 0-10:SCM 11:SCY 11:LCM 11:SCM 12:SCY 12:LCM 12:SCM 13:SCY 13:LCM 13:SCM 14:SCY 14:LCM 14:SCM
 

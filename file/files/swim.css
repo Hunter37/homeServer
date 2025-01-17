@@ -181,6 +181,10 @@ tr:nth-child(2n+1) {
     font-weight: 700;
 }
 
+.tt {
+    padding-bottom: 2px;
+}
+
 .st,
 .dd,
 .ds {
@@ -349,8 +353,7 @@ td {
     align-items: center;
 }
 
-.dp>.bs::before,
-.ad>.bs::before {
+.tt>.bs::before {
     content: attr(data-pop);
     font-size: 10px;
     position: relative;
@@ -533,6 +536,7 @@ button:hover:not(.disabled),
 }
 
 .checkbox-wrapper label {
+    white-space: nowrap;
     margin: 0 5px;
 }
 
@@ -621,6 +625,19 @@ button:hover:not(.disabled),
     padding: 0;
 }
 
+.split th,
+.split td {
+    padding: 2px;
+    color: var(--f1-clr);
+    background-color: var(--b0-clr);
+    text-align: left;
+    font-weight: normal;
+}
+
+.split th {
+    color: var(--f0-clr);
+}
+
 /* dropdown */
 .drop-layout>tbody>tr>td {
     border: 0;
@@ -667,7 +684,7 @@ button:hover:not(.disabled),
 
 .dropdown .option.selected,
 .hilightrow tr:hover:not(.th) {
-    background-color: var(--b3-clr);
+    background-color: color-mix(in srgb, var(--f0-clr) 20%, #0000);
 }
 
 tr.high-light {

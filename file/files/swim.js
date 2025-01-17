@@ -75,8 +75,8 @@ const G = {};
         '90 _ _', 'IMR _ SCY', 'IMX _ SCY', 'IMR _ LCM', 'IMX _ LCM'];
     const _eventOrderMap = new Map([
         ['SCY', [81, 1, 2, 3, 4, 5, 6, 82, 11, 12, 13, 83, 14, 15, 16, 84, 17, 18, 19, 20, 21, 22, 91, 92]],
-        ['SCM', [85, 28, 29, 30, 31, 32, 33, 86, 38, 39, 40, 87, 41, 42, 43, 88, 44, 45, 46, 47, 48, 49, 93, 94]],
-        ['LCM', [55, 56, 57, 58, 59, 60, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75]]
+        ['SCM', [85, 28, 29, 30, 31, 32, 33, 86, 38, 39, 40, 87, 41, 42, 43, 88, 44, 45, 46, 47, 48, 49]],
+        ['LCM', [55, 56, 57, 58, 59, 60, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 93, 94]]
     ]);
     const _eventIndexMap = new Map(_eventList.map((item, index) => [item, index]));
 
@@ -374,28 +374,61 @@ const G = {};
         return values;
     }
 
-    function shortenDateField(values) {
-        let idx = values.idx;
+    function shortenDateField(values, date) {
+        date = values.idx[date || 'date'];
         for (let row of values) {
-            row[idx.date] = row[idx.date].substring(0, 10);
+            row[date] = row[date].substring(0, 10);
         }
     }
 
-    async function convertObject(arr, idx) {
+    async function appendSubArray(data, fieldName, loader, options) {
+        if (!data) {
+            return;
+        }
+        let idx = data.idx;
+        let field = idx[fieldName];
+        let map = new Map(data.map(r => [r[field], r]));
+
+        let sub = await loader(fieldName, map, options);
+        if (!sub) {
+            return;
+        }
+
+        for (let row of data) {
+            row[field] = [];
+        }
+
+        let subIdx = sub.idx;
+        let subField = subIdx[fieldName];
+        for (let item of sub) {
+            let row = map.get(item[subField]);
+            row[field].push(item);
+        }
+        data.idx[fieldName + '_Idx'] = subIdx;
+
+        removeDataIdx(sub, fieldName);
+    }
+
+    async function convertObject(arr, idx, meetSet) {
         if (!arr) {
             return;
         }
         idx = idx || arr.idx;
+        let childrenIdx = [];
+        for (let key in idx) {
+            if (key.endsWith('_Idx')) {
+                childrenIdx.push([key.substring(0, key.length - 4), idx[key]]);
+                delete idx[key];
+            }
+        }
 
         let result = [];
-        let meets = new Set();
+        let meets = meetSet || new Set();
 
         for (let row of arr) {
             let obj = {};
             for (let key in idx) {
-                if (row[idx[key]] !== undefined) {
-                    obj[key] = row[idx[key]];
-                }
+                obj[key] = row[idx[key]];
             }
             if (obj.meet) {
                 meets.add(obj.meet);
@@ -406,10 +439,14 @@ const G = {};
             if (obj.event) {
                 obj.eventStr = _eventList[obj.event];
             }
+
+            for (let [field, subIdx] of childrenIdx) {
+                obj[field] = await convertObject(obj[field], subIdx, meets);
+            }
             result.push(obj);
         }
 
-        if (meets.size) {
+        if (!meetSet && meets.size) {
             await MeetDictionary.loadMeets(meets);
 
             for (let obj of result) {
@@ -521,7 +558,7 @@ const G = {};
     // local caches
 
     class LocalCache {
-        static currentVersion = 5;
+        static currentVersion = 6;
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
@@ -1235,6 +1272,7 @@ const G = {};
             swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
             event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
             club: 'https://usaswimming.sisense.com/api/datasources/Club Performance Elasticube/jaql',
+            split: 'https://usaswimming.sisense.com/api/datasources/Splits/jaql',
             // meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql'
         }
 
@@ -2157,7 +2195,7 @@ const G = {};
                 swimmer: swimmerInfo,
                 cacheTime: events.cacheTime
             };
-        }, null, 5);
+        }, null, 6);
 
         if (data) {
             return await postLoadDetails(data);
@@ -2224,6 +2262,14 @@ const G = {};
                     dim: '[Session.SessionKey]'
                 },
                 {
+                    title: 'score',
+                    dim: '[UsasSwimTime.PowerPoints]'
+                },
+                {
+                    title: 'splash',
+                    dim: '[UsasSwimTime.UsasSwimTimeKey]'
+                },
+                {
                     dim: '[UsasSwimTime.PersonKey]',
                     filter: {
                         equals: pkey
@@ -2235,16 +2281,41 @@ const G = {};
         };
 
         let events = await fetchSwimValues(bodyObj, 'event');
-        // time, age, std, lsc, club, date, event, meet, gender
-        // 0     1    2    3    4     5     6      7     8
-
         if (!events) {
             return;
         }
 
         shortenDateField(events);
 
+        await appendSubArray(events, 'splash', loadSplits);
+
         return events;
+    }
+
+    async function loadSplits(key, map) {
+        let bodyObj = {
+            metadata: [
+                {
+                    title: 'dist',
+                    dim: '[SwimTimeSplit.CumulativeDistance]',
+                    sort: 'asc'
+                },
+                {
+                    title: 'split',
+                    dim: '[SwimTimeSplit.CumulativeSplitTimeFormatted]'
+                },
+                {
+                    title: key,
+                    dim: '[SwimTimeSplit.UsasSwimTimeKey]',
+                    filter: {
+                        members: [...map.keys()]
+                    }
+                }
+            ],
+            count: map.size * 30
+        };
+
+        return await fetchSwimValues(bodyObj, 'split');
     }
 
     async function loadSwimerInfo(pkey) {
@@ -2514,14 +2585,14 @@ const G = {};
         }
 
         let html = ['<div class="content"><h2>Personal Best</h2><div class="center-row">',
-            createShowCheckbox('show-rk', 'show rankings', 'rk', true), createHSpace(20)
+            createShowCheckbox('show-rk', 'show rankings', 'rk', false), createHSpace(20)
         ];
 
         if (swimmer.age > 9) {
             html.push(createShowCheckbox('show-smt', 'single age times', 'smt', false), createHSpace(20))
         }
 
-        html.push(createShowCheckbox('show-mt', 'motivation times', 'mt', true), createHSpace(20));
+        html.push(createShowCheckbox('show-mt', 'motivation times', 'mt', false), createHSpace(20));
 
         html.push(createShowCheckbox('show-mc', 'meet cuts', 'mc', true));
 
@@ -2569,7 +2640,7 @@ const G = {};
         let genderStr = convetToGenderString(swimmer.gender);
         let meetList = await buildMeetList(genderStr, age, zone, lsc);
 
-        let html = ['<table class="fill top-margin color-table"><tbody>'];
+        let html = ['<table class="fill top-margin color-table hilightrow"><tbody>'];
 
         // create the table header
         let header = createBestTimeTableHeader(swimmer, meetList, age);
@@ -2589,10 +2660,12 @@ const G = {};
                     let eventStr = row.eventStr;
                     let cls = `d${dist} ${stroke}`;
                     let count = eventList.length;
+                    let std = formatStandard(row.std);
+                    let short = formatStandard(std, true);
 
                     html.push('<tr>', leading,
                         `<td class="full ${cls}">`, createClickableDiv(dist, `${getGlobalName(showGraph)}(null,{event:${event}})`),
-                        `</td><td class="${cls}">`, row.time, `</td><td class="${cls}">`, formatDate(row.date), `</td><td class="${cls}">`, count, '</td>',
+                        `</td><td class="tc ${cls}">`, buildTimeCell(row.time, createPopup(short, std), row.score), `</td><td class="${cls}">`, formatDate(row.date), `</td><td class="${cls}">`, count, '</td>',
                         await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc, swimmer.clubName),
                         await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone, swimmer.lsc),
                         await buildRankingCell(swimmer.pkey, timeInt, genderStr, event, rankAgeKey, cls, swimmer.zone),
@@ -2631,7 +2704,7 @@ const G = {};
                         }
                         preTime = (preTime && preTime >= stdInt ? preTime : 0) || stdInt * 1.15;
                         let percent = Math.min(100, Math.max(0, (timeInt - stdInt) / (preTime - stdInt) * 100));
-                        percent = 100 - (percent < 5 && percent > 0 ? 5 : Math.floor(percent));
+                        percent = 100 - (percent < 5 && percent > 0 ? 5 : percent);
                         let updowncls = timeInt <= stdInt ? 'dp' : 'ad';
                         html.push(`<td class="${css} ${cls} tc">`, buildTimeCell(stdStr, '', formatDelta(timeInt - stdInt), updowncls, percent), '</td>');
                         preTime = stdInt;
@@ -2737,7 +2810,7 @@ const G = {};
     }
 
     function createAgeBestTimeTable(courseMap, ageList) {
-        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table agebest"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table agebest hilightrow"><tbody>'];
 
         let header = '<tr><th>Course</th><th>Stroke</th><th>Distance</th>' + ageList.map(age => `<th>${age}</th>`).reverse().join('') + '</tr>';
 
@@ -2792,14 +2865,14 @@ const G = {};
         for (let [course, ageMap] of meetsMap) {
 
             html.push('<div class="header">', course, ' Event Count: ', ageMap.eventCount,
-                '</div><table class="fill color-table"><tbody>');
+                '</div><table class="fill color-table hilightrow"><tbody>');
 
             // create the table header (2 rows)
             html.push('<tr><th rowspan="2"></th><th rowspan="2">Age</th><th rowspan="2">Date</th>');
             for (let [stroke, distList] of ageMap.strokeMap) {
                 html.push(`<th colspan="${distList.length}">${_storkeMap.get(stroke)}</th>`);
             }
-            html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr>');
+            html.push('<th rowspan="2">Meet</th><th rowspan="2">Team</th></tr><tr class="th">');
             for (let [stroke, distList] of ageMap.strokeMap) {
                 for (let dist of distList) {
                     let evt = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
@@ -2833,10 +2906,27 @@ const G = {};
                                 let std = formatStandard(row.std);
                                 let short = formatStandard(std, true);
 
-                                if (splashList.length > 1) {
-                                    let popStyle = `top:-${splashList.length * 18 + 12}px;right:-7px`;
-                                    let pop = splashList.map(r => (r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session]) + ' ' + r.time).join('<br>')
-                                    time = createPopup(time, pop, popStyle, ` data-pop="${splashList.length}"`);
+                                if (splashList.length > 1 || splashList[0].splash.length > 1) {
+                                    let pop = [];
+                                    let up = 18;
+                                    pop.push('<table class="fill split">');
+                                    for (let r of splashList) {
+                                        let session = r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session];
+                                        pop.push('<tr><th>', session, '</th><th colSpan="99">', r.time, '</th></tr>');
+                                        up += 22.4;
+                                        if (r.splash.length > 0) {
+                                            pop.push('<tr><th rowSpan="2">Split</th>');
+                                            pop.push('<td>', r.splash.map(s => s.dist).join('</td><td>'), '</td>');
+                                            pop.push('</tr><tr>');
+                                            pop.push('<td>', r.splash.map(s => s.split).join('</td><td>'), '</td>');
+                                            pop.push('</tr>');
+                                            up += 44.8;
+                                        }
+                                    }
+                                    pop.push('</table>')
+                                    let popStyle = `top:-${up.toFixed()}px;left:-38px`;
+
+                                    time = createPopup(time, pop.join(''), popStyle, ` data-pop="${splashList.length > 1 ? splashList.length : '*'}"`);
                                 }
 
                                 html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
@@ -2947,21 +3037,21 @@ const G = {};
             return '<div>&nbsp;</div><div class="st">&nbsp;</div>';
         }
 
-        let html = [`<div class="${color || ''}">${time}</div>`];
+        let html = [`<div class="tt ${color || ''}">${time}</div>`];
         if (std) {
             html.push(`<div class="st">${std}</div><div class="dd ${color || ''}">${delta}</div>`);
         } else {
             html.push(`<div class="ds ${color || ''}">${delta === '' ? '&nbsp;' : delta}</div>`);
         }
         if (percent < 100) {
-            html.push(`<div class="r" style="left:${percent}%"></div>`);
+            html.push(`<div class="r" style="left:${percent.toFixed()}%"></div>`);
         }
         return html.join('');
     }
 
     function createProgressGraph(pkey, hide25) {
         let html = ['<div class="content">',
-            showEventButtons(1, hide25, (event) => `${getGlobalName(showGraph)}(null,{pkey:${pkey},event:${event}})`),
+            showEventButtons(1, hide25, false, (event) => `${getGlobalName(showGraph)}(null,{pkey:${pkey},event:${event}})`),
             '<h2 id="graph-title" class="top-margin"></h2>'];
 
         let searchDropdown = new Dropdown('add-search',
@@ -3843,7 +3933,7 @@ const G = {};
                     {
                         dim: '[Persons.ClubName]',
                         filter: {
-                            contains: clubName
+                            equals: clubName
                         },
                         panel: 'scope'
                     },
@@ -4116,36 +4206,26 @@ const G = {};
             values = filterDataBy(values, row => row[imxAge].includes(' ') || row[age] == row[imxAge]);
             removeDataIdx(values, 'imxAge');
 
-            values = await loadImxRankDetails(values, eventCount);
+            await appendSubArray(values, 'details', loadImxRankDetails, eventCount);
 
             values = mergeDupImxBest(values, eventCount);
 
             return truncateFetchData(values, 1000);
         });
 
-        let detailsIdx = values.idx.detailsIdx;
-        let data = await convertObject(values);
-        for (let row of data) {
-            // convert details to object with event as key
-            row.details = (await convertObject(row.details, detailsIdx))
-                .reduce((acc, cur) => (acc.set(cur.event, cur), delete cur.event, acc), new Map());
-        }
-
-        return data;
+        return await convertObject(values);
     }
 
     function mergeDupImxBest(values, detailsCount) {
         let idx = values.idx;
         let cacheTime = values.cacheTime;
-        let detailsIdx = idx.detailsIdx;
+        let detailsIdx = idx.details_Idx;
         let pkeyMap = new Map();
         for (let row of values) {
             let details = idx.details;
             if (row[details].length !== detailsCount) {
                 continue;
             }
-
-            row[details].sort((a, b) => a[detailsIdx.event] - b[detailsIdx.event]);
 
             let pkey = row[idx.pkey];
             let best = pkeyMap.get(pkey);
@@ -4314,19 +4394,13 @@ const G = {};
         }
     }
 
-    async function loadImxRankDetails(values, eventCount) {
-        if (!values || values.length == 0) {
-            return values;
-        }
-
-        let idx = values.idx;
-        let detailKeyToRow = new Map(values.map(row => [row[idx.details], row]));
-
+    async function loadImxRankDetails(key, map, eventCount) {
         let bodyObj = {
             metadata: [
                 {
                     title: 'event',
-                    dim: '[SwimEvent.SwimEventKey]'
+                    dim: '[SwimEvent.SwimEventKey]',
+                    sort: 'asc'
                 },
                 //   {
                 //     title: 'meet',
@@ -4343,40 +4417,25 @@ const G = {};
                 },
                 {
                     title: 'score',
-                    dim: '[ImxDetail.IMXPoints]',
-                    sort: 'desc'
+                    dim: '[ImxDetail.IMXPoints]'
+                    // sort: 'desc'
                 },
                 {
-                    title: 'details',
+                    title: key,
                     dim: '[ImxSummary.ImxSummaryKey]',
                     filter: {
-                        members: [...detailKeyToRow.keys()]
+                        members: [...map.keys()]
                     }
                 }
             ],
-            count: detailKeyToRow.size * eventCount
+            count: map.size * eventCount
         };
 
         let details = await fetchSwimValues(bodyObj, 'club');
+
         shortenDateField(details);
 
-        let detailsIdx = details.idx;
-        for (let detail of details) {
-            let detailKey = detail[detailsIdx.details];
-            let row = detailKeyToRow.get(detailKey);
-            let detailArray = row[idx.details];
-            if (typeof detailArray == 'number') {
-                detailArray = row[idx.details] = [];
-            }
-
-            detailArray.push(detail);
-        }
-
-        removeDataIdx(details, 'details');
-
-        idx.detailsIdx = detailsIdx;
-
-        return values;
+        return details;
     }
 
     async function filterByAndAppendAge(values, ageKey, notRemoveDup) {
@@ -4454,7 +4513,7 @@ const G = {};
 
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let hide25 = ageKey != '8U' && !show25();
-        html.push(showEventButtons(event, hide25, (event) => `${getGlobalName(go)}('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`));
+        html.push(showEventButtons(event, hide25, true, (event) => `${getGlobalName(go)}('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`));
 
         html.push(showRankTableTitle(key));
 
@@ -4503,7 +4562,7 @@ const G = {};
             '<div class="center-row p-l-space top-margin"><p>Age Group:</p>', createAgeGenderSelect(key, customSelect, onchange),
             '<p>Course:</p>', createCourseSelect(key, customSelect, onchange),
             '<p>Team:</p>', await buildClubSelect(key, customSelect, onchange), '</div>',
-            showEventButtons(event, hide25, (event) => `${getGlobalName(go)}('rank', \`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`),
+            showEventButtons(event, hide25, true, (event) => `${getGlobalName(go)}('rank',\`${getRankDataKey(genderStr, ageKey, event, zone, lsc, clubName)}\`)`),
             showRankTableTitle(key),
             await showImxRankTable(data, key)];
 
@@ -4588,13 +4647,13 @@ const G = {};
         table.innerHTML = await showRankTable(table.data, table.key);
     }
 
-    function showEventButtons(selectedEvent, hide25, onclick) {
+    function showEventButtons(selectedEvent, hide25, showImx, onclick) {
         let html = [];
         let course = _eventList[selectedEvent].slice(-3);
 
         html.push('<div class="match-size top-margin">');
         for (let event of _eventOrderMap.get(course)) {
-            if (event < 81 || event > 90 || !hide25) {
+            if (event < 81 || (event > 90 && showImx) || !hide25) {
                 let [d, s, c] = _eventList[event].split(' ');
                 let seleted = event == selectedEvent ? ' selected' : '';
                 let text = s == '_' ? d : `${s}<br>${d}`;
@@ -4715,7 +4774,7 @@ const G = {};
         }
 
         html.push('<table class="hilightrow fill imx"><tbody><tr><th></th><th>Name</th><th>Score</th><th>Age</th>');
-        for (let [event, stk] of data[0].details) {
+        for (let stk of data[0].details) {
             let [dist, stroke, course] = stk.eventStr.split(' ');
             html.push(`<th>${dist} ${_storkeMap.get(stroke)}</th>`);
         }
@@ -4736,7 +4795,7 @@ const G = {};
 
             html.push(`<tr${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row), '<td>', row.score, '</td><td>', row.age, '</td>');
 
-            for (let [event, stk] of row.details) {
+            for (let stk of row.details) {
                 html.push('<td class="tc">', buildTimeCell(stk.time, stk.score, formatDate(stk.date)), '</td>');
             }
             html.push(`<td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
