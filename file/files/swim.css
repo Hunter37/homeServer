@@ -194,6 +194,10 @@ tr:nth-child(2n+1) {
     margin-right: 30px;
 }
 
+table.imx .st {
+    margin-right: 55px;
+}
+
 table.agebest .st {
     margin-right: 50px;
 }
@@ -902,6 +906,7 @@ tr.high-light {
     opacity: calc(7 * var(--fr-clr-factor));
 }
 
+.dIMR::after,
 .FR.d50::after {
     opacity: calc(6 * var(--fr-clr-factor));
 }
@@ -910,6 +915,7 @@ tr.high-light {
     opacity: calc(5 * var(--fr-clr-factor));
 }
 
+.dIMX::after,
 .FR.d200::after {
     opacity: calc(4 * var(--fr-clr-factor));
 }
@@ -957,6 +963,8 @@ tr.high-light {
     opacity: calc(1 * var(--im-clr-factor));
 }
 
+.dIMR,
+.dIMX,
 .FR,
 .BK,
 .BR,
@@ -965,6 +973,8 @@ tr.high-light {
     position: relative;
 }
 
+.dIMR::after,
+.dIMX::after,
 .FR::after,
 .BK::after,
 .BR::after,
@@ -979,6 +989,8 @@ tr.high-light {
     z-index: -9;
 }
 
+.dIMR::after,
+.dIMX::after,
 .FR::after {
     background: var(--fr-clr);
 }

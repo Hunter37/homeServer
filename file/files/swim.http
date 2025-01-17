@@ -363,24 +363,28 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
 }
 
 ###
-# imx/imr
+# imx/imr single
 
 POST https://usaswimming.sisense.com/api/datasources/Club Performance Elasticube/jaql
 Content-Type: application/json
-authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZjJiNzVhMjMtNjBkMS03OTk3LTc3MmYtNGMwNDRmN2U5YzBlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.l98FEprwgETLyavyeuwFMlzxHV7cTReHKY7bkvZJ88Y
+authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZDBhYTNhYTItYmQxZS1mNmY2LTNmN2ItZjhmY2Y1MGIzN2ZlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.h8Mts3Y9ekmCKiUB_4bspnWOHGaOTuSjItm7qd7st6I
 
 {
   "metadata": [
     {
-      "title": "Score",
-      "dim": "[ImxSummary.ImxPoints]",
+      "title": "Event",
+      "dim": "[SwimEvent.SwimEventKey]",
       "datatype": "numeric",
-      "sort": "desc"
     },
     {
       "title": "Event",
       "dim": "[SwimEvent.EventCode]",
       "datatype": "text"
+    },
+    {
+      "title": "Meet",
+      "dim": "[Meet.MeetKey]",
+      "datatype": "numeric",
     },
     {
       "title": "Meet",
@@ -408,57 +412,50 @@ authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
       "title": "ImxSummaryKey",
       "dim": "[ImxSummary.ImxSummaryKey]",
       "datatype": "numeric",
-      # "filter": {
-      #   "equals": 4231070
-      # }
+      "filter": {
+        # "members": [4069244, 4241501, 4069212, 4241509]
+        # "members": [4158643, 4283143, 4283193, 4158634]
+        "members": [4258075, 4158643]
+      },
+    }
+  ],
+  "count": 500
+}
+
+###### 
+# IMX/IMR ranking
+
+POST https://usaswimming.sisense.com/api/datasources/Club Performance Elasticube/jaql
+Content-Type: application/json
+authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZDBhYTNhYTItYmQxZS1mNmY2LTNmN2ItZjhmY2Y1MGIzN2ZlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.h8Mts3Y9ekmCKiUB_4bspnWOHGaOTuSjItm7qd7st6I
+
+{
+  "metadata": [
+    {
+      "title": "lsc",
+      "dim": "[OrgUnit.Level3Code]",
+      "datatype": "text"
     },
     {
-      "title": "Name",
+        "title": "pkey",
+        "dim": "[Person.personKey]",
+        "datatype": "numeric"
+    },
+    {
+      "title": "name",
       "dim": "[Person.fullname]",
       "datatype": "text"
     },
     {
-      "title": "Age",
+      "title": "age",
       "dim": "[Age.IMXAgeRange]",
       "datatype": "text",
       "filter": {
-        "members": [
-          "10"
-        ]
+        "members": ["10", "9"]
       }
     },
     {
-      "title": "Gender",
-      "dim": "[CompetitionCategory.CompetitionCategoryKey]",
-      "datatype": "numeric",
-      "filter": {
-        "members": [
-          2
-        ]
-      }
-    },
-    {
-      "title": "National Rank",
-      "dim": "[ImxSummary.NationalRank]",
-      "datatype": "numeric"
-    },
-    {
-      "title": "Zone Rank",
-      "dim": "[ImxSummary.ZoneRank]",
-      "datatype": "numeric"
-    },
-    {
-      "title": "Lsc Rank",
-      "dim": "[ImxSummary.LscRank]",
-      "datatype": "numeric"
-    },
-    # {
-    #   "title": "Club",
-    #   "dim": "[OrgUnit.Level4Name]",
-    #   "datatype": "text"
-    # },
-    {
-      "title": "LSC",
+      "title": "lsc",
       "dim": "[OrgUnit.Level3Code]",
       "datatype": "text",
       "filter": {
@@ -466,125 +463,77 @@ authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4M
       }
     },
     {
-      "title": "ImxSeasonName",
-      "dim": "[ImxSeason.ImxSeasonName]",
-      "datatype": "text",
-      "filter": {
-        "members": [
-          "SCY 2024-2025"
-        ]
-      }
-    }
-  ],
-  "count": 10
-}
-
-###### 
-# IMX/IMR search
-
-POST https://usaswimming.sisense.com/api/datasources/Club%20Performance%20Elasticube/jaql
-Content-Type: application/json
-authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZjJiNzVhMjMtNjBkMS03OTk3LTc3MmYtNGMwNDRmN2U5YzBlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.l98FEprwgETLyavyeuwFMlzxHV7cTReHKY7bkvZJ88Y
-
-{
-  "metadata": [
-    {
-      "title": "Event",
-      "dim": "[SwimEvent.EventCode]",
-      "datatype": "text",
-      "filter": {
-        "equals": "IMX"
-      }
-    },
-    {
-      "title": "Name",
-      "dim": "[Person.fullname]",
-      "datatype": "text"
-    },
-    {
-      "title": "Gender",
-      "dim": "[CompetitionCategory.CompetitionCategoryKey]",
-      "datatype": "numeric",
-      "filter": {
-        "members": [
-          2
-        ]
-      }
-    },
-    {
-      "title": "Age",
-      "dim": "[Age.IMXAgeRange]",
-      "datatype": "text",
-      "filter": {
-        "members": [
-          "10"
-        ]
-      }
-    },
-    {
-      "title": "LSC",
-      "dim": "[OrgUnit.Level3Code]",
-      "datatype": "text",
-      "filter": {
-        "members": [
-          "PN"
-        ]
-      }
-    },
-    {
-      "title": "Club",
+      "title": "clubName",
       "dim": "[OrgUnit.Level4Name]",
       "datatype": "text"
     },
     {
-      "title": "Score",
+      "title": "score",
       "dim": "[ImxSummary.ImxPoints]",
       "datatype": "numeric",
       "sort": "desc"
     },
     {
-      "title": "National Rank",
+      "title": "natiRank",
       "dim": "[ImxSummary.NationalRank]",
       "datatype": "numeric"
     },
     {
-      "title": "Zone Rank",
+      "title": "zoneRank",
       "dim": "[ImxSummary.ZoneRank]",
       "datatype": "numeric"
     },
     {
-      "title": "Lsc Rank",
+      "title": "lscRank",
       "dim": "[ImxSummary.LscRank]",
       "datatype": "numeric"
     },
     {
-      "title": "ImxSummaryKey",
+      "title": "sumaryKey",
       "dim": "[ImxSummary.ImxSummaryKey]",
       "datatype": "numeric"
     },
     {
-      "title": "ImxType",
+      "title": "imxType",
       "dim": "[ImxSeason.ImxType]",
       "datatype": "text",
       "filter": {
-        "members": [
-          "IMX"
-        ]
-      }
+        "equals": "IMR"
+      },
+      "panel": "scope"
     },
     {
-      "title": "ImxSeasonName",
+      "title": "gender",
+      "dim": "[CompetitionCategory.CompetitionCategoryKey]",
+      "datatype": "numeric",
+      "filter": {
+        "equals": 2
+      },
+      "panel": "scope"
+    },
+    {
       "dim": "[ImxSeason.ImxSeasonName]",
       "datatype": "text",
       "filter": {
         "members": [
-          "SCY 2024-2025"
+          # "SCY 2024-2025",
+          # "SCY 2023-2024",
+          "SCY 2024-2025 (IMR)",
+          "SCY 2023-2024 (IMR)"
         ]
-      }
+      },
+      "panel": "scope"
     }
   ],
-  "count": 500
+  "count": 10
 }
+
+
+###
+# power point
+
+GET https://commonapi.usaswimming.org/swims/DataHub/PowerPointCalculator?filters={"swimmerAge":10,"swimEventKey":11,"eventCompetitionCategory":"M","swimTime":"00:00:38.70"}
+Authorization: Bearer undefined
 
 ###
 # testing
