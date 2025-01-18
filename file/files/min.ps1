@@ -1,10 +1,18 @@
 Write-Output "Minifying swim.js..."
 
-$minJsContent = ""
-$minJsFileSize = [long]::MaxValue
+# param([Int32]$repeat=30) 
+$repeat = $args[0]
+if (-not $repeat) {
+    $repeat = 10
+}
 
-for ($i = 1; $i -le 10; $i++) {
-    javascript-obfuscator swim.js -o swim.min.js --config config.json
+$minJsContent = ""
+$minJsFileSize = (Get-Item -Path "swim.js").Length
+
+for ($i = 0; $i -lt $repeat; $i++) {
+    $percent = [int]($i / $repeat * 100)
+    Write-Progress -Activity "Compress" -Status "$percent% Complete [$minJsFileSize]" -PercentComplete $percent
+    javascript-obfuscator swim.js -o swim.min.js --config config.json > $null
 
     # Get the file size of the minified JS
     $currentFileSize = (Get-Item -Path "swim.min.js").Length
@@ -15,7 +23,9 @@ for ($i = 1; $i -le 10; $i++) {
         $minJsContent = Get-Content -Path "swim.min.js" -Raw
     }
 }
-Write-Output "Using the smallest minified JS file with size $minJsFileSize bytes"
+
+$compressRate = [int]($minJsFileSize / (Get-Item -Path "swim.js").Length * 100)
+Write-Output "Using the smallest minified JS file with size $minJsFileSize bytes [$compressRate%]"
 
 # Remove the minified JS file
 Remove-Item -Path "swim.min.js"
@@ -47,5 +57,7 @@ $updatedHtmlContent = $htmlContent -replace '<script src="swim.js"></script>', "
 Set-Content -Path "swim.min.html" -Value $updatedHtmlContent
 Set-Content -Path "swim1.min.html" -Value $updatedHtmlContent
 
+$compressRate = [int]((Get-Item -Path "swim.min.html").Length / ((Get-Item -Path "swim.html").Length + (Get-Item -Path "swim.css").Length + (Get-Item -Path "swim.js").Length ) * 100)
+Write-Output "Compressed size $((Get-Item -Path "swim.min.html").Length) bytes [$compressRate%]"
 
-ls swim.*
+# ls swim.*

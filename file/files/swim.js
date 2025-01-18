@@ -495,8 +495,8 @@ const G = {};
             `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
     }
 
-    async function createBirthdayCell(pkey, callback) {
-        let range = await _birthdayDictionary.load(pkey);
+    async function createBirthdayCell(pkey, callback, range) {
+        range = range || await _birthdayDictionary.load(pkey);
         let loader = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
             (id) => { _backgroundActions.push([loadBirthday, [pkey, id, callback]]); });
         return loader.render();
@@ -576,7 +576,7 @@ const G = {};
     // local caches
 
     class LocalCache {
-        static currentVersion = 6;
+        static currentVersion = 7;
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
@@ -1982,7 +1982,7 @@ const G = {};
         let result = values.filter(row => pkeys.has(row[idxPkey]));
         result.idx = values.idx;
         result.cacheTime = min(values.cacheTime, list.cacheTime);
-        
+
         return result;
     }
 
@@ -2656,11 +2656,12 @@ const G = {};
         let lsc = override?.lsc || swimmer.lsc;
         let genderStr = convetToGenderString(swimmer.gender);
         let meetList = await buildMeetList(genderStr, age, zone, lsc);
+        let standardNames = (await getAgeGroupMotivationMap()).keys();
 
         let html = ['<table class="fill top-margin color-table hilightrow"><tbody>'];
 
         // create the table header
-        let header = createBestTimeTableHeader(swimmer, meetList, age);
+        let header = createBestTimeTableHeader(swimmer, standardNames, meetList, age);
 
         for (let [course, strokeMap] of courseMap) {
             html.push(header);
@@ -2692,16 +2693,14 @@ const G = {};
 
                     let singleTimeCount = 0;
                     if (age < 19) {
-                        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
-
                         if (age > 9) {
-                            for (let std of stdName) {
+                            for (let std of standardNames) {
                                 stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr, true));
                             }
                         }
                         singleTimeCount = stds.length;
 
-                        for (let std of stdName) {
+                        for (let std of standardNames) {
                             stds.push(await getAgeGroupMotivationTime(std, age, genderStr, eventStr));
                         }
                     }
@@ -2772,9 +2771,8 @@ const G = {};
         return meetList;
     }
 
-    function createBestTimeTableHeader(swimmer, meetList, age) {
+    function createBestTimeTableHeader(swimmer, standardNames, meetList, age) {
         let ageKey = getAgeKey(age);
-        let stdName = ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA'];
 
         let html = ['<tr><th rowspan="2">Course</th><th rowspan="2">Stroke</th><th rowspan="2">Distance</th>',
             '<th rowspan="2">Best<br>Time</th><th rowspan="2">Event<br>Date</th><th rowspan="2" class="full">',
@@ -2782,11 +2780,11 @@ const G = {};
 
         if (age < 19) {
             if (age > 9) {
-                html.push(`<th colspan="${stdName.length}" class="smt full">`,
+                html.push(`<th colspan="${standardNames.length}" class="smt full">`,
                     createPopup(`Single Age Motivational Standards (${age})`, 'USA Swimming 2024-2028 Single Age Motivational Standards'),
                     '</th>');
             }
-            html.push(`<th colspan="${stdName.length}" class="mt full">`,
+            html.push(`<th colspan="${standardNames.length}" class="mt full">`,
                 createPopup(`Age Group Motivational Standards (${ageKey == '8U' ? '10U' : ageKey})`, 'USA Swimming 2024-2028 Age Group Motivational Standards'),
                 '</th>');
         }
@@ -2801,12 +2799,12 @@ const G = {};
 
         if (age < 19) {
             if (age > 9) {
-                for (let std of stdName) {
+                for (let std of standardNames) {
                     html.push('<th class="smt">', std, '</th>');
                 }
             }
 
-            for (let std of stdName) {
+            for (let std of standardNames) {
                 html.push('<th class="mt">', std, '</th>');
             }
         }
@@ -3893,7 +3891,7 @@ const G = {};
     }
     _navFuncMap.set('rank', rank);
 
-    let rankDataRequiredVersion = 2;
+    let rankDataRequiredVersion = 7;
     async function peekRank(key) {
         return await LocalCache.get('rank/' + key, null, rankDataRequiredVersion);
     }
@@ -4011,6 +4009,10 @@ const G = {};
                     }
                 },
                 {
+                    title: 'score',
+                    dim: '[UsasSwimTime.PowerPoints]'
+                },
+                {
                     title: 'sortkey',
                     dim: '[UsasSwimTime.SortKey]',
                     sort: 'asc'
@@ -4122,6 +4124,10 @@ const G = {};
                 {
                     title: 'pkey',
                     dim: '[UsasSwimTime.PersonKey]'
+                },
+                {
+                    title: 'score',
+                    dim: '[UsasSwimTime.PowerPoints]'
                 },
                 {
                     title: 'sortkey',
@@ -4435,7 +4441,6 @@ const G = {};
                 {
                     title: 'score',
                     dim: '[ImxDetail.IMXPoints]'
-                    // sort: 'desc'
                 },
                 {
                     title: key,
@@ -4712,6 +4717,7 @@ const G = {};
     async function showRankTable(data, key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
+        let standardNames = (await getAgeGroupMotivationMap()).keys();
         let standards = [];
         for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
             let [meetName, ageRange] = (localStorage.getItem('meetStds' + i) || '|').split('|');
@@ -4734,14 +4740,12 @@ const G = {};
         for (let row of await filterDataByMeetDate(data, to)) {
 
             let maxStd = '';
-            let maxStdInt = '';
-            for (let std of ['B', 'BB', 'A', 'AA', 'AAA', 'AAAA']) {
+            for (let std of standardNames) {
                 let [_, stdInt] = await getAgeGroupMotivationTime(std, from, genderStr, _eventList[event]);
                 if (row.timeInt > stdInt) {
                     break;
                 }
                 maxStd = std;
-                maxStdInt = stdInt;
             }
             let color = '';
             for (let [std, clr] of standards) {
@@ -4761,7 +4765,7 @@ const G = {};
             let hightlightPkey = pkey == _highLightPkey ? ` class="high-light"` : '';
 
             html.push(`<tr${color}${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row),
-                '<td class="tc">', buildTimeCell(row.time, maxStd, maxStd ? formatDelta(row.timeInt - maxStdInt) : '&nbsp;'),
+                '<td class="tc">', buildTimeCell(row.time, maxStd, row.score),
                 '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', await createBirthdayCell(pkey),
                 `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
                 `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
@@ -5197,8 +5201,9 @@ const G = {};
             html.push('<td>', swimmer.age);
 
             if (realSwimmer) {
+                let range = await _birthdayDictionary.load(swimmer.pkey);
                 let css = filterOutSwimmer(meetDate, to, range) ? ' deselected' : '';
-                html.push(`</td><td class="left full${css}">`, createBirthdayCell(swimmer.pkey, updateSelectionTable), '</td></tr>');
+                html.push(`</td><td class="left full${css}">`, await createBirthdayCell(swimmer.pkey, updateSelectionTable, range), '</td></tr>');
             } else {
                 html.push('</td><td></td></tr>');
             }
@@ -5766,11 +5771,11 @@ WY|Wyoming|Western|west-nw`;
         });
     }
 
-    async function getAgeGroupMotivationTime(meetName, age, genderStr, event, single) {
+    async function getAgeGroupMotivationMap(single) {
         let file = single ? 'meet-age-single-motivation.js' : 'meet-age-group-motivation.js';
 
         // meet dictionary is cached in the runtime cache but the meed file is cached in the local cache
-        let meets = await RuntimeCache.func('meet-cut/' + file, async () => {
+        return await RuntimeCache.func('meet-cut/' + file, async () => {
             try {
                 let root = getMeetCutFileRoot();
                 let data = await getFileData(`${root}${file}`);
@@ -5779,7 +5784,10 @@ WY|Wyoming|Western|west-nw`;
                 console.error(e.stack);
             }
         });
+    }
 
+    async function getAgeGroupMotivationTime(meetName, age, genderStr, event, single) {
+        let meets = await getAgeGroupMotivationMap(single);
         return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]) || ['', 0];
     }
 

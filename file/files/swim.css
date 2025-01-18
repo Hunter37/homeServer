@@ -720,6 +720,7 @@ tr.high-light {
 .center-row {
     display: flex;
     align-items: center;
+    text-wrap: nowrap;
 }
 
 .p-l-space>p:not(:first-child) {
