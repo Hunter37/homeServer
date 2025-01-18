@@ -10,7 +10,7 @@ const G = {};
 
     Map.prototype.sort = function (compare) {
         let sorted = new Map([...this].sort(compare));
-        for (let key of Object.keys(this)) {
+        for (let key in this) {
             sorted[key] = this[key];
         }
         return sorted;
@@ -18,7 +18,7 @@ const G = {};
 
     Map.prototype.reverse = function () {
         let reversed = new Map([...this].reverse());
-        for (let key of Object.keys(this)) {
+        for (let key in this) {
             reversed[key] = this[key];
         }
         return reversed;
@@ -495,6 +495,24 @@ const G = {};
             `<input type="checkbox" id="${id}"${onchange}${checked}><label for="${id}">${text}</label></span></span>`;
     }
 
+    async function createBirthdayCell(pkey, callback) {
+        let range = await _birthdayDictionary.load(pkey);
+        let loader = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
+            (id) => { _backgroundActions.push([loadBirthday, [pkey, id, callback]]); });
+        return loader.render();
+    }
+
+    async function loadBirthday(params) {
+        let [pkey, elemId, callback] = params;
+        let data = await loadDetails(pkey);
+        if (data) {
+            Loading.get(elemId).done(BirthdayDictionary.format(data.swimmer.birthday));
+            callback && callback();
+        } else {
+            Loading.get(elemId).failed();
+        }
+    }
+
     function loadScript(src) {
         let id = encodeURIComponent(src);
         let script = document.getElementById(id);
@@ -731,20 +749,20 @@ const G = {};
             if (!data) {
                 return;
             }
-            let idx = data.idx;
 
             // only keep the first meet date as meet start date
             let result = [];
+            result.idx = data.idx;
+            let idxMeet = data.idx.meet;
             for (let row of data) {
-                let meet = row[idx.meet];
+                let meet = row[idxMeet];
                 if (meets.has(meet)) {
                     meets.delete(meet);
-
-                    row[idx.date] = row[idx.date].substring(0, 10);
                     result.push(row);
                 }
             }
-            result.idx = idx;
+
+            shortenDateField(result);
 
             return result;
         }
@@ -1937,7 +1955,9 @@ const G = {};
     }
 
     async function filterSwimmers(values) {
-        let pkeys = new Set(values.map(v => v[values.idx.pkey]));
+        let idxPkey = values.idx.pkey;
+
+        let pkeys = new Set(values.map(v => v[idxPkey]));
 
         let bodyObj = {
             metadata: [
@@ -1958,17 +1978,11 @@ const G = {};
         }
 
         pkeys = new Set(list.map(v => v[list.idx.pkey]));
-        let idx = values.idx;
 
-        let result = [];
-        for (let row of values) {
-            if (pkeys.has(row[idx.pkey])) {
-                result.push(row);
-            }
-        }
-
-        result.idx = idx;
+        let result = values.filter(row => pkeys.has(row[idxPkey]));
+        result.idx = values.idx;
         result.cacheTime = min(values.cacheTime, list.cacheTime);
+        
         return result;
     }
 
@@ -2219,6 +2233,9 @@ const G = {};
     async function loadEvents(pkey) {
         let bodyObj = {
             metadata: [
+                //[UsasSwimTime.FinishPosition]
+                //[UsasSwimTime.FullName]
+                //[Age.AgeGroup1]
                 {
                     title: 'time',
                     dim: '[UsasSwimTime.SwimTimeFormatted]'
@@ -2247,19 +2264,19 @@ const G = {};
                 },
                 {
                     title: 'event',
-                    dim: '[UsasSwimTime.SwimEventKey]'
+                    dim: '[UsasSwimTime.SwimEventKey]'  //[SwimEvent.EventCode]
                 },
                 {
                     title: 'meet',
-                    dim: '[UsasSwimTime.MeetKey]'
+                    dim: '[UsasSwimTime.MeetKey]'   //[Meet.MeetKey]
                 },
                 {
                     title: 'gender',
-                    dim: '[UsasSwimTime.EventCompetitionCategoryKey]'
+                    dim: '[UsasSwimTime.EventCompetitionCategoryKey]'   //[EventCompetitionCategory.TypeName]
                 },
                 {
                     title: 'session',
-                    dim: '[Session.SessionKey]'
+                    dim: '[Session.SessionKey]' //[Session.SessionName]
                 },
                 {
                     title: 'score',
@@ -4741,15 +4758,11 @@ const G = {};
             rowlscRankKey = rowlscRankKey == key ? '' : rowlscRankKey;
 
             let pkey = row.pkey;
-            let range = await _birthdayDictionary.load(pkey);
-            let loading = new Loading('bday-' + pkey, BirthdayDictionary.format(range),
-                (id) => { _backgroundActions.push([loadBirthday, [pkey, id]]); });
-
             let hightlightPkey = pkey == _highLightPkey ? ` class="high-light"` : '';
 
             html.push(`<tr${color}${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row),
                 '<td class="tc">', buildTimeCell(row.time, maxStd, maxStd ? formatDelta(row.timeInt - maxStdInt) : '&nbsp;'),
-                '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', loading.render(),
+                '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', await createBirthdayCell(pkey),
                 `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
                 `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
                 '</td><td class="left">', row.meetInfo.name, '</td></tr>');
@@ -4778,7 +4791,7 @@ const G = {};
             let [dist, stroke, course] = stk.eventStr.split(' ');
             html.push(`<th>${dist} ${_storkeMap.get(stroke)}</th>`);
         }
-        html.push('<th>Team</th><th>LSC</th></tr>');
+        html.push('<th>Birthday</th><th>Team</th><th>LSC</th></tr>');
 
         let index = 0;
         for (let row of data) {
@@ -4798,8 +4811,11 @@ const G = {};
             for (let stk of row.details) {
                 html.push('<td class="tc">', buildTimeCell(stk.time, stk.score, formatDate(stk.date)), '</td>');
             }
-            html.push(`<td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
-                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
+            html.push('<td class="left full">', await createBirthdayCell(pkey),
+                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`,
+                rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
+                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`,
+                rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
                 '</td></tr>');
         }
 
@@ -5181,16 +5197,8 @@ const G = {};
             html.push('<td>', swimmer.age);
 
             if (realSwimmer) {
-                let range = await _birthdayDictionary.load(swimmer.pkey);
                 let css = filterOutSwimmer(meetDate, to, range) ? ' deselected' : '';
-
-                let loading = new Loading('bday-' + swimmer.pkey,
-                    BirthdayDictionary.format(range),
-                    (id) => {
-                        _backgroundActions.push([loadBirthday, [swimmer.pkey, id, updateSelectionTable]]);
-                    });
-
-                html.push(`</td><td class="left full${css}">`, loading.render(), '</td></tr>');
+                html.push(`</td><td class="left full${css}">`, createBirthdayCell(swimmer.pkey, updateSelectionTable), '</td></tr>');
             } else {
                 html.push('</td><td></td></tr>');
             }
@@ -5202,19 +5210,6 @@ const G = {};
         table.innerHTML = html.join('');
 
         await updateRelayTables();
-    }
-
-    async function loadBirthday(params) {
-        let [pkey, elemId, callback] = params;
-        let data = await loadDetails(pkey);
-        if (data) {
-            Loading.get(elemId).done(BirthdayDictionary.format(data.swimmer.birthday));
-            if (callback) {
-                callback();
-            }
-        } else {
-            Loading.get(elemId).failed();
-        }
     }
 
     async function deselectRelayStroke(elememt, legIndex, pkey) {
