@@ -2656,7 +2656,7 @@ const G = {};
         let lsc = override?.lsc || swimmer.lsc;
         let genderStr = convetToGenderString(swimmer.gender);
         let meetList = await buildMeetList(genderStr, age, zone, lsc);
-        let standardNames = (await getAgeGroupMotivationMap()).keys();
+        let standardNames = [...(await getAgeGroupMotivationMap()).keys()];
 
         let html = ['<table class="fill top-margin color-table hilightrow"><tbody>'];
 

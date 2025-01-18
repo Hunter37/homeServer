@@ -23,6 +23,7 @@ for ($i = 0; $i -lt $repeat; $i++) {
         $minJsContent = Get-Content -Path "swim.min.js" -Raw
     }
 }
+Write-Progress -Completed "Compress" -Status "100% Complete [$minJsFileSize]" -PercentComplete 100
 
 $compressRate = [int]($minJsFileSize / (Get-Item -Path "swim.js").Length * 100)
 Write-Output "Using the smallest minified JS file with size $minJsFileSize bytes [$compressRate%]"
