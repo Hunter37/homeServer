@@ -652,35 +652,11 @@ const G = {};
 
         static async _load(lsc) {
             return await LocalCache.func('clubs/' + lsc, async () => {
-                let bodyObj = {
-                    metadata: [
+                return await fetchSwimValues('event', 5000, ['clubName', 'club', 'event', 'lsc'],
                         {
-                            title: 'clubName',
-                            dim: '[OrgUnit.Level4Name]'
-                        },
-                        {
-                            title: 'club',
-                            dim: '[OrgUnit.Level4Code]'
-                        },
-                        {
-                            dim: "[UsasSwimTime.SwimEventKey]",
-                            filter: {
-                                equals: 1
-                            },
-                            panel: 'scope'
-                        },
-                        {
-                            dim: '[OrgUnit.Level3Code]',
-                            filter: {
-                                equals: lsc
-                            },
-                            panel: 'scope'
-                        }
-                    ],
-                    count: 5000
-                };
-
-                return await fetchSwimValues(bodyObj, 'event');
+                        event: { filter: { equals: 1 }, panel: 'scope' },
+                        lsc: { filter: { equals: lsc }, panel: 'scope' }
+                    });
             }, _1WeekInSec, 3);
         }
 
@@ -722,30 +698,11 @@ const G = {};
         }
 
         static async _load(meets) {
-            let bodyObj = {
-                metadata: [
-                    {
-                        title: 'meet',
-                        dim: '[UsasSwimTime.MeetKey]',
-                        filter: {
-                            members: [...meets]
-                        }
-                    },
-                    {
-                        title: 'date',
-                        dim: '[SeasonCalendar.CalendarDate (Calendar)]',
-                        level: 'days',
-                        sort: 'asc'
-                    },
-                    {
-                        title: 'name',
-                        dim: '[Meet.MeetName]'
-                    }
-                ],
-                count: meets.size * 5
-            };
-
-            let data = await fetchSwimValues(bodyObj, 'event');
+            let data = await fetchSwimValues('event', meets.size * 5, ['meet', 'date', 'meetName'],
+                {
+                    meet: { filter: { members: [...meets] } },
+                    date: { sort: 'asc' }
+                });
             if (!data) {
                 return;
             }
@@ -789,7 +746,7 @@ const G = {};
                 for (let row of data) {
                     let meet = row[idx.meet];
                     let date = row[idx.date];
-                    let name = row[idx.name];
+                    let name = row[idx.meetName];
                     result.push([meet, date, name]);
                     LocalCache.set('meet/' + meet, [date, name]);
                 }
@@ -1285,7 +1242,135 @@ const G = {};
         return getLocalBoolValue('use-proxy', true);
     }
 
-    async function fetchSwimValues(bodyObj, type) {
+    let _body = {
+        swimmer: {
+            dim: {
+                pkey: 'Persons.PersonKey',
+                name: 'Persons.FullName',
+                firstName: 'Persons.FirstAndPreferredName',
+                lastName: 'Persons.LastName',
+                age: 'Persons.Age',
+                clubName: 'Persons.ClubName',
+                lsc: 'Persons.LscCode',
+            }
+        },
+        event: {
+            dim: {
+                splash: 'UsasSwimTime.UsasSwimTimeKey',
+                place: 'UsasSwimTime.FinishPosition',
+                session: 'Session.SessionKey',                      // Session.SessionName
+                event: 'UsasSwimTime.SwimEventKey',                 // SwimEvent.EventCode 
+                meet: 'UsasSwimTime.MeetKey',                       // Meet.MeetKey 
+                meetName: 'Meet.MeetName',
+                pkey: 'UsasSwimTime.PersonKey',
+                name: 'UsasSwimTime.FullName',                      // Person.FullName
+                time: 'UsasSwimTime.SwimTimeFormatted',
+                date: 'SeasonCalendar.CalendarDate (Calendar)',
+                age: 'UsasSwimTime.AgeAtMeetKey',
+                gender: 'UsasSwimTime.EventCompetitionCategoryKey', // EventCompetitionCategory.EventCompetitionCategoryKey EventCompetitionCategory.TypeName 
+                club: 'OrgUnit.Level4Code',
+                clubName: 'OrgUnit.Level4Name',
+                lsc: 'OrgUnit.Level3Code',
+                zone: 'OrgUnit.Level2Code',
+                std: 'TimeStandard.TimeStandardName',
+                score: 'UsasSwimTime.PowerPoints',
+                ageGroup: 'Age.AgeGroup1',
+                season: 'SeasonCalendar.SeasonYearDesc',
+                sortkey: 'UsasSwimTime.SortKey',
+            },
+            level: {
+                date: 'days',
+            }
+        },
+        split: {
+            dim: {
+                dist: 'SwimTimeSplit.CumulativeDistance',
+                split: 'SwimTimeSplit.CumulativeSplitTimeFormatted',
+                splash: 'SwimTimeSplit.UsasSwimTimeKey',
+            }
+        },
+        club: {
+            dim: {
+                pkey: 'Person.personKey',
+                name: 'Person.fullname',
+                lsc: 'OrgUnit.Level3Code',
+                clubName: 'OrgUnit.Level4Name',
+                summary: 'ImxSummary.ImxPoints',
+                // nationalRank: 'ImxSummary.NationalRank',
+                // zoneRank: 'ImxSummary.ZoneRank',
+                // lscRank: 'ImxSummary.LscRank',
+                imxAge: 'Age.IMXAgeRange',
+                imxType: 'ImxSeason.ImxType',
+                gender: 'CompetitionCategory.CompetitionCategoryKey',
+                season: 'ImxSeason.ImxSeasonName',
+                zone: 'OrgUnit.Level2Code',
+                lsc: 'OrgUnit.Level3Code',
+
+                details: 'ImxSummary.ImxSummaryKey',
+
+                event: 'SwimEvent.SwimEventKey',
+                // meet: 'Meet.MeetKey',
+                date: 'ImxDetail.SwimDate (Calendar)',
+                time: 'ImxDetail.SwimTimeFormatted',
+                score: 'ImxDetail.IMXPoints',
+            },
+            level: {
+                date: 'days',
+            }
+        }
+    }
+
+    function buildBodyObject(type, count, fields, config) {
+        let bodyObj = {
+            metadata: [],
+            count: count
+        };
+
+        let typeObj = _body[type];
+        for (let field of fields) {
+            let dim = typeObj.dim[field];
+            if (dim) {
+                let obj = {
+                    title: field,
+                    dim: '[' + dim + ']'
+                };
+
+                let level = typeObj.level?.[field];
+                if (level) {
+                    obj.level = level;
+                }
+
+                let cfg = config?.[field];
+                if (cfg !== null) {
+                    for (let key in cfg) {
+                        if (cfg[key] !== null) {
+                            obj[key] = cfg[key];
+                        }
+                    }
+
+                    bodyObj.metadata.push(obj);
+                }
+            }
+        }
+
+        return bodyObj;
+    }
+
+    async function fetchSwimValues(type, count, fields, config) {
+        let bodyObj = buildBodyObject(type, count, fields, config);
+        let data = await fetchSwimValuesInner(bodyObj, type);
+        if (!data) {
+            return;
+        }
+
+        if (data.length > count) {
+            console.error('Too many records:', bodyObj, data);
+        }
+
+        return data;
+    }
+
+    async function fetchSwimValuesInner(bodyObj, type) {
         let map = {
             swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
             event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
@@ -1959,20 +2044,10 @@ const G = {};
 
         let pkeys = new Set(values.map(v => v[idxPkey]));
 
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'pkey',
-                    dim: '[UsasSwimTime.PersonKey]',
-                    filter: {
-                        members: [...pkeys]
-                    }
-                }
-            ],
-            count: pkeys.size
-        }
-
-        let list = await fetchSwimValues(bodyObj, 'event');
+        let list = await fetchSwimValues('event', pkeys.size, ['pkey'],
+            {
+                pkey: { filter: { members: [...pkeys] } }
+            });
         if (!list) {
             return;
         }
@@ -2028,47 +2103,11 @@ const G = {};
     }
 
     async function loadClubSearch(value, all) {
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'name',
-                    dim: '[Persons.FullName]'
-                },
-                {
-                    title: 'age',
-                    dim: '[Persons.Age]',
-                    sort: 'asc'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[Persons.ClubName]',
-                    filter: {
-                        contains: value
-                    }
-                },
-                {
-                    title: 'lsc',
-                    dim: '[Persons.LscCode]'
-                },
-                {
-                    title: 'pkey',
-                    dim: '[Persons.PersonKey]'
-                }
-            ],
-            count: 5000
-        };
-
-        if (!all) {
-            bodyObj.metadata[1].filter = {
-                to: 18
-            }
-        } else {
-            bodyObj.metadata[1].filter = {
-                from: 19
-            }
-        }
-
-        return await fetchSwimValues(bodyObj);
+        return await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey'],
+            {
+                clubName: { filter: { contains: value } },
+                age: { filter: all ? { from: 19 } : { to: 18 } }
+            });
     }
 
     async function loadSwimmerSearch(value, all) {
@@ -2110,58 +2149,12 @@ const G = {};
     }
 
     async function loadSwimmerSearchByFirstAndLastName(firstName, lastName, all) {
-        let bodyObj = {
-            metadata: [
+        return await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey', 'lastName', 'firstName'],
                 {
-                    title: 'name',
-                    dim: '[Persons.FullName]'
-                },
-                {
-                    title: 'age',
-                    dim: '[Persons.Age]',
-                    sort: 'asc'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[Persons.ClubName]'
-                },
-                {
-                    title: 'lsc',
-                    dim: '[Persons.LscCode]'
-                },
-                {
-                    title: 'pkey',
-                    dim: '[Persons.PersonKey]'
-                },
-                {
-                    dim: '[Persons.LastName]',
-                    filter: {
-                        startsWith: lastName
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[Persons.FirstAndPreferredName]',
-                    filter: {
-                        contains: firstName
-                    },
-                    panel: 'scope'
-                }
-            ],
-            count: 5000
-        };
-
-        if (!all) {
-            bodyObj.metadata[1].filter = {
-                to: 18
-            }
-        } else {
-            bodyObj.metadata[1].filter = {
-                from: 19
-            }
-        }
-
-        return await fetchSwimValues(bodyObj);
+                lastName: { filter: { startsWith: lastName }, panel: 'scope' },
+                firstName: { filter: { contains: firstName }, panel: 'scope' },
+                age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
+            });
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -2231,73 +2224,13 @@ const G = {};
     }
 
     async function loadEvents(pkey) {
-        let bodyObj = {
-            metadata: [
-                //[UsasSwimTime.FinishPosition]
-                //[UsasSwimTime.FullName]
-                //[Age.AgeGroup1]
+        let events = await fetchSwimValues('event', 5000,
+            ['time', 'age', 'std', 'lsc', 'clubName', 'date', 'event', 'meet', 'gender', 'session', 'score', 'splash', 'pkey'],
                 {
-                    title: 'time',
-                    dim: '[UsasSwimTime.SwimTimeFormatted]'
-                },
-                {
-                    title: 'age',
-                    dim: '[UsasSwimTime.AgeAtMeetKey]'
-                },
-                {
-                    title: 'std',
-                    dim: '[TimeStandard.TimeStandardName]'
-                },
-                {
-                    title: 'lsc',
-                    dim: '[OrgUnit.Level3Code]'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[OrgUnit.Level4Name]'
-                },
-                {
-                    title: 'date',
-                    dim: '[SeasonCalendar.CalendarDate (Calendar)]',
-                    level: 'days',
-                    sort: 'asc'
-                },
-                {
-                    title: 'event',
-                    dim: '[UsasSwimTime.SwimEventKey]'  //[SwimEvent.EventCode]
-                },
-                {
-                    title: 'meet',
-                    dim: '[UsasSwimTime.MeetKey]'   //[Meet.MeetKey]
-                },
-                {
-                    title: 'gender',
-                    dim: '[UsasSwimTime.EventCompetitionCategoryKey]'   //[EventCompetitionCategory.TypeName]
-                },
-                {
-                    title: 'session',
-                    dim: '[Session.SessionKey]' //[Session.SessionName]
-                },
-                {
-                    title: 'score',
-                    dim: '[UsasSwimTime.PowerPoints]'
-                },
-                {
-                    title: 'splash',
-                    dim: '[UsasSwimTime.UsasSwimTimeKey]'
-                },
-                {
-                    dim: '[UsasSwimTime.PersonKey]',
-                    filter: {
-                        equals: pkey
-                    },
-                    panel: 'scope'
-                }
-            ],
-            count: 5000
-        };
-
-        let events = await fetchSwimValues(bodyObj, 'event');
+                pkey: { filter: { equals: pkey }, panel: 'scope' },
+                date: { sort: 'asc' }
+            }
+        );
         if (!events) {
             return;
         }
@@ -2310,66 +2243,18 @@ const G = {};
     }
 
     async function loadSplits(key, map) {
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'dist',
-                    dim: '[SwimTimeSplit.CumulativeDistance]',
-                    sort: 'asc'
-                },
-                {
-                    title: 'split',
-                    dim: '[SwimTimeSplit.CumulativeSplitTimeFormatted]'
-                },
-                {
-                    title: key,
-                    dim: '[SwimTimeSplit.UsasSwimTimeKey]',
-                    filter: {
-                        members: [...map.keys()]
-                    }
-                }
-            ],
-            count: map.size * 30
-        };
-
-        return await fetchSwimValues(bodyObj, 'split');
+        return await fetchSwimValues('split', map.size * 30, ['dist', 'split', key],
+            {
+                dist: { sort: 'asc' },
+                [key]: { filter: { members: [...map.keys()] } }
+            });
     }
 
     async function loadSwimerInfo(pkey) {
-        let bodyObj = {
-            metadata: [
+        let values = await fetchSwimValues('swimmer', 1, ['firstName', 'lastName', 'age', 'clubName', 'lsc', 'pkey'],
                 {
-                    title: 'firstName',
-                    dim: '[Persons.FirstAndPreferredName]'
-                },
-                {
-                    title: 'lastName',
-                    dim: '[Persons.LastName]'
-                },
-                {
-                    title: 'age',
-                    dim: '[Persons.Age]'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[Persons.ClubName]'
-                },
-                {
-                    title: 'lsc',
-                    dim: '[Persons.LscCode]'
-                },
-                {
-                    title: 'pkey',
-                    dim: '[Persons.PersonKey]',
-                    filter: {
-                        equals: pkey
-                    }
-                }
-            ],
-            count: 1
-        };
-
-        let values = await fetchSwimValues(bodyObj);
+                pkey: { filter: { equals: pkey } }
+            });
         if (!values) {
             return;
         }
@@ -3931,39 +3816,12 @@ const G = {};
         let values = await LocalCache.func(cacheKey, async () => {
             let [from, to] = decodeAgeKey(ageKey);
 
-            let bodyObj = {
-                metadata: [
-                    {
-                        title: 'pkey',
-                        dim: '[Persons.PersonKey]'
-                    },
-                    {
-                        title: 'age',
-                        dim: '[Persons.Age]',
-                        filter: {
-                            from: from,
-                            to: to
-                        }
-                    },
-                    {
-                        dim: '[Persons.ClubName]',
-                        filter: {
-                            equals: clubName
-                        },
-                        panel: 'scope'
-                    },
-                    {
-                        dim: '[Persons.LscCode]',
-                        filter: {
-                            equals: lsc
-                        },
-                        panel: 'scope'
-                    }
-                ],
-                count: 1000
-            };
-
-            return await fetchSwimValues(bodyObj);
+            return await fetchSwimValues('swimmer', 1000, ['pkey', 'age', 'clubName', 'lsc'],
+                {
+                    age: { filter: { from: from, to: to } },
+                    clubName: { filter: { equals: clubName }, panel: 'scope' },
+                    lsc: { filter: { equals: lsc }, panel: 'scope' }
+                });
         });
 
         return new Map(values);
@@ -3974,66 +3832,13 @@ const G = {};
 
         let year = getSessionYear();
 
-        let bodyObj = {
-            metadata: [
+        let list = await fetchSwimValues('event', 5000, ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'gender', 'season'],
                 {
-                    title: 'name',
-                    dim: '[Person.FullName]'
-                },
-                {
-                    title: 'date',
-                    dim: '[SeasonCalendar.CalendarDate (Calendar)]',
-                    level: 'days'
-                },
-                {
-                    title: 'time',
-                    dim: '[UsasSwimTime.SwimTimeFormatted]'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[OrgUnit.Level4Name]'
-                },
-                {
-                    title: 'lsc',
-                    dim: '[OrgUnit.Level3Code]'
-                },
-                {
-                    title: 'meet',
-                    dim: '[UsasSwimTime.MeetKey]'
-                },
-                {
-                    title: 'pkey',
-                    dim: '[UsasSwimTime.PersonKey]',
-                    filter: {
-                        members: [...swimmerAgeMap.keys()]
-                    }
-                },
-                {
-                    title: 'score',
-                    dim: '[UsasSwimTime.PowerPoints]'
-                },
-                {
-                    title: 'sortkey',
-                    dim: '[UsasSwimTime.SortKey]',
-                    sort: 'asc'
-                },
-                {
-                    title: 'event',
-                    dim: '[UsasSwimTime.SwimEventKey]',
-                    filter: {
-                        equals: Number(event)
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[UsasSwimTime.EventCompetitionCategoryKey]',
-                    filter: {
-                        equals: convertToGenderCode(genderStr)
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[SeasonCalendar.SeasonYearDesc]',
+                pkey: { filter: { members: [...swimmerAgeMap.keys()] } },
+                event: { filter: { equals: Number(event) }, panel: 'scope' },
+                gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
+                sortkey: { sort: 'asc' },
+                season: {
                     filter: {
                         members: [
                             `${year} (9/1/${year - 1} - 8/31/${year})`,
@@ -4043,11 +3848,8 @@ const G = {};
                     },
                     panel: 'scope'
                 }
-            ],
-            count: 5000
         }
-
-        let list = await fetchSwimValues(bodyObj, 'event');
+        );
         if (!list || list.length == 0) {
             return list;
         }
@@ -4094,71 +3896,15 @@ const G = {};
         let [from, to] = decodeAgeKey(ageKey);
         from = from > 0 ? from - 2 : 0;
 
-        let bodyObj = {
-            metadata: [
+        return await fetchSwimValues('event', 5000,
+            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'age', 'gender', 'season', 'zone'],
                 {
-                    title: 'name',
-                    dim: '[UsasSwimTime.FullName]'
-                },
-                {
-                    title: 'date',
-                    dim: '[SeasonCalendar.CalendarDate (Calendar)]',
-                    level: 'days'
-                },
-                {
-                    title: 'time',
-                    dim: '[UsasSwimTime.SwimTimeFormatted]'
-                },
-                {
-                    title: 'clubName',
-                    dim: '[OrgUnit.Level4Name]'
-                },
-                {
-                    title: 'lsc',
-                    dim: '[OrgUnit.Level3Code]'
-                },
-                {
-                    title: 'meet',
-                    dim: '[UsasSwimTime.MeetKey]'
-                },
-                {
-                    title: 'pkey',
-                    dim: '[UsasSwimTime.PersonKey]'
-                },
-                {
-                    title: 'score',
-                    dim: '[UsasSwimTime.PowerPoints]'
-                },
-                {
-                    title: 'sortkey',
-                    dim: '[UsasSwimTime.SortKey]',
-                    sort: 'asc'
-                },
-                {
-                    title: 'event',
-                    dim: '[UsasSwimTime.SwimEventKey]',
-                    filter: {
-                        equals: Number(event)
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[UsasSwimTime.AgeAtMeetKey]',
-                    filter: {
-                        from: from,
-                        to: to
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[EventCompetitionCategory.EventCompetitionCategoryKey]',
-                    filter: {
-                        equals: convertToGenderCode(genderStr)
-                    },
-                    panel: 'scope'
-                },
-                {
-                    dim: '[SeasonCalendar.SeasonYearDesc]',
+                lsc: { filter: lsc ? { equals: lsc } : null },
+                sortkey: { sort: 'asc' },
+                event: { filter: { equals: Number(event) }, panel: 'scope' },
+                age: { filter: { from: from, to: to }, panel: 'scope' },
+                gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
+                season: {
                     filter: {
                         members: [
                             `${year} (9/1/${year - 1} - 8/31/${year})`,
@@ -4167,32 +3913,9 @@ const G = {};
                         ]
                     },
                     panel: 'scope'
-                }
-            ],
-            count: 5000
-        }
-
-        if (zone) {
-            bodyObj.metadata.push({
-                dim: '[OrgUnit.Level2Code]',
-                filter: {
-                    equals: zone
                 },
-                panel: 'scope'
+                zone: zone ? { filter: { equals: zone }, panel: 'scope' } : null
             });
-        }
-
-        if (lsc) {
-            bodyObj.metadata.push({
-                dim: '[OrgUnit.Level3Code]',
-                filter: {
-                    equals: lsc
-                },
-                panel: 'scope'
-            });
-        }
-
-        return await fetchSwimValues(bodyObj, 'event');
     }
 
     async function loadImxRank(key) {
@@ -4310,150 +4033,27 @@ const G = {};
         return values;
 
         async function loadImxSeason(year) {
-            let bodyObj = {
-                metadata: [
-                    {
-                        title: 'pkey',
-                        dim: '[Person.personKey]'
-                    },
-                    {
-                        title: 'name',
-                        dim: '[Person.fullname]'
-                    },
-                    {
-                        title: 'lsc',
-                        dim: '[OrgUnit.Level3Code]'
-                    },
-                    {
-                        title: 'clubName',
-                        dim: '[OrgUnit.Level4Name]'
-                    },
-                    {
-                        title: 'score',
-                        dim: '[ImxSummary.ImxPoints]',
-                        sort: 'desc'
-                    },
-                    // {
-                    //     title: 'nationalRank',
-                    //     dim: '[ImxSummary.NationalRank]'
-                    // },
-                    // {
-                    //     title: 'zoneRank',
-                    //     dim: '[ImxSummary.ZoneRank]'
-                    // },
-                    // {
-                    //     title: 'lscRank',
-                    //     dim: '[ImxSummary.LscRank]'
-                    // },
-                    {
-                        title: 'details',
-                        dim: '[ImxSummary.ImxSummaryKey]'
-                    },
-                    {
-                        title: 'imxAge',
-                        dim: '[Age.IMXAgeRange]',
-                        filter: {
-                            members: ages
-                        }
-                    },
-                    {
-                        title: 'imxType',
-                        dim: '[ImxSeason.ImxType]',
-                        filter: {
-                            equals: imxType
-                        },
-                        panel: 'scope'
-                    },
-                    {
-                        title: 'gender',
-                        dim: '[CompetitionCategory.CompetitionCategoryKey]',
-                        filter: {
-                            equals: convertToGenderCode(genderStr)
-                        },
-                        panel: 'scope'
-                    },
-                    {
-                        dim: '[ImxSeason.ImxSeasonName]',
-                        filter: {
-                            equals: `${course} ${year}${seasonSuffix}`
-                        },
-                        panel: 'scope'
-                    }
-                ],
-                count: 1000
-            };
-
-            if (zone) {
-                bodyObj.metadata.push({
-                    dim: '[OrgUnit.Level2Code]',
-                    filter: {
-                        equals: zone
-                    },
-                    panel: 'scope'
+            return await fetchSwimValues('club', 1000,
+                ['pkey', 'name', 'lsc', 'clubName', 'summary', 'details', 'imxAge', 'imxType', 'gender', 'season', 'zone'],
+                {
+                    pkey: { filter: swimmerAgeMap ? { members: [...swimmerAgeMap.keys()] } : null },
+                    lsc: { filter: lsc ? { equals: lsc } : null },
+                    summary: { sort: 'desc' },
+                    imxAge: { filter: { members: ages } },
+                    imxType: { filter: { equals: imxType }, panel: 'scope' },
+                    gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
+                    season: { filter: { equals: `${course} ${year}${seasonSuffix}` }, panel: 'scope' },
+                    zone: zone ? { filter: { equals: zone }, panel: 'scope' } : null
                 });
-            }
-
-            if (lsc) {
-                bodyObj.metadata.push({
-                    dim: '[OrgUnit.Level3Code]',
-                    filter: {
-                        equals: lsc
-                    },
-                    panel: 'scope'
-                });
-            }
-
-            if (swimmerAgeMap) {
-                bodyObj.metadata.push({
-                    dim: '[Person.personKey]',
-                    filter: {
-                        members: [...swimmerAgeMap.keys()]
-                    },
-                    panel: 'scope'
-                });
-            }
-
-            return await fetchSwimValues(bodyObj, 'club');
         }
     }
 
     async function loadImxRankDetails(key, map, eventCount) {
-        let bodyObj = {
-            metadata: [
+        let details = await fetchSwimValues('club', map.size * eventCount, ['event', 'date', 'time', 'score', key],
                 {
-                    title: 'event',
-                    dim: '[SwimEvent.SwimEventKey]',
-                    sort: 'asc'
-                },
-                //   {
-                //     title: 'meet',
-                //     dim: '[Meet.MeetKey]',
-                //   },
-                {
-                    title: 'date',
-                    dim: '[ImxDetail.SwimDate (Calendar)]',
-                    level: 'days'
-                },
-                {
-                    title: 'time',
-                    dim: '[ImxDetail.SwimTimeFormatted]'
-                },
-                {
-                    title: 'score',
-                    dim: '[ImxDetail.IMXPoints]'
-                },
-                {
-                    title: key,
-                    dim: '[ImxSummary.ImxSummaryKey]',
-                    filter: {
-                        members: [...map.keys()]
-                    }
-                }
-            ],
-            count: map.size * eventCount
-        };
-
-        let details = await fetchSwimValues(bodyObj, 'club');
+                event: { sort: 'asc' },
+                [key]: { filter: { members: [...map.keys()] } }
+            });
 
         shortenDateField(details);
 
@@ -4470,33 +4070,14 @@ const G = {};
 
         let [from, to] = decodeAgeKey(ageKey);
 
-        let bodyObj = {
-            metadata: [
-                {
-                    title: 'pkey',
-                    dim: '[Persons.PersonKey]',
-                    filter: {
-                        members: [...pkeys]
-                    }
-                },
-                {
-                    title: 'age',
-                    dim: '[Persons.Age]',
-                    filter: {
-                        from: from,
-                        to: to
-                    }
-                }
-            ],
-            count: pkeys.length
-        };
-
-        let pkeyToAgeList = await fetchSwimValues(bodyObj);
+        let pkeyToAgeList = await fetchSwimValues('swimmer', pkeys.length, ['pkey', 'age'],
+            {
+                pkey: { filter: { members: [...pkeys] } },
+                age: { filter: { from: from, to: to } }
+            });
         if (!pkeyToAgeList) {
             return values;
         }
-        // pkey, age
-        // 0     1
 
         // create new pkey set by age response.
         let pkeyAge = new Map(pkeyToAgeList);
@@ -4717,7 +4298,7 @@ const G = {};
     async function showRankTable(data, key) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
         let [from, to] = decodeAgeKey(ageKey);
-        let standardNames = (await getAgeGroupMotivationMap()).keys();
+        let standardNames = [...(await getAgeGroupMotivationMap()).keys()];
         let standards = [];
         for (let [i, clr] of ['gn', 'bl', 'rd'].entries()) {
             let [meetName, ageRange] = (localStorage.getItem('meetStds' + i) || '|').split('|');
@@ -4810,7 +4391,7 @@ const G = {};
 
             let hightlightPkey = pkey == _highLightPkey ? ` class="high-light"` : '';
 
-            html.push(`<tr${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row), '<td>', row.score, '</td><td>', row.age, '</td>');
+            html.push(`<tr${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row), '<td>', row.summary, '</td><td>', row.age, '</td>');
 
             for (let stk of row.details) {
                 html.push('<td class="tc">', buildTimeCell(stk.time, stk.score, formatDate(stk.date)), '</td>');
