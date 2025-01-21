@@ -653,7 +653,7 @@ const G = {};
         static async _load(lsc) {
             return await LocalCache.func('clubs/' + lsc, async () => {
                 return await fetchSwimValues('event', 5000, ['clubName', 'club', 'event', 'lsc'],
-                        {
+                    {
                         event: { filter: { equals: 1 }, panel: 'scope' },
                         lsc: { filter: { equals: lsc }, panel: 'scope' }
                     });
@@ -2150,7 +2150,7 @@ const G = {};
 
     async function loadSwimmerSearchByFirstAndLastName(firstName, lastName, all) {
         return await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey', 'lastName', 'firstName'],
-                {
+            {
                 lastName: { filter: { startsWith: lastName }, panel: 'scope' },
                 firstName: { filter: { contains: firstName }, panel: 'scope' },
                 age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
@@ -2226,7 +2226,7 @@ const G = {};
     async function loadEvents(pkey) {
         let events = await fetchSwimValues('event', 5000,
             ['time', 'age', 'std', 'lsc', 'clubName', 'date', 'event', 'meet', 'gender', 'session', 'score', 'splash', 'pkey'],
-                {
+            {
                 pkey: { filter: { equals: pkey }, panel: 'scope' },
                 date: { sort: 'asc' }
             }
@@ -2252,7 +2252,7 @@ const G = {};
 
     async function loadSwimerInfo(pkey) {
         let values = await fetchSwimValues('swimmer', 1, ['firstName', 'lastName', 'age', 'clubName', 'lsc', 'pkey'],
-                {
+            {
                 pkey: { filter: { equals: pkey } }
             });
         if (!values) {
@@ -3765,7 +3765,7 @@ const G = {};
                 if (load == loadRank) {
                     data.sort((a, b) => a.timeInt - b.timeInt);
                 } else {
-                    data.sort((a, b) => b.score - a.score);
+                    data.sort((a, b) => b.summary - a.summary);
                 }
             }
         } else {
@@ -3833,7 +3833,7 @@ const G = {};
         let year = getSessionYear();
 
         let list = await fetchSwimValues('event', 5000, ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'gender', 'season'],
-                {
+            {
                 pkey: { filter: { members: [...swimmerAgeMap.keys()] } },
                 event: { filter: { equals: Number(event) }, panel: 'scope' },
                 gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
@@ -3848,7 +3848,7 @@ const G = {};
                     },
                     panel: 'scope'
                 }
-        }
+            }
         );
         if (!list || list.length == 0) {
             return list;
@@ -3898,7 +3898,7 @@ const G = {};
 
         return await fetchSwimValues('event', 5000,
             ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'age', 'gender', 'season', 'zone'],
-                {
+            {
                 lsc: { filter: lsc ? { equals: lsc } : null },
                 sortkey: { sort: 'asc' },
                 event: { filter: { equals: Number(event) }, panel: 'scope' },
@@ -3978,11 +3978,11 @@ const G = {};
             if (!best) {
                 pkeyMap.set(pkey, row);
             } else {
-                best[idx.score] += mergeBest(best[details], row[details], detailsIdx.score);
+                best[idx.summary] += mergeBest(best[details], row[details], detailsIdx.score);
             }
         }
 
-        values = [...pkeyMap.values()].sort((a, b) => b[idx.score] - a[idx.score]);
+        values = [...pkeyMap.values()].sort((a, b) => b[idx.summary] - a[idx.summary]);
         values.cacheTime = cacheTime;
         values.idx = idx;
         return values;
@@ -4050,7 +4050,7 @@ const G = {};
 
     async function loadImxRankDetails(key, map, eventCount) {
         let details = await fetchSwimValues('club', map.size * eventCount, ['event', 'date', 'time', 'score', key],
-                {
+            {
                 event: { sort: 'asc' },
                 [key]: { filter: { members: [...map.keys()] } }
             });
