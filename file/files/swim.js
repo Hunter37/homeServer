@@ -1012,7 +1012,7 @@ const G = {};
         close() {
             window.removeEventListener('click', this.closing);
             window.removeEventListener('touchstart', this.closing);
-            document.querySelector(`#${this.id} .dropdown`).classList.add('hide');
+            document.querySelector(`#${this.id} .dropdown`)?.classList.add('hide');
         }
     }
 
@@ -2004,7 +2004,7 @@ const G = {};
         }
         html.push('</tr>');
         for (let [i, row] of values.entries()) {
-            html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${row.pkey})"><td>`, i, '</td><td class="left">',
+            html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${row.pkey})"><td>`, i + 1, '</td><td class="left">',
                 row.name, '</td><td>', row.age, '</td><td class="left">', row.clubName, '</td><td>', row.lsc, '</td></tr>');
         }
         html.push('</tbody></table>');
