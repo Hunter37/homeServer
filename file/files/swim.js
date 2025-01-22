@@ -39,7 +39,9 @@ const G = {};
         ['BK', 'Back'],
         ['BR', 'Breast'],
         ['FL', 'Fly'],
-        ['IM', 'IM']]);
+        ['IM', 'IM'],
+        ['FR-R', 'Free Relay'],
+        ['MED-R', 'Medley Relay']]);
     const _strokeIndexMap = new Map([..._storkeMap.keys()].map((item, index) => [item, index]));
     const _meetShortNames = {
         'Futures (LCM)': 'FU',
@@ -76,15 +78,16 @@ const G = {};
     const _eventOrderMap = new Map([
         ['SCY', [81, 1, 2, 3, 4, 5, 6, 82, 11, 12, 13, 83, 14, 15, 16, 84, 17, 18, 19, 20, 21, 22, 91, 92]],
         ['SCM', [85, 28, 29, 30, 31, 32, 33, 86, 38, 39, 40, 87, 41, 42, 43, 88, 44, 45, 46, 47, 48, 49]],
-        ['LCM', [55, 56, 57, 58, 59, 60, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 93, 94]]
+        ['LCM', [55, 56, 57, 58, 59, 60, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 93, 94]],
+        ['SCY-RELAY', [23, 24, 25, 26, 27]]
     ]);
     const _eventIndexMap = new Map(_eventList.map((item, index) => [item, index]));
 
-    // session code (0|Unknown 1|Prelim 2|SwimOff 3|Final 4|SemiFinal 5|QuarterFinal 6|TimedFinal 7|Time Trial)
-    // order: unknown, timed, prelim, swimoff, quarter, semi, final, time trial
-    //        0        1      2       3        4        5     6      7
-    const _sessionOrder = [0, 2, 3, 6, 5, 4, 1, 7];
-    const _sessionNames = ['', 'Prelim', 'SwimOff', 'Final', 'SemiFinal', 'QuarterFinal', 'TimedFinal', 'Time Trial'];   // 0 == 'Unknown',
+    // session code (0|Unknown 1|Prelim 2|SwimOff 3|Final 4|SemiFinal 5|QuarterFinal 6|TimedFinal 7|Time Trial) (8|Relay)
+    // order: unknown, timed, prelim, swimoff, quarter, semi, final, time trial (Relay)
+    //        0        1      2       3        4        5     6      7           8
+    const _sessionOrder = [0, 3, 4, 7, 6, 5, 2, 1, -1];
+    const _sessionNames = ['', 'Prelim', 'SwimOff', 'Final', 'SemiFinal', 'QuarterFinal', 'TimedFinal', 'Time Trial', 'Relay'];   // 0 == 'Unknown',
 
     const starSVG = '<svg viewBox="-1 -1 26 26" stroke-width="1.3"><path d="M4.59 23.5l1.95-8.5039L0 9.27632l8.64-.75658L12 .5l3.36 8.01974 8.64.75658-6.54 5.71978L19.41 23.5 12 18.9908 4.59 23.5Z"/></svg>';
     const gearSVG = '<svg viewBox="0 0 18 18"><path d="M14.98 8.66L17 6.71l-2.02-3.5-2.69.77c-.2-.13-.42-.25-.63-.36L11 1H7l-.66 2.63c-.22.1-.43.22-.63.36l-2.69-.77L1 6.71l2.02 1.95c-.02.41-.02.26 0 .68L1 11.29l2.02 3.5 2.69-.77c.2.13.42.25.63.36L7 17h4l.66-2.63c.22-.11.43-.23.63-.36l2.69.77 2.02-3.5-2.02-1.95c.03-.41.03-.26 0-.67z"/><circle cx="9" cy="9" r="3"/></svg>';
@@ -172,18 +175,21 @@ const G = {};
     }
 
     function decodeAgeKey(ageKey) {
+        ageKey = ageKey.replace(/^(\d+)\s?&\s?([U|O]).+$/i, '$1$2');
         let from = 0;
         let to = 99;
-        if (ageKey.endsWith('U')) {
-            to = parseInt(ageKey);
-        } else if (ageKey.endsWith('O')) {
-            from = parseInt(ageKey);
-        } else if (ageKey.includes('-')) {
-            let parts = ageKey.split('-');
-            from = parseInt(parts[0]);
-            to = parseInt(parts[1]);
-        } else {
-            from = to = parseInt(ageKey);
+        if (ageKey.toLowerCase() != 'open') {
+            if (ageKey.endsWith('U')) {
+                to = parseInt(ageKey);
+            } else if (ageKey.endsWith('O')) {
+                from = parseInt(ageKey);
+            } else if (ageKey.includes('-')) {
+                let parts = ageKey.split('-');
+                from = parseInt(parts[0]);
+                to = parseInt(parts[1]);
+            } else {
+                from = to = parseInt(ageKey);
+            }
         }
         return [from, to];
     }
@@ -191,6 +197,9 @@ const G = {};
     function ageRangeToAgeKey(from, to) {
         if (!to) {
             return from + '';
+        }
+        if (from == 0 && to == 99) {
+            return 'Open';
         }
         if (from == 0) {
             return to + 'U';
@@ -576,7 +585,7 @@ const G = {};
     // local caches
 
     class LocalCache {
-        static currentVersion = 7;
+        static currentVersion = 8;
 
         static enable(yes) {
             if (typeof yes === 'boolean') {
@@ -652,10 +661,10 @@ const G = {};
 
         static async _load(lsc) {
             return await LocalCache.func('clubs/' + lsc, async () => {
-                return await fetchSwimValues('event', 5000, ['clubName', 'club', 'event', 'lsc'],
+                return await fetchSwimValues('event', 5000, ['clubName', 'club', '_event', '_lsc'],
                     {
-                        event: { filter: { equals: 1 }, panel: 'scope' },
-                        lsc: { filter: { equals: lsc }, panel: 'scope' }
+                        event: { filter: { equals: 1 } },
+                        lsc: { filter: { equals: lsc } }
                     });
             }, _1WeekInSec, 3);
         }
@@ -941,8 +950,8 @@ const G = {};
         }
 
         render() {
-            return `<table id="${this.id}" class="fill drop-layout"><tbody><tr><td onclick="${getGlobalName(Dropdown)}.get('${this.id}').click()">${this.triggerElem}</td></tr>`
-                + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.content}</div></div></td></tr></tbody></table>`;
+            return `<table id="${this.id}" class="fill drop-layout"><tr><td onclick="${getGlobalName(Dropdown)}.get('${this.id}').click()">${this.triggerElem}</td></tr>`
+                + `<tr><td style="position:relative"><div><div class="dropdown hide">${this.content}</div></div></td></tr></table>`;
         }
 
         click() {
@@ -1244,6 +1253,7 @@ const G = {};
 
     let _body = {
         swimmer: {
+            db: 'Public Person Search',
             dim: {
                 pkey: 'Persons.PersonKey',
                 name: 'Persons.FullName',
@@ -1255,34 +1265,44 @@ const G = {};
             }
         },
         event: {
+            db: 'USA Swimming Times Elasticube',
             dim: {
+                sortkey: 'UsasSwimTime.SortKey',
                 splash: 'UsasSwimTime.UsasSwimTimeKey',
                 place: 'UsasSwimTime.FinishPosition',
-                session: 'Session.SessionKey',                      // Session.SessionName
+                session: 'UsasSwimTime.SessionKey',                 // Session.SessionKey Session.SessionName
                 event: 'UsasSwimTime.SwimEventKey',                 // SwimEvent.EventCode 
                 meet: 'UsasSwimTime.MeetKey',                       // Meet.MeetKey 
                 meetName: 'Meet.MeetName',
                 pkey: 'UsasSwimTime.PersonKey',
                 name: 'UsasSwimTime.FullName',                      // Person.FullName
                 time: 'UsasSwimTime.SwimTimeFormatted',
-                date: 'SeasonCalendar.CalendarDate (Calendar)',
                 age: 'UsasSwimTime.AgeAtMeetKey',
                 gender: 'UsasSwimTime.EventCompetitionCategoryKey', // EventCompetitionCategory.EventCompetitionCategoryKey EventCompetitionCategory.TypeName 
+                score: 'UsasSwimTime.PowerPoints',
                 club: 'OrgUnit.Level4Code',
                 clubName: 'OrgUnit.Level4Name',
                 lsc: 'OrgUnit.Level3Code',
                 zone: 'OrgUnit.Level2Code',
                 std: 'TimeStandard.TimeStandardName',
-                score: 'UsasSwimTime.PowerPoints',
                 ageGroup: 'Age.AgeGroup1',
+                date: 'SeasonCalendar.CalendarDate (Calendar)',
                 season: 'SeasonCalendar.SeasonYearDesc',
-                sortkey: 'UsasSwimTime.SortKey',
+                relayAG: 'AgeGroup.AgeGroupDesc', // only for relay
+                // RelayTimes.SwimTimeFormatted =? UsasSwimTime.SwimTimeFormatted
+                // RelayTimes.FullName =? UsasSwimTime.FullName
+                // RelayTimes.SwimEventKey =? UsasSwimTime.SwimEventKey
+                // RelayTimes.EventCompetitionCategoryKey =? UsasSwimTime.EventCompetitionCategoryKey
+                // RelayTimes.MeetKey =? UsasSwimTime.MeetKey
+                // RelayTimes.RelayAgeGroupKey =? Age.AgeGroup1
+                // RelayTimes.SortKey =? UsasSwimTime.SortKey
             },
             level: {
                 date: 'days',
             }
         },
         split: {
+            db: 'Splits',
             dim: {
                 dist: 'SwimTimeSplit.CumulativeDistance',
                 split: 'SwimTimeSplit.CumulativeSplitTimeFormatted',
@@ -1290,6 +1310,7 @@ const G = {};
             }
         },
         club: {
+            db: 'Club Performance Elasticube',
             dim: {
                 pkey: 'Person.personKey',
                 name: 'Person.fullname',
@@ -1317,6 +1338,23 @@ const G = {};
             level: {
                 date: 'days',
             }
+        },
+        meet: {
+            db: 'Meets',
+            dim: {
+                meet: 'Meet.MeetKey',
+                name: 'Meet.MeetName',
+                type: 'Meet.MeetType',
+                host: 'OrgUnit.Level4Name',
+                date: 'Meet.StartDate (Calendar)',
+                end: 'Meet.EndDate (Calendar)',
+                // lsc: 'OrgUnit.Level3Code',
+                // result: 'Meet.MeetResultsUrl',
+            },
+            level: {
+                date: 'days',
+                end: 'days',
+            }
         }
     }
 
@@ -1328,12 +1366,22 @@ const G = {};
 
         let typeObj = _body[type];
         for (let field of fields) {
+            let hiden = false;
+            if (field.startsWith('_')) {
+                hiden = true;
+                field = field.substring(1);
+            }
+
             let dim = typeObj.dim[field];
             if (dim) {
                 let obj = {
                     title: field,
                     dim: '[' + dim + ']'
                 };
+                if (hiden) {
+                    obj.panel = 'scope';
+                    delete obj.title;
+                }
 
                 let level = typeObj.level?.[field];
                 if (level) {
@@ -1342,13 +1390,23 @@ const G = {};
 
                 let cfg = config?.[field];
                 if (cfg !== null) {
-                    for (let key in cfg) {
-                        if (cfg[key] !== null) {
-                            obj[key] = cfg[key];
-                        }
-                    }
 
-                    bodyObj.metadata.push(obj);
+                    cfg = Array.isArray(cfg) ? cfg : [cfg];
+
+                    for (let [i, c] of cfg.entries()) {
+                        let obj2 = { ...obj };  //Object.assign({}, obj);
+                        if (i > 0) {
+                            obj2.panel = 'scope';
+                            delete obj2.title;
+                        }
+
+                        for (let key in c) {
+                            if (cfg[key] !== null) {
+                                obj2[key] = c[key];
+                            }
+                        }
+                        bodyObj.metadata.push(obj2);
+                    }
                 }
             }
         }
@@ -1371,14 +1429,6 @@ const G = {};
     }
 
     async function fetchSwimValuesInner(bodyObj, type) {
-        let map = {
-            swimmer: 'https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql',
-            event: 'https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql',
-            club: 'https://usaswimming.sisense.com/api/datasources/Club Performance Elasticube/jaql',
-            split: 'https://usaswimming.sisense.com/api/datasources/Splits/jaql',
-            // meet: 'https://usaswimming.sisense.com/api/datasources/Meets/jaql'
-        }
-
         let response;
         for (let retry = 0; retry < 2; ++retry) {
             let headers = {
@@ -1387,7 +1437,7 @@ const G = {};
                 // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
             };
 
-            let url = map[type || 'swimmer'];
+            let url = 'https://usaswimming.sisense.com/api/datasources/' + _body[type].db + '/jaql';
 
             if (useProxy()) {
                 url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
@@ -1740,7 +1790,7 @@ const G = {};
     _navFuncMap.set('favorite', favorite);
 
     function createFavoriteTable(values) {
-        let html = ['<table class="fill top-margin"><tbody><tr><th></th>'];
+        let html = ['<table class="fill top-margin"><tr><th></th>'];
         for (let e of ['Name', 'Age', 'Club', 'LSC']) {
             html.push(`<th class="clickable" onclick="${getGlobalName(Favorite)}.sort('${e}');${getGlobalName(filterFavorite)}()">${e}</th>`);
         }
@@ -1749,7 +1799,7 @@ const G = {};
             html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${pkey})"><td onclick="event.stopPropagation()">`, Favorite.createButton(pkey, obj.name, obj.age, obj.club, obj.lsc),
                 '</td><td class="left">', obj.name, '</td><td>', obj.age, '</td><td class="left">', obj.club, '</td><td class="left">', obj.lsc, '</td></tr>');
         }
-        html.push('</tbody></table>');
+        html.push('</table>');
 
         return html.join('');
     }
@@ -2004,11 +2054,6 @@ const G = {};
             all = true;
         }
 
-        let index = name.indexOf(',');
-        if (index > 0) {
-            name = name.substring(index + 1) + ' ' + name.substring(0, index);
-        }
-
         await ensureToken();
         let data = await loadSearch(name, all);
 
@@ -2017,26 +2062,107 @@ const G = {};
     _navFuncMap.set('search', search);
 
     async function loadSearch(name, all) {
-        name = name.trim().replace(/\s+/g, ' ');
+        let isMeet = false;
+
+        // swap first and last name
+        let index = name.indexOf(',');
+        if (index > 0) {
+            name = name.substring(index + 1) + ' ' + name.substring(0, index);
+        }
+
+        // clean up name
+        name = name.trim().toLowerCase().replace(/\s+/g, ' ');
+
         let key = 'search/' + name + (all ? '<ALL>' : '');
         let data = await LocalCache.func(key, async () => {
+
             let values = await loadSwimmerSearch(name, all);
+
             if (!values || values.length == 0) {
                 values = await loadClubSearch(name, all);
             }
 
-            if (!values || values.length <= 1) {
-                return values;
+            if (values?.length > 1) {
+                values = await filterSwimmers(values);
             }
 
-            values = await filterSwimmers(values);
-            if (values) {
-                values.sort((a, b) => a[values.idx.age] - b[values.idx.age]);
+            if (!values || values.length == 0) {
+                values = await loadMeetSearch(name);
+                isMeet = true;
+                if (values) {
+                    shortenDateField(values);
+                    shortenDateField(values, 'end');
+                }
             }
-            return values;
-        });
 
-        return await convertObject(data);
+            return { values, isMeet };
+        }, _1DayInSec, 8);
+
+        data.values = await convertObject(data.values, null, new Set());
+
+        return data;
+    }
+
+    async function loadSwimmerSearch(name, all) {
+        let config = {
+            age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
+        };
+
+        return await partsSearch(name, 'name', config,
+            async () => await fetchSwimValues('swimmer', 1000, ['name', 'age', 'clubName', 'lsc', 'pkey'], config));
+    }
+
+    async function loadClubSearch(name, all) {
+        let config = {
+            age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
+        };
+
+        return await partsSearch(name, 'clubName', config,
+            async () => await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey'], config));
+    }
+
+    async function loadMeetSearch(name) {
+        let config = {
+            date: { sort: 'desc' }
+        };
+
+        return await partsSearch(name, 'name', config,
+            async () => await fetchSwimValues('meet', 1000, ['meet', 'name', 'type', 'host', 'date', 'end'], config), true);
+    }
+
+    async function partsSearch(value, field, config, fetchFunc, ignorePartsOrder) {
+        let parts = value.split(' ');
+        config[field] = parts.map(p => ({ filter: { contains: p } }));
+
+        let data = await fetchFunc();
+
+        if (!data || ignorePartsOrder) {
+            return data;
+        }
+
+        let idx = data.idx;
+        let result = [];
+        for (let row of data) {
+            let val = row[idx[field]].toLowerCase();
+            let match = matchPartsInOrder(parts, val);
+            match && result.push(row);
+        }
+
+        result.idx = idx;
+        result.cacheTime = data.cacheTime;
+        return result;
+    }
+
+    function matchPartsInOrder(parts, name) {
+        let i = 0;
+        for (let p of parts) {
+            i = name.indexOf(p, i);
+            if (i < 0) {
+                return false;
+            }
+            i += p.length;
+        }
+        return true;
     }
 
     async function filterSwimmers(values) {
@@ -2061,7 +2187,8 @@ const G = {};
         return result;
     }
 
-    function showSearch(values, loadingHash) {
+    function showSearch(data, loadingHash) {
+        let values = data.values;
         if (values.length == 0) {
             updateContent('No result found', loadingHash);
             return;
@@ -2073,88 +2200,47 @@ const G = {};
             return;
         }
 
-        let html = ['<table class="fill top-margin" id="search-table"><tbody><tr class="th"><th></th>'];
-        for (let [key, title] of [['name', 'Name'], ['age', 'Age'], ['clubName', 'Club'], ['lsc', 'LSC']]) {
+        let isMeet = data.isMeet;
+
+        let titles = isMeet ? [['name', 'Meet'], ['date', 'Date'], ['type', 'Type'], ['host', 'Host']]
+            : [['name', 'Name'], ['age', 'Age'], ['clubName', 'Club'], ['lsc', 'LSC']]
+
+        let html = ['<table class="fill top-margin left" id="search-table"><tr class="th"><th></th>'];
+        for (let [key, title] of titles) {
             html.push(`<th class="clickable" onclick="${getGlobalName(sortSearch)}('${key}')">${title}</th>`);
         }
         html.push('</tr>');
+
         for (let [i, row] of values.entries()) {
-            html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${row.pkey})"><td>`, i + 1, '</td><td class="left">',
-                row.name, '</td><td>', row.age, '</td><td class="left">', row.clubName, '</td><td>', row.lsc, '</td></tr>');
+            if (isMeet) {
+                html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('meet','${row.meet}_1_1_10')"><td class="right">`, i + 1,
+                    '</td><td>', row.name, '</td><td>', formatDate(row.date), row.date == row.end ? '' : ` - ${formatDate(row.end)}`,
+                    '</td><td>', row.type, '</td><td>', row.host, '</td></tr>');
+            } else {
+                html.push(`<tr class="clickable" onclick="${getGlobalName(go)}('swimmer', ${row.pkey})"><td class="right">`, i + 1, '</td><td>',
+                    row.name, '</td><td>', row.age, '</td><td>', row.clubName, '</td><td>', row.lsc, '</td></tr>');
+            }
         }
-        html.push('</tbody></table>');
+        html.push('</table>');
 
         updateContent(html.join(''), loadingHash);
 
         let table = document.getElementById('search-table');
-        table.values = values;
+        table.data = data;
         table.loadingHash = loadingHash;
     }
 
     function sortSearch(sortby) {
         let table = document.getElementById('search-table');
-        let values = table.values;
+        let data = table.data;
+        let values = data.values;
 
         let sorted = values.stableSort((a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] > b[sortby] ? 1 : -1);
         if (arrayEqual(sorted, values, (a, b) => a == b)) {
             sorted = values.stableSort((a, b) => a[sortby] == b[sortby] ? 0 : a[sortby] < b[sortby] ? 1 : -1);
         }
-        showSearch(sorted, table.loadingHash);
-    }
-
-    async function loadClubSearch(value, all) {
-        return await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey'],
-            {
-                clubName: { filter: { contains: value } },
-                age: { filter: all ? { from: 19 } : { to: 18 } }
-            });
-    }
-
-    async function loadSwimmerSearch(value, all) {
-        let names = splitNameBySpaces(value);
-        let calls = [];
-        for (let [firstName, lastName] of names) {
-            calls.push(loadSwimmerSearchByFirstAndLastName(firstName, lastName, all));
-        }
-
-        let values = [];
-        let data = await Promise.all(calls);
-        let set = new Set();
-        for (let vs of data) {
-            for (let v of vs) {
-                let pkey = v[vs.idx.pkey];
-                if (!set.has(pkey)) {
-                    values.push(v);
-                    set.add(pkey);
-                }
-            }
-            values.idx = vs.idx;
-            values.cacheTime = min(values.cacheTime || new Date(), vs.cacheTime)
-        }
-
-        return values;
-    }
-
-    function splitNameBySpaces(input) {
-        const result = [];
-        const words = input.split(' ');
-
-        for (let i = 0; i <= words.length; i++) {
-            const firstPart = words.slice(0, i).join(' ');
-            const secondPart = words.slice(i).join(' ');
-            result.push([firstPart, secondPart]);
-        }
-
-        return result;
-    }
-
-    async function loadSwimmerSearchByFirstAndLastName(firstName, lastName, all) {
-        return await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey', 'lastName', 'firstName'],
-            {
-                lastName: { filter: { startsWith: lastName }, panel: 'scope' },
-                firstName: { filter: { contains: firstName }, panel: 'scope' },
-                age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
-            });
+        data.values = sorted;
+        showSearch(data, table.loadingHash);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -2225,9 +2311,9 @@ const G = {};
 
     async function loadEvents(pkey) {
         let events = await fetchSwimValues('event', 5000,
-            ['time', 'age', 'std', 'lsc', 'clubName', 'date', 'event', 'meet', 'gender', 'session', 'score', 'splash', 'pkey'],
+            ['time', 'age', 'std', 'lsc', 'clubName', 'date', 'event', 'meet', 'gender', 'session', 'score', 'splash', '_pkey'],
             {
-                pkey: { filter: { equals: pkey }, panel: 'scope' },
+                pkey: { filter: { equals: pkey } },
                 date: { sort: 'asc' }
             }
         );
@@ -2543,7 +2629,7 @@ const G = {};
         let meetList = await buildMeetList(genderStr, age, zone, lsc);
         let standardNames = [...(await getAgeGroupMotivationMap()).keys()];
 
-        let html = ['<table class="fill top-margin color-table hilightrow"><tbody>'];
+        let html = ['<table class="fill top-margin color-table hilightrow">'];
 
         // create the table header
         let header = createBestTimeTableHeader(swimmer, standardNames, meetList, age);
@@ -2617,7 +2703,7 @@ const G = {};
             }
         }
 
-        html.push('</tbody></table>');
+        html.push('</table>');
 
         return html.join('');
     }
@@ -2710,7 +2796,7 @@ const G = {};
     }
 
     function createAgeBestTimeTable(courseMap, ageList) {
-        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table agebest hilightrow"><tbody>'];
+        let html = ['<div class="content"><h2>Age Best Time</h2><table class="fill color-table agebest hilightrow">'];
 
         let header = '<tr><th>Course</th><th>Stroke</th><th>Distance</th>' + ageList.map(age => `<th>${age}</th>`).reverse().join('') + '</tr>';
 
@@ -2752,12 +2838,13 @@ const G = {};
             }
         }
 
-        html.push('</tbody></table></div>');
+        html.push('</table></div>');
 
         return html.join('');
     }
 
     function createMeetTable(data, courseMap) {
+        let swimmer = data.swimmer;
         let meetsMap = createMeetTableData(data, courseMap);
 
         let html = ['<div class="content"><h2>Meets</h2>'];
@@ -2765,7 +2852,7 @@ const G = {};
         for (let [course, ageMap] of meetsMap) {
 
             html.push('<div class="header">', course, ' Event Count: ', ageMap.eventCount,
-                '</div><table class="fill color-table hilightrow"><tbody>');
+                '</div><table class="fill color-table hilightrow">');
 
             // create the table header (2 rows)
             html.push('<tr><th rowspan="2"></th><th rowspan="2">Age</th><th rowspan="2">Date</th>');
@@ -2802,32 +2889,10 @@ const G = {};
 
                                 let delta = row.delta;
                                 let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
-                                let time = row.time;
                                 let std = formatStandard(row.std);
                                 let short = formatStandard(std, true);
 
-                                if (splashList.length > 1 || splashList[0].splash.length > 1) {
-                                    let pop = [];
-                                    let up = 18;
-                                    pop.push('<table class="fill split">');
-                                    for (let r of splashList) {
-                                        let session = r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session];
-                                        pop.push('<tr><th>', session, '</th><th colSpan="99">', r.time, '</th></tr>');
-                                        up += 22.4;
-                                        if (r.splash.length > 0) {
-                                            pop.push('<tr><th rowSpan="2">Split</th>');
-                                            pop.push('<td>', r.splash.map(s => s.dist).join('</td><td>'), '</td>');
-                                            pop.push('</tr><tr>');
-                                            pop.push('<td>', r.splash.map(s => s.split).join('</td><td>'), '</td>');
-                                            pop.push('</tr>');
-                                            up += 44.8;
-                                        }
-                                    }
-                                    pop.push('</table>')
-                                    let popStyle = `top:-${up.toFixed()}px;left:-38px`;
-
-                                    time = createPopup(time, pop.join(''), popStyle, ` data-pop="${splashList.length > 1 ? splashList.length : '*'}"`);
-                                }
+                                let time = buildSplitPopup(splashList, row.time);
 
                                 html.push(buildTimeCell(time, createPopup(short, std), formatDelta(delta), style));
                             }
@@ -2835,17 +2900,45 @@ const G = {};
                         }
                     }
 
-                    html.push(`<td class="left" data-meet="${oneEvent.meet}">${meetInfo.name}</td><td class="left">${oneEvent.clubName}</td></tr>`);
+                    html.push('<td class="left full">',
+                        createClickableDiv(meetInfo.name, `${getGlobalName(go)}('meet','${oneEvent.meet}_${swimmer.gender}_${oneEvent.event}_${swimmer.age}')`),
+                        '</td><td class="left">', oneEvent.clubName, '</td></tr>');
                     leading = '';
                 }
             }
 
-            html.push('</tbody></table>');
+            html.push('</table>');
         }
 
         html.push('</div>');
 
         return html.join('');
+    }
+
+    function buildSplitPopup(splashList, time) {
+        if (splashList.length > 1 || splashList[0].splash.length > 1) {
+            let pop = [];
+            let up = 18;
+            pop.push('<table class="fill split">');
+            for (let r of splashList) {
+                let session = r.time.endsWith('r') ? 'Relay' : _sessionNames[r.session];
+                pop.push('<tr><th>', session, '</th><th colSpan="99">', r.time, '</th></tr>');
+                up += 22.4;
+                if (r.splash.length > 0) {
+                    pop.push('<tr><th rowSpan="2">Split</th>');
+                    pop.push('<td>', r.splash.map(s => s.dist).join('</td><td>'), '</td>');
+                    pop.push('</tr><tr>');
+                    pop.push('<td>', r.splash.map(s => s.split).join('</td><td>'), '</td>');
+                    pop.push('</tr>');
+                    up += 44.8;
+                }
+            }
+            pop.push('</table>');
+            let popStyle = `top:-${up.toFixed()}px;left:-38px`;
+
+            time = createPopup(time, pop.join(''), popStyle, ` data-pop="${splashList.length > 1 ? splashList.length : '*'}"`);
+        }
+        return time;
     }
 
     function createMeetTableData(data, courseMap) {
@@ -3597,12 +3690,11 @@ const G = {};
         let html = [];
         if (value) {
             let list = await loadSearch(value, all);
-            html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left"><tbody>');
+            html.push('<table style="cursor:pointer;border-collapse:collapse;" class="left">');
             for (let row of list) {
                 html.push(`<tr onclick="${getGlobalName(addSwimmer)}(${row.pkey})" class="clickable"><td>${row.name}</td><td>${row.age}</td><td>${row.lsc}</td><td>${row.clubName}</td></tr>`);
             }
-            html.push('</tbody></table>');
-            html.push('<p class="tip">Click on the row to add the swimmer for comparison.</p>');
+            html.push('</table><p class="tip">Click on the row to add the swimmer for comparison.</p>');
         } else {
             html.push(`<p class="tip">Enter the swimmer's name in the search box.</p>`);
         }
@@ -3816,11 +3908,11 @@ const G = {};
         let values = await LocalCache.func(cacheKey, async () => {
             let [from, to] = decodeAgeKey(ageKey);
 
-            return await fetchSwimValues('swimmer', 1000, ['pkey', 'age', 'clubName', 'lsc'],
+            return await fetchSwimValues('swimmer', 1000, ['pkey', 'age', '_clubName', '_lsc'],
                 {
                     age: { filter: { from: from, to: to } },
-                    clubName: { filter: { equals: clubName }, panel: 'scope' },
-                    lsc: { filter: { equals: lsc }, panel: 'scope' }
+                    clubName: { filter: { equals: clubName } },
+                    lsc: { filter: { equals: lsc } }
                 });
         });
 
@@ -3832,12 +3924,12 @@ const G = {};
 
         let year = getSessionYear();
 
-        let list = await fetchSwimValues('event', 5000, ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'gender', 'season'],
+        let list = await fetchSwimValues('event', 5000, ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', '_event', '_gender', '_season'],
             {
                 pkey: { filter: { members: [...swimmerAgeMap.keys()] } },
-                event: { filter: { equals: Number(event) }, panel: 'scope' },
-                gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
                 sortkey: { sort: 'asc' },
+                event: { filter: { equals: Number(event) } },
+                gender: { filter: { equals: convertToGenderCode(genderStr) } },
                 season: {
                     filter: {
                         members: [
@@ -3845,8 +3937,7 @@ const G = {};
                             `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,
                             `${year - 2} (9/1/${year - 3} - 8/31/${year - 2})`
                         ]
-                    },
-                    panel: 'scope'
+                    }
                 }
             }
         );
@@ -3897,13 +3988,13 @@ const G = {};
         from = from > 0 ? from - 2 : 0;
 
         return await fetchSwimValues('event', 5000,
-            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', 'event', 'age', 'gender', 'season', 'zone'],
+            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', '_event', '_age', '_gender', '_season', '_zone'],
             {
                 lsc: { filter: lsc ? { equals: lsc } : null },
                 sortkey: { sort: 'asc' },
-                event: { filter: { equals: Number(event) }, panel: 'scope' },
-                age: { filter: { from: from, to: to }, panel: 'scope' },
-                gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
+                event: { filter: { equals: Number(event) } },
+                age: { filter: { from: from, to: to } },
+                gender: { filter: { equals: convertToGenderCode(genderStr) } },
                 season: {
                     filter: {
                         members: [
@@ -3911,10 +4002,9 @@ const G = {};
                             `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,
                             // `${year - 2} (9/1/${year - 3} - 8/31/${year - 2})`
                         ]
-                    },
-                    panel: 'scope'
+                    }
                 },
-                zone: zone ? { filter: { equals: zone }, panel: 'scope' } : null
+                zone: zone ? { filter: { equals: zone } } : null
             });
     }
 
@@ -4034,16 +4124,16 @@ const G = {};
 
         async function loadImxSeason(year) {
             return await fetchSwimValues('club', 1000,
-                ['pkey', 'name', 'lsc', 'clubName', 'summary', 'details', 'imxAge', 'imxType', 'gender', 'season', 'zone'],
+                ['pkey', 'name', 'lsc', 'clubName', 'summary', 'details', 'imxAge', '_imxType', '_gender', '_season', '_zone'],
                 {
                     pkey: { filter: swimmerAgeMap ? { members: [...swimmerAgeMap.keys()] } : null },
                     lsc: { filter: lsc ? { equals: lsc } : null },
                     summary: { sort: 'desc' },
                     imxAge: { filter: { members: ages } },
-                    imxType: { filter: { equals: imxType }, panel: 'scope' },
-                    gender: { filter: { equals: convertToGenderCode(genderStr) }, panel: 'scope' },
-                    season: { filter: { equals: `${course} ${year}${seasonSuffix}` }, panel: 'scope' },
-                    zone: zone ? { filter: { equals: zone }, panel: 'scope' } : null
+                    imxType: { filter: { equals: imxType } },
+                    gender: { filter: { equals: convertToGenderCode(genderStr) } },
+                    season: { filter: { equals: `${course} ${year}${seasonSuffix}` } },
+                    zone: zone ? { filter: { equals: zone } } : null
                 });
         }
     }
@@ -4254,7 +4344,7 @@ const G = {};
         let html = [];
         let course = _eventList[selectedEvent].slice(-3);
 
-        html.push('<div class="match-size top-margin">');
+        html.push('<div class="center-row top-margin">');
         for (let event of _eventOrderMap.get(course)) {
             if (event < 81 || (event > 90 && showImx) || !hide25) {
                 let [d, s, c] = _eventList[event].split(' ');
@@ -4316,7 +4406,7 @@ const G = {};
             return html.join('');
         }
 
-        html.push('<table class="hilightrow fill"><tbody><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
+        html.push('<table class="hilightrow fill"><tr><th></th><th>Name</th><th>Time</th><th>Date</th><th>Age</th><th>Birthday</th><th>Team</th><th>LSC</th><th>Meet</th></tr>');
         let index = 0;
         for (let row of await filterDataByMeetDate(data, to)) {
 
@@ -4348,11 +4438,15 @@ const G = {};
             html.push(`<tr${color}${hightlightPkey}><td>`, ++index, '</td>', createSwimmerNameTd(row),
                 '<td class="tc">', buildTimeCell(row.time, maxStd, row.score),
                 '</td><td>', formatDate(row.date), '</td><td>', row.age, '<td class="left full">', await createBirthdayCell(pkey),
-                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`, rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
-                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`, rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
-                '</td><td class="left">', row.meetInfo.name, '</td></tr>');
+                `</td><td class="left${rowTeamRankKey ? ' full' : ''}">`,
+                rowTeamRankKey ? createClickableDiv(row.clubName, `${getGlobalName(go)}('rank',\`${rowTeamRankKey}\`)`) : row.clubName,
+                `</td><td class="left${rowlscRankKey ? ' full' : ''}">`,
+                rowlscRankKey ? createClickableDiv(row.lsc, `${getGlobalName(go)}('rank','${rowlscRankKey}')`) : row.lsc,
+                '</td><td class="left full">',
+                createClickableDiv(row.meetInfo.name, `${getGlobalName(go)}('meet','${row.meet}_${convertToGenderCode(genderStr)}_${event}_${ageKey}')`),
+                '</td></tr>');
         }
-        html.push('</tbody></table>');
+        html.push('</table>');
         return html.join('');
     }
 
@@ -4371,7 +4465,7 @@ const G = {};
             return html.join('');
         }
 
-        html.push('<table class="hilightrow fill imx"><tbody><tr><th></th><th>Name</th><th>Score</th><th>Age</th>');
+        html.push('<table class="hilightrow fill imx"><tr><th></th><th>Name</th><th>Score</th><th>Age</th>');
         for (let stk of data[0].details) {
             let [dist, stroke, course] = stk.eventStr.split(' ');
             html.push(`<th>${dist} ${_storkeMap.get(stroke)}</th>`);
@@ -4404,7 +4498,7 @@ const G = {};
                 '</td></tr>');
         }
 
-        html.push('</tbody></table>');
+        html.push('</table>');
         return html.join('');
     }
 
@@ -4484,6 +4578,276 @@ const G = {};
         };
 
         return select.render(custom);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    // meet functions
+    // bug: meet/263588_0_23_10U
+
+    async function meet(key) {
+
+        TopButton.show('relay', true);
+        TopButton.show('rank', true);
+
+        await ensureToken();
+        let data = await loadMeet(key);
+        if (typeof data === 'string') {
+            window.location.replace('#meet/' + data);
+            return;
+        }
+
+        showMeet(data, key);
+    }
+    _navFuncMap.set('meet', meet);
+
+    async function loadMeet(key) {
+
+        let data = await loadMeetInfo(key);
+        if (data.realKey != key) {
+            return data.realKey;
+        }
+        let isRelay = data.isRelay;
+        let eventInfo = data.eventInfo;
+
+        let events = await LocalCache.func('meetRank/' + key,
+            async () => {
+                let events = await fetchSwimValues('event', 5000,
+                    ['event', 'place', 'pkey', 'name', 'time', 'std', 'score', 'age', 'clubName', 'lsc', 'session', 'splash', '_gender', '_meet', '_ageGroup', '_relayAG'],
+                    {
+                        event: { filter: { members: getRelatedEventList(eventInfo.event) } },
+                        place: { sort: 'asc' },
+                        pkey: isRelay ? null : {},
+                        score: isRelay ? null : {},
+                        age: isRelay ? null : {},
+                        gender: { filter: { equals: eventInfo.gender } },
+                        meet: { filter: { equals: data.meet } },
+                        ageGroup: !isRelay ? { filter: { equals: eventInfo.ageGroup } } : null,
+                        relayAG: isRelay ? { filter: { equals: eventInfo.ageGroup } } : null
+                    });
+
+                if (isRelay) {
+                    removeDataIdx(events, 'splash');
+                } else {
+                    await appendSubArray(events, 'splash', loadSplits);
+                }
+
+                return events;
+            });
+
+        data.events = await convertObject(events);
+
+        return data;
+    }
+
+    async function loadMeetInfo(key) {
+        let [meet, gender, event, ageKey] = key.split('_');
+        meet = Number(meet);
+
+        let data = await LocalCache.func('meetInfo/' + meet,
+            async () => await fetchSwimValues('event', 300, ['gender', 'event', 'ageGroup', 'meetName', 'relayAG', '_meet'],
+                {
+                    meet: { filter: { equals: meet } },
+                }));
+        if (!data) {
+            return;
+        }
+
+        mergeRelayAgeGroupInfo(data);
+        let meetInfo = await convertObject(data);
+        appendAgeKey(meetInfo);
+
+        let genderMap = new Map();
+        for (let row of meetInfo) {
+            let ageKeyMap = genderMap.get(row.gender) || genderMap.set(row.gender, new Map()).get(row.gender);
+            let eventMap = ageKeyMap.get(row.ageKey) || ageKeyMap.set(row.ageKey, new Map()).get(row.ageKey);
+            eventMap.set(row.event, row);
+        }
+
+        let ageKeyMap = genderMap.get(Number(gender)) || [...genderMap.values()][0];
+        let eventMap = ageKeyMap.get(ageKey);
+        if (!eventMap) {
+            let age = parseInt(ageKey);
+            for (let [ageKey, eMap] of ageKeyMap) {
+                let [from, to] = decodeAgeKey(ageKey);
+                if (from <= age && age <= to) {
+                    eventMap = eMap;
+                    break;
+                }
+            }
+            if (!eventMap) {
+                eventMap = [...ageKeyMap.values()][0];
+            }
+        }
+        let eventInfo = eventMap.get(Number(event)) || [...eventMap.values()][0];
+        let realKey = `${meet}_${eventInfo.gender}_${eventInfo.event}_${eventInfo.ageKey}`;
+        let isRelay = _eventList[event].split(' ')[1].includes('-R');
+
+        return { meetInfo, realKey, eventInfo, meet, isRelay };
+    }
+
+    function getRelatedEventList(event) {
+        let values = [];
+        let [dist, stroke, course] = _eventList[event].split(' ');
+        for (let newCourse of _courseOrder) {
+            let newEvent = fixDistance([dist, stroke, newCourse].join(' '));
+            let newEventCode = _eventIndexMap.get(newEvent);
+            newEventCode && values.push(newEventCode);
+        }
+        return values;
+    }
+
+    function mergeRelayAgeGroupInfo(values) {
+        let idx = values.idx;
+        for (let row of values) {
+            if (row[idx.ageGroup][0] == 'N') {
+                row[idx.ageGroup] = row[idx.relayAG];
+            }
+        }
+        removeDataIdx(values, 'relayAG');
+    }
+
+    function appendAgeKey(meetInfo) {
+        for (let row of meetInfo) {
+            let [from, to] = decodeAgeKey(row.ageGroup);
+            row.ageKey = ageRangeToAgeKey(from, to);
+        }
+    }
+
+    function showMeet(data, key) {
+        let loadingHash = 'meet/' + key;
+
+        if (!data?.events?.length) {
+            updateContent('No meet data found.', loadingHash);
+            return;
+        }
+
+        let meet = data.meet;
+        let isRelay = data.isRelay;
+        let eventInfo = data.eventInfo;
+        let gender = eventInfo.gender;
+        let ageKey = eventInfo.ageKey;
+        let event = eventInfo.event;
+        let eventStr = eventInfo.eventStr;
+        let customSelect = useCustomSelect();
+
+        let genderMap = new Map();
+        for (let row of data.meetInfo) {
+            let [dist, stroke, course] = _eventList[row.event].split(' ');
+
+            let ageKeyMap = genderMap.get(row.gender) || genderMap.set(row.gender, new Map()).get(row.gender);
+            let distStrokeSet = ageKeyMap.get(row.ageKey) || ageKeyMap.set(row.ageKey, new Set()).get(row.ageKey);
+            distStrokeSet.add(dist + ' ' + stroke);
+        }
+
+        // build age group selection
+        let ageGroupOpts = [];
+        for (let [gender1, ageKeyMap] of genderMap) {
+            let genderStr = convetToGenderString(gender1);
+            ageGroupOpts.push([genderStr]);
+            for (let ageKey of ageKeyMap.keys()) {
+                ageGroupOpts.push([`${ageKey} ${genderStr}`, `${gender1}_${event}_${ageKey}`]);
+            }
+        }
+        let ageGroupSelect = new Select('age-group-select', ageGroupOpts, `${gender}_${event}_${ageKey}`, v => go('meet', meet + '_' + v));
+
+        let html = ['<div class="center-row top-margin">', 'Age Group: ', ageGroupSelect.render(customSelect), '</div>'];
+
+        // build event buttons
+        let [dist, stroke, course] = eventStr.split(' ');
+        html.push('<div class="top-margin">');
+        let distStrokeSet = genderMap.get(Number(gender)).get(ageKey);
+        for (let orderedEvent of [..._eventOrderMap.get('SCY'), ..._eventOrderMap.get('SCY-RELAY')]) {
+            let [d, s, c] = _eventList[orderedEvent].split(' ');
+            let distStroke = d + ' ' + s;
+            if (distStrokeSet.has(distStroke)) {
+                let e = _eventIndexMap.get(fixDistance(distStroke + ' SCY'));
+                let selected = d == dist && s == stroke ? ' selected' : '';
+                html.push(`<button class="evt d${d} ${s}${selected}" onclick="${getGlobalName(go)}('meet', '${meet}_${gender}_${e}_${ageKey}')">${d}<br>${s}</button>`);
+            }
+        }
+        html.push('</div>');
+
+        // prepare the meet table data
+        let courseMap = prepareMeetRankTableData(data.events);
+
+        html.push('<div style="display:inline-block"><h2>', eventInfo.meetName, '</h2><h3>',
+            `${ageKey} ${convetToGenderString(gender)}  ${dist} ${_storkeMap.get(stroke)}`, '</h3>');
+
+        for (let [course, sessionMap] of courseMap) {
+            for (let [session, rows] of sessionMap) {
+                html.push('<div style="width:fit-content"><h3>', _sessionNames[session], ' (', course, ')</h3>',
+                    '<table class="fill hilightrow"><tr><th>Place</th><th>Name</th><th>Time</th>',
+                    isRelay ? '' : '<th>Age</th>', '<th>Team</th><th>LSC</th></tr>');
+                for (let row of rows) {
+                    let std = formatStandard(row.std);
+                    let short = formatStandard(std, true);
+
+                    html.push('<tr><td>', row.place, '</td>');
+                    if (isRelay) {
+                        html.push('<td class="left">', row.name.replace(/,/g, '<br>'), '</td><td>', buildTimeCell(row.time, createPopup(short, std), ''), '</td>');
+                    } else {
+                        let time = buildSplitPopup([row], row.time);
+                        html.push(createSwimmerNameTd(row), '<td class="tc">',
+                            buildTimeCell(time, createPopup(short, std), row.score), '</td><td>', row.age, '</td>');
+                    }
+                    html.push('<td class="left">', row.clubName, '</td><td>', row.lsc, '</td></tr>');
+                }
+                html.push('</table></div>');
+            }
+        }
+
+        html.push('</div>');
+
+        updateContent(html.join(''), loadingHash);
+    }
+
+    function prepareMeetRankTableData(events) {
+        let courseMap = new Map();
+        for (let row of events) {
+            let course = row.eventStr.split(' ')[2];
+            let session = row.time.endsWith('r') ? 8 : row.session;
+
+            let sessionMap = courseMap.get(course) || courseMap.set(course, new Map()).get(course);
+            let placeList = sessionMap.get(session) || sessionMap.set(session, []).get(session);
+            placeList.push(row);
+        }
+        for (let [course, sessionMap] of courseMap) {
+            for (let [session, rows] of sessionMap) {
+                let newRows = [];
+                let extRows = [];
+                let otherRows = [];
+                let pre;
+                for (let row of rows) {
+                    if (row.place == 0) {
+                        row.place = 'EXH';
+                        extRows.push(row);
+                        continue;
+                    }
+                    if (pre && pre.place == row.place && pre.timeInt != row.timeInt) {
+                        if (pre.timeInt > row.timeInt) {
+                            otherRows.push(pre);
+                            newRows.pop();
+                            newRows.push(row);
+                            pre = row;
+                        } else {
+                            otherRows.push(row);
+                        }
+                    } else {
+                        newRows.push(row);
+                        pre = row;
+                    }
+                }
+                sessionMap.set(session, newRows.concat(extRows.sort((a, b) => a.timeInt - b.timeInt)));
+
+                if (otherRows.length) {
+                    let trials = sessionMap.get(7) || sessionMap.set(7, []).get(7); //  7 = 'Time Trial'
+                    trials.push(...otherRows);
+                }
+            }
+
+            courseMap.set(course, sessionMap.sort((a, b) => _sessionOrder[b[0]] - _sessionOrder[a[0]]));
+        }
+        return courseMap;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -4763,7 +5127,7 @@ const G = {};
         let [from, to] = decodeAgeKey(ageKey);
         let meetDate = getMeetDate();
 
-        let html = ['<table class="fill"><tbody><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
+        let html = ['<table class="fill"><tr><th>Name</th><th>Back</th><th>Breast</th><th>Fly</th><th>Free</th><th>Age</th><th>Birthday</th></tr>'];
 
         for (let swimmer of data.merged) {
             let realSwimmer = typeof swimmer.pkey == 'number';
@@ -4790,7 +5154,7 @@ const G = {};
             }
         }
 
-        html.push('</tbody></table>');
+        html.push('</table>');
 
         let table = document.getElementById('selection-table');
         table.innerHTML = html.join('');
@@ -4933,7 +5297,7 @@ const G = {};
     function updateRelayTable(relays, type) {
         let html = [];
         for (let [time, swimmers] of relays) {
-            html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill"><tbody>');
+            html.push('<p class="relay-time">', formatTime(time), '</p><table class="fill">');
             for (let [i, swimmer] of swimmers.entries()) {
                 if (type == 'medley') {
                     let stroke = _relayOrder[i];
@@ -4942,7 +5306,7 @@ const G = {};
                     html.push('<tr>', createSwimmerNameTd(swimmer), '<td>', swimmer.FR, '</td></tr>');
                 }
             }
-            html.push('</tbody></table>');
+            html.push('</table>');
         }
 
         document.getElementById(type + '-relay-table').innerHTML = html.join('');

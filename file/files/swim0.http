@@ -538,37 +538,49 @@ Authorization: Bearer undefined
 ###
 # testing
 
-POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
+POST https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiN2M4ZDlhN2UtODhjYy0xOTM0LTY1N2MtNjI0MmVjZDU4ZTRkIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.onY0_S2D3Mp7Q2PNsDPE8VxZSYqHGgnteS6TbNN_73U
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZTgwMGM3MDYtOGJiMy0yMWM3LWIzY2UtMmExMDkwZmFlNzIyIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.QmD5DJe491URBKuNuXnADE-zaytc7vBPQYQKQh48hak
 
 {
   "metadata": [
     {
-      "agg": "count",
-      "dim": "[OrgUnit.Level4Code]",
-      "datatype": "text",
+      "title": "name",
+      "dim": "[Persons.FullName]",
+      "filter": {
+        "contains": "alexander"
+      }
     },
     {
-      "agg": "count",
-      "dim": "[OrgUnit.Level4Name]",
-      "datatype": "numeric"
+      "title": "name",
+      "dim": "[Persons.FullName]",
+      "filter": {
+        "contains": "han"
+      },
+      "panel": "scope"
     },
     {
-      "agg": "count",
-      "dim": "[UsasSwimTime.OrgUnitKey]",
-      "datatype": "numeric"
+      "title": "age",
+      "dim": "[Persons.Age]",
+      "filter": {
+        "to": 18
+      },
+      "sort": "asc"
     },
     {
-        "dim": "[UsasSwimTime.SwimEventKey]",
-        "datatype": "numeric",
-        "filter": {
-            "equals": 1
-        },
-        "panel": "scope"
+      "title": "clubName",
+      "dim": "[Persons.ClubName]"
+    },
+    {
+      "title": "lsc",
+      "dim": "[Persons.LscCode]"
+    },
+    {
+      "title": "pkey",
+      "dim": "[Persons.PersonKey]"
     }
   ],
-  "count": 200
+  "count": 5000
 }
 
 
