@@ -106,7 +106,7 @@ const G = {};
     }
 
     function getFileRoot() {
-        return isRunningLocally() ? '' : '/files/';
+        return isRunningLocally() ? '' : 'https://usaswimming.blob.core.windows.net/src/';
     }
 
     function min(a, b) {
@@ -148,7 +148,7 @@ const G = {};
             return '';
         }
 
-        if (standard.startsWith('"')) {
+        if (standard[0] == '"') {
             return standard.substring(1, standard.length - 1);
         }
 
@@ -1367,7 +1367,7 @@ const G = {};
         let typeObj = _body[type];
         for (let field of fields) {
             let hiden = false;
-            if (field.startsWith('_')) {
+            if (field[0] == '_') {
                 hiden = true;
                 field = field.substring(1);
             }
@@ -1945,7 +1945,7 @@ const G = {};
         if (!elem) {
             let key = document.getElementById('cache-key').value;
             let list = await new Promise(resolve => ldb.list(resolve));
-            if (key.startsWith('!')) {
+            if (key[0] == '!') {
                 key = key.substring(1);
                 for (let k of list) {
                     if (!k.startsWith(key)) {
@@ -3031,6 +3031,7 @@ const G = {};
         }
 
         let html = [`<div class="tt ${color || ''}">${time}</div>`];
+        delta = delta[0] == 'N' ? '' : delta;
         if (std) {
             html.push(`<div class="st">${std}</div><div class="dd ${color || ''}">${delta}</div>`);
         } else {
@@ -5606,7 +5607,7 @@ WY|Wyoming|Western|west-nw`;
         };
 
         for (let [rowNumber, row] of data.split('\n').entries()) {
-            if (row.startsWith('#') || row === '') {
+            if (row[0] == '#' || row === '') {
                 continue;
             }
             if (row.startsWith('meet')) {

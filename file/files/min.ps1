@@ -1,3 +1,5 @@
+$startTime = Get-Date
+
 Write-Output "Minifying swim.js..."
 
 # param([Int32]$repeat=30) 
@@ -62,3 +64,7 @@ $compressRate = [int]((Get-Item -Path "swim.min.html").Length / ((Get-Item -Path
 Write-Output "Compressed size $((Get-Item -Path "swim.min.html").Length) bytes [$compressRate%]"
 
 # ls swim.*
+
+$endTime = Get-Date
+$runTime = $endTime - $startTime
+Write-Output "Total runtime: $runTime"

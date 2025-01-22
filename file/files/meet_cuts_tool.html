@@ -109,7 +109,7 @@
     for (let [rowNumber, row] of rows.entries()) {
       row = row.trim().replace(/\s+/g, ' ');
 
-      if (row.startsWith('#') || row === '') {
+      if (row[0] == '#' || row === '') {
         result.push(row, '\n');
         continue;
       }
@@ -260,7 +260,7 @@
     };
 
     for (let [rowNumber, row] of data.split('\n').entries()) {
-      if (row.startsWith('#') || row === '') {
+      if (row[0] == '#' || row === '') {
         continue;
       }
       if (row.startsWith('meet')) {
