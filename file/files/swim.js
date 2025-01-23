@@ -105,8 +105,9 @@ const G = {};
         return location.protocol === 'file:';
     }
 
-    function getFileRoot() {
-        return isRunningLocally() ? '' : 'https://usaswimming.blob.core.windows.net/src/';
+    function getFileRoot(path) {
+        let blob = 'https://usaswimming.blob.core.windows.net/';
+        return (isRunningLocally() ? '../' : blob) + path + '/';
     }
 
     function min(a, b) {
@@ -5251,7 +5252,7 @@ const G = {};
     }
 
     async function initDatepicker(table) {
-        let root = getFileRoot();
+        let root = getFileRoot('src');
         loadCSS(`${root}datepicker.material.css`);
         await loadScript(`${root}datepicker.js`);
         new Datepicker('#datepicker', {
@@ -5678,14 +5679,10 @@ WY|Wyoming|Western|west-nw`;
         return meets.get(meetName)?.ageMap.get(age)?.eventMap.get(event + ' ' + genderStr[0]);
     }
 
-    function getMeetCutFileRoot() {
-        return isRunningLocally() ? '../meet-cut/' : 'https://usaswimming.blob.core.windows.net/meet-cut/';
-    }
-
     async function getLscMeetCuts(zone, lsc) {
         // meet dictionary is cached in the runtime cache but the meed file is cached in the local cache
         return await RuntimeCache.func(`meet-cut/${lsc}`, async () => {
-            let root = getMeetCutFileRoot();
+            let root = getFileRoot('meet-cut');
             let meetCuts = new Map();
 
             async function loadMeetsFromFile(file) {
@@ -5723,7 +5720,7 @@ WY|Wyoming|Western|west-nw`;
         // meet dictionary is cached in the runtime cache but the meed file is cached in the local cache
         return await RuntimeCache.func('meet-cut/' + file, async () => {
             try {
-                let root = getMeetCutFileRoot();
+                let root = getFileRoot('meet-cut');
                 let data = await getFileData(`${root}${file}`);
                 return parseMeetCut(data);
             } catch (e) {
