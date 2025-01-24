@@ -664,8 +664,8 @@ const G = {};
             return await LocalCache.func('clubs/' + lsc, async () => {
                 return await fetchSwimValues('event', 5000, ['clubName', 'club', '_event', '_lsc'],
                     {
-                        event: { filter: { equals: 1 } },
-                        lsc: { filter: { equals: lsc } }
+                        event: { equals: 1 },
+                        lsc: { equals: lsc }
                     });
             }, _1WeekInSec, 3);
         }
@@ -708,10 +708,9 @@ const G = {};
         }
 
         static async _load(meets) {
-            let data = await fetchSwimValues('event', meets.size * 5, ['meet', 'date', 'meetName'],
+            let data = await fetchSwimValues('event', meets.size * 5, ['meet', 'date+', 'meetName'],
                 {
-                    meet: { filter: { members: [...meets] } },
-                    date: { sort: 'asc' }
+                    meet: { members: [...meets] }
                 });
             if (!data) {
                 return;
@@ -1299,10 +1298,10 @@ const G = {};
                 lsc: 'OrgUnit.Level3Code',
                 zone: 'OrgUnit.Level2Code',
                 std: 'TimeStandard.TimeStandardName',
-                ageGroup: 'Age.AgeGroup1',
-                // ageGroup2: 'Age.AgeGroup2',
+                ageGroup1: 'Age.AgeGroup1',
+                ageGroup2: 'Age.AgeGroup2',
                 date: 'SeasonCalendar.CalendarDate (Calendar)', //{ "from": "2025-01-02T08:00:00.000Z", "to": "2025-01-23T08:00:00.000Z" }
-                // season: 'SeasonCalendar.SeasonYearDesc', // filter: {members: [`${year} (9/1/${year - 1} - 8/31/${year})`, `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,]}
+                // season: 'SeasonCalendar.SeasonYearDesc', //  {members: [`${year} (9/1/${year - 1} - 8/31/${year})`, `${year - 1} (9/1/${year - 2} - 8/31/${year - 1})`,]}
                 relayAG: 'AgeGroup.AgeGroupDesc', // only for relay
                 // RelayTimes.SwimTimeFormatted =? UsasSwimTime.SwimTimeFormatted
                 // RelayTimes.FullName =? UsasSwimTime.FullName
@@ -1378,7 +1377,7 @@ const G = {};
         }
     }
 
-    function buildBodyObject(type, count, fields, config) {
+    function buildBodyObject(type, count, fields, filters) {
         let bodyObj = {
             metadata: [],
             count: count
@@ -1386,46 +1385,51 @@ const G = {};
 
         let typeObj = _body[type];
         for (let field of fields) {
-            let hiden = false;
+
+            let obj = { title: field, dim: 0 };
+
             if (field[0] == '_') {
-                hiden = true;
+                obj = { panel: 'scope', dim: 0 };
                 field = field.substring(1);
             }
 
-            let dim = typeObj.dim[field];
-            if (dim) {
-                let obj = {
-                    title: field,
-                    dim: '[' + dim + ']'
-                };
-                if (hiden) {
-                    obj.panel = 'scope';
-                    delete obj.title;
-                }
+            let last = field.length - 1;
+            if (field[last] == '-') {
+                obj.sort = 'desc';
+                field = field.substring(0, last);
+            } else if (field[last] == '+') {
+                obj.sort = 'asc';
+                field = field.substring(0, last);
+            }
 
-                let level = typeObj.level?.[field];
-                if (level) {
-                    obj.level = level;
-                }
+            obj.title && (obj.title = field);
+            obj.dim = '[' + typeObj.dim[field] + ']';
 
-                let cfg = config?.[field];
-                if (cfg !== null) {
+            let level = typeObj.level?.[field];
+            if (level) {
+                obj.level = level;
+            }
 
-                    cfg = Array.isArray(cfg) ? cfg : [cfg];
+            bodyObj.metadata.push(obj);
 
-                    for (let [i, c] of cfg.entries()) {
-                        let obj2 = { ...obj };  //Object.assign({}, obj);
-                        if (i > 0) {
-                            obj2.panel = 'scope';
-                            delete obj2.title;
-                        }
+            let filter = filters?.[field];
+            if (filter === null) {
+                let obj = bodyObj.metadata.pop();
+                obj.title && (bodyObj.metadata.push(obj));
+            } else {
+                filter = Array.isArray(filter) ? filter : [filter];
+                let template = bodyObj.metadata.pop();
+                for (let [i, flt] of filter.entries()) {
+                    let obj = { ...template };  //Object.assign({}, obj);
 
-                        for (let key in c) {
-                            if (cfg[key] !== null) {
-                                obj2[key] = c[key];
-                            }
-                        }
-                        bodyObj.metadata.push(obj2);
+                    if (i > 0) {
+                        obj.panel = 'scope';
+                        delete obj.title;
+                    }
+
+                    if (flt !== null) {
+                        obj.filter = flt;
+                        bodyObj.metadata.push(obj);
                     }
                 }
             }
@@ -1436,7 +1440,7 @@ const G = {};
 
     async function fetchSwimValues(type, count, fields, config) {
         let bodyObj = buildBodyObject(type, count, fields, config);
-        let data = await fetchSwimValuesInner(bodyObj, type);
+        let data = await fetchValues(bodyObj, type);
         if (!data) {
             return;
         }
@@ -1446,64 +1450,64 @@ const G = {};
         }
 
         return data;
-    }
 
-    async function fetchSwimValuesInner(bodyObj, type) {
-        let response;
-        for (let retry = 0; retry < 2; ++retry) {
-            let headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + await ensureToken(),
-                // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
-            };
+        async function fetchValues(bodyObj, type) {
+            let response;
+            for (let retry = 0; retry < 2; ++retry) {
+                let headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + await ensureToken(),
+                    // 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjY0YmE2NmE5M2ZiYTUwMDM4NWIyMWQwIiwiYXBpU2VjcmV0IjoiNDQ0YTE3NWQtM2I1OC03NDhhLTVlMGEtYTVhZDE2MmRmODJlIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.izSIvaD2udKTs3QRngla1Aw23kZVyoq7Xh23AbPUw1M'
+                };
 
-            let url = 'https://usaswimming.sisense.com/api/datasources/' + _body[type].db + '/jaql';
+                let url = 'https://usaswimming.sisense.com/api/datasources/' + _body[type].db + '/jaql';
 
-            if (useProxy()) {
-                url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
+                if (useProxy()) {
+                    url = (localStorage.getItem('proxy-server') || '') + '/q?url=' + encodeURIComponent(url);
 
-                let ttl = localStorage.getItem('cache-ttl') || 0;
-                if (ttl) {
-                    headers['X-Cache-TTL'] = ttl;
+                    let ttl = localStorage.getItem('cache-ttl') || 0;
+                    if (ttl) {
+                        headers['X-Cache-TTL'] = ttl;
+                    }
                 }
+
+                let fetchTimeout = parseInt(localStorage.getItem('fetch-timeout')) || 10_000;
+
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    signal: AbortSignal.timeout(fetchTimeout),
+                    body: JSON.stringify(bodyObj)
+                });
+
+                if (response.ok) {
+                    break;
+                }
+
+                if (response.status == 401) {
+                    console.warn(response.statusText, await response.text());
+                    await ensureToken(true);
+                    continue;
+                }
+
+                return;
             }
 
-            let fetchTimeout = parseInt(localStorage.getItem('fetch-timeout')) || 10_000;
-
-            response = await fetch(url, {
-                method: 'POST',
-                headers: headers,
-                signal: AbortSignal.timeout(fetchTimeout),
-                body: JSON.stringify(bodyObj)
-            });
-
-            if (response.ok) {
-                break;
+            let data = await response.json();
+            if (data.error || !data.values) {
+                return;
             }
 
-            if (response.status == 401) {
-                console.warn(response.statusText, await response.text());
-                await ensureToken(true);
-                continue;
+            let idx = {};
+            for (let i = 0; i < data.headers.length; ++i) {
+                idx[data.headers[i]] = i;
             }
+            data.values.idx = idx;
+            let cacheTime = response.headers.get("X-Cache-Date");
+            data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
 
-            return;
+            return data.values;
         }
-
-        let data = await response.json();
-        if (data.error || !data.values) {
-            return;
-        }
-
-        let idx = {};
-        for (let i = 0; i < data.headers.length; ++i) {
-            idx[data.headers[i]] = i;
-        }
-        data.values.idx = idx;
-        let cacheTime = response.headers.get("X-Cache-Date");
-        data.values.cacheTime = cacheTime ? new Date(cacheTime) : new Date();
-
-        return data.values;
     }
 
     async function fetchToken() {
@@ -2120,41 +2124,37 @@ const G = {};
     }
 
     async function loadSwimmerSearch(name, all) {
-        let config = {
-            age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
-        };
+        let data = await fetchSwimValues('swimmer', 1000, ['name', 'age+', 'clubName', 'lsc', 'pkey'],
+            {
+                age: all ? { from: 19 } : { to: 18 },
+                name: name.split(' ').map(p => ({ contains: p }))
+            });
 
-        return await partsSearch(name, 'name', config,
-            async () => await fetchSwimValues('swimmer', 1000, ['name', 'age', 'clubName', 'lsc', 'pkey'], config));
+        return filterDataBySearchPartsOrder(data, name, 'name');
     }
 
     async function loadClubSearch(name, all) {
-        let config = {
-            age: { filter: all ? { from: 19 } : { to: 18 }, sort: 'asc' }
-        };
+        let data = await fetchSwimValues('swimmer', 5000, ['name', 'age+', 'clubName', 'lsc', 'pkey'],
+            {
+                age: all ? { from: 19 } : { to: 18 },
+                clubName: name.split(' ').map(p => ({ contains: p }))
+            });
 
-        return await partsSearch(name, 'clubName', config,
-            async () => await fetchSwimValues('swimmer', 5000, ['name', 'age', 'clubName', 'lsc', 'pkey'], config));
+        return await filterDataBySearchPartsOrder(data, name, 'clubName');
     }
 
     async function loadMeetSearch(name) {
-        let config = {
-            date: { sort: 'desc' }
-        };
-
-        return await partsSearch(name, 'name', config,
-            async () => await fetchSwimValues('meet', 1000, ['meet', 'name', 'type', 'host', 'date', 'end'], config), true);
+        return await fetchSwimValues('meet', 1000, ['meet', 'name', 'type', 'host', 'date-', 'end'],
+            {
+                name: name.split(' ').map(p => ({ contains: p }))
+            });
     }
 
-    async function partsSearch(value, field, config, fetchFunc, ignorePartsOrder) {
-        let parts = value.split(' ');
-        config[field] = parts.map(p => ({ filter: { contains: p } }));
-
-        let data = await fetchFunc();
-
-        if (!data || ignorePartsOrder) {
+    function filterDataBySearchPartsOrder(data, value, field) {
+        if (!data) {
             return data;
         }
+        let parts = value.split(' ');
 
         let idx = data.idx;
         let result = [];
@@ -2190,7 +2190,7 @@ const G = {};
 
         let list = await fetchSwimValues('event', pkeys.size, ['pkey'],
             {
-                pkey: { filter: { members: [...pkeys] } }
+                pkey: { members: [...pkeys] }
             });
         if (!list) {
             return;
@@ -2337,10 +2337,9 @@ const G = {};
 
     async function loadEvents(pkey) {
         let events = await fetchSwimValues('event', 5000,
-            ['time', 'age', 'std', 'lsc', 'clubName', 'date', 'event', 'meet', 'gender', 'session', 'score', 'splash', '_pkey'],
+            ['time', 'age', 'std', 'lsc', 'clubName', 'date+', 'event', 'meet', 'gender', 'session', 'score', 'splash', '_pkey'],
             {
-                pkey: { filter: { equals: pkey } },
-                date: { sort: 'asc' }
+                pkey: { equals: pkey },
             }
         );
         if (!events) {
@@ -2355,17 +2354,16 @@ const G = {};
     }
 
     async function loadSplits(key, map) {
-        return await fetchSwimValues('split', map.size * 30, ['dist', 'split', key],
+        return await fetchSwimValues('split', map.size * 30, ['dist+', 'split', key],
             {
-                dist: { sort: 'asc' },
-                [key]: { filter: { members: [...map.keys()] } }
+                [key]: { members: [...map.keys()] }
             });
     }
 
     async function loadSwimerInfo(pkey) {
         let values = await fetchSwimValues('swimmer', 1, ['firstName', 'lastName', 'age', 'clubName', 'lsc', 'pkey'],
             {
-                pkey: { filter: { equals: pkey } }
+                pkey: { equals: pkey }
             });
         if (!values) {
             return;
@@ -3955,9 +3953,9 @@ const G = {};
 
             return await fetchSwimValues('swimmer', 1000, ['pkey', 'age', '_clubName', '_lsc'],
                 {
-                    age: { filter: { from: from, to: to } },
-                    clubName: { filter: { equals: clubName } },
-                    lsc: { filter: { equals: lsc } }
+                    age: { from: from, to: to },
+                    clubName: { equals: clubName },
+                    lsc: { equals: lsc }
                 });
         });
 
@@ -3967,16 +3965,14 @@ const G = {};
     async function loadRankDataByClub(key, swimmerAgeMap) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(key);
 
-        let [old, now] = getYearRangeJSON(3);
-
-        let list = await fetchSwimValues('event', 5000, ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', '_best', '_event', '_gender'],
+        let list = await fetchSwimValues('event', 5000,
+            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey+', '_best', '_event', '_gender'],
             {
-                date: { filter: { from: old, to: now } },
-                pkey: { filter: { members: [...swimmerAgeMap.keys()] } },
-                sortkey: { sort: 'asc' },
-                best: { filter: { equals: 1 } },
-                event: { filter: { equals: Number(event) } },
-                gender: { filter: { equals: convertToGenderCode(genderStr) } }
+                date: { from: getStartYearJSON(3) },
+                pkey: { members: [...swimmerAgeMap.keys()] },
+                best: { equals: 1 },
+                event: { equals: Number(event) },
+                gender: { equals: convertToGenderCode(genderStr) }
             }
         );
         if (!list || list.length == 0) {
@@ -4017,34 +4013,30 @@ const G = {};
         return month < 9 ? year : year + 1;
     }
 
-    function getYearRangeJSON(n) {
+    function getStartYearJSON(n) {
         let now = new Date();
-        now.setDate(now.getDate() + 1);
-        now = now.toJSON().substring(0, 10) + 'T00:00:00.000Z';
-        let old = new Date(now);
-        old.setFullYear(old.getFullYear() - n);
-        return [old.toJSON(), now];
+        // query by month, to make sure the server side cache still available for the next day.
+        now.setDate(1);
+        now.setFullYear(now.getFullYear() - n);
+        return now.toJSON().substring(0, 10) + 'T00:00:00.000Z';
     }
 
     async function LoadRankDataAll(mapKey) {
         let [genderStr, ageKey, event, zone, lsc, clubName] = decodeRankMapKey(mapKey);
 
-        let [old, now] = getYearRangeJSON(2);
-
         let [from, to] = decodeAgeKey(ageKey);
         from = from > 0 ? from - 2 : 0;
 
         return await fetchSwimValues('event', 5000,
-            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey', '_best', '_event', '_age', '_gender', '_zone'],
+            ['name', 'date', 'time', 'clubName', 'lsc', 'meet', 'pkey', 'score', 'sortkey+', '_best', '_event', '_age', '_gender', '_zone'],
             {
-                date: { filter: { from: old, to: now } },
-                lsc: { filter: lsc ? { equals: lsc } : null },
-                sortkey: { sort: 'asc' },
-                best: { filter: { equals: 1 } },
-                event: { filter: { equals: Number(event) } },
-                age: { filter: { from: from, to: to } },
-                gender: { filter: { equals: convertToGenderCode(genderStr) } },
-                zone: zone ? { filter: { equals: zone } } : null
+                date: { from: getStartYearJSON(2) },
+                lsc: lsc ? { equals: lsc } : null,
+                best: { equals: 1 },
+                event: { equals: Number(event) },
+                age: { from: from, to: to },
+                gender: { equals: convertToGenderCode(genderStr) },
+                zone: zone ? { equals: zone } : null
             });
     }
 
@@ -4164,25 +4156,23 @@ const G = {};
 
         async function loadImxSeason(year) {
             return await fetchSwimValues('club', 1000,
-                ['pkey', 'name', 'lsc', 'clubName', 'summary', 'details', 'imxAge', '_imxType', '_gender', '_season', '_zone'],
+                ['pkey', 'name', 'lsc', 'clubName', 'summary-', 'details', 'imxAge', '_imxType', '_gender', '_season', '_zone'],
                 {
-                    pkey: { filter: swimmerAgeMap ? { members: [...swimmerAgeMap.keys()] } : null },
-                    lsc: { filter: lsc ? { equals: lsc } : null },
-                    summary: { sort: 'desc' },
-                    imxAge: { filter: { members: ages } },
-                    imxType: { filter: { equals: imxType } },
-                    gender: { filter: { equals: convertToGenderCode(genderStr) } },
-                    season: { filter: { equals: `${course} ${year}${seasonSuffix}` } },
-                    zone: zone ? { filter: { equals: zone } } : null
+                    pkey: swimmerAgeMap ? { members: [...swimmerAgeMap.keys()] } : null,
+                    lsc: lsc ? { equals: lsc } : null,
+                    imxAge: { members: ages },
+                    imxType: { equals: imxType },
+                    gender: { equals: convertToGenderCode(genderStr) },
+                    season: { equals: `${course} ${year}${seasonSuffix}` },
+                    zone: zone ? { equals: zone } : null
                 });
         }
     }
 
     async function loadImxRankDetails(key, map, eventCount) {
-        let details = await fetchSwimValues('club', map.size * eventCount, ['event', 'date', 'time', 'score', key],
+        let details = await fetchSwimValues('club', map.size * eventCount, ['event+', 'date', 'time', 'score', key],
             {
-                event: { sort: 'asc' },
-                [key]: { filter: { members: [...map.keys()] } }
+                [key]: { members: [...map.keys()] }
             });
 
         shortenDateField(details);
@@ -4202,8 +4192,8 @@ const G = {};
 
         let pkeyToAgeList = await fetchSwimValues('swimmer', pkeys.length, ['pkey', 'age'],
             {
-                pkey: { filter: { members: [...pkeys] } },
-                age: { filter: { from: from, to: to } }
+                pkey: { members: [...pkeys] },
+                age: { from: from, to: to }
             });
         if (!pkeyToAgeList) {
             return values;
@@ -4653,17 +4643,16 @@ const G = {};
         let events = await LocalCache.func('meetRank/' + key,
             async () => {
                 let events = await fetchSwimValues('event', 5000,
-                    ['event', 'place', 'pkey', 'name', 'time', 'std', 'score', 'age', 'clubName', 'lsc', 'session', 'splash', '_gender', '_meet', '_ageGroup', '_relayAG'],
+                    ['event', 'place+', 'pkey', 'name', 'time', 'std', 'score', 'age', 'clubName', 'lsc', 'session', 'splash', '_gender', '_meet', '_ageGroup', '_relayAG'],
                     {
-                        event: { filter: { members: getRelatedEventList(eventInfo.event) } },
-                        place: { sort: 'asc' },
+                        event: { members: getRelatedEventList(eventInfo.event) },
                         pkey: isRelay ? null : {},
                         score: isRelay ? null : {},
                         age: isRelay ? null : {},
-                        gender: { filter: { equals: eventInfo.gender } },
-                        meet: { filter: { equals: data.meet } },
-                        ageGroup: !isRelay ? { filter: { equals: eventInfo.ageGroup } } : null,
-                        relayAG: isRelay ? { filter: { equals: eventInfo.ageGroup } } : null
+                        gender: { equals: eventInfo.gender },
+                        meet: { equals: data.meet },
+                        ageGroup1: !isRelay ? { equals: eventInfo.ageGroup1 } : null,
+                        relayAG: isRelay ? { equals: eventInfo.ageGroup1 } : null
                     });
 
                 if (isRelay) {
@@ -4685,9 +4674,9 @@ const G = {};
         meet = Number(meet);
 
         let data = await LocalCache.func('meetInfo/' + meet,
-            async () => await fetchSwimValues('event', 300, ['gender', 'event', 'ageGroup', /*'ageGroup2',*/ 'meetName', 'relayAG', '_meet'],
+            async () => await fetchSwimValues('event', 300, ['gender', 'event', 'ageGroup1', /*'ageGroup2',*/ 'meetName', 'relayAG', '_meet'],
                 {
-                    meet: { filter: { equals: meet } },
+                    meet: { equals: meet },
                 }));
         if (!data) {
             return;
@@ -4740,8 +4729,8 @@ const G = {};
     function mergeRelayAgeGroupInfo(values) {
         let idx = values.idx;
         for (let row of values) {
-            if (row[idx.ageGroup][0] == 'N') {
-                row[idx.ageGroup] = row[idx.relayAG];
+            if (row[idx.relayAG] != 'Not a Relay') {
+                row[idx.ageGroup1] = row[idx.relayAG];
             }
         }
         removeDataIdx(values, 'relayAG');
@@ -4749,7 +4738,7 @@ const G = {};
 
     function appendAgeKey(meetInfo) {
         for (let row of meetInfo) {
-            let [from, to] = decodeAgeKey(row.ageGroup);
+            let [from, to] = decodeAgeKey(row.ageGroup1);
             row.ageKey = ageRangeToAgeKey(from, to);
         }
     }

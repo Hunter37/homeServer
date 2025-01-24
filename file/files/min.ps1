@@ -58,7 +58,7 @@ $updatedHtmlContent = $htmlContent -replace '<script src="swim.js"></script>', "
 
 # Save the updated content to swim.min.html
 Set-Content -Path "swim.min.html" -Value $updatedHtmlContent
-Set-Content -Path "swim1.min.html" -Value $updatedHtmlContent
+Set-Content -Path "swim.dbg.html" -Value $updatedHtmlContent
 
 $compressRate = [int]((Get-Item -Path "swim.min.html").Length / ((Get-Item -Path "swim.html").Length + (Get-Item -Path "swim.css").Length + (Get-Item -Path "swim.js").Length ) * 100)
 Write-Output "Compressed size $((Get-Item -Path "swim.min.html").Length) bytes [$compressRate%]"
