@@ -7,6 +7,8 @@
     --im-clr-factor: 10%;
     --bbf-clr-factor: 8%;
     --fr-clr-factor: 4%;
+
+    --loader-size: 9px;
 }
 
 * {
@@ -226,14 +228,21 @@ td {
     background-color: color-mix(in srgb, var(--fr-clr) 10%, var(--b0-clr));
 }
 
-.loader {
+.loader::after {
+    content: "";
     border: 5px solid var(--b3-clr);
     border-top: 5px solid var(--ctrl-bk-clr);
     border-radius: 50%;
-    width: 16px;
-    height: 16px;
+    width: var(--loader-size);
+    height: var(--loader-size);
     animation: spin 2s linear infinite;
-    float: right;
+}
+
+.loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .mback {
@@ -372,6 +381,12 @@ canvas.height {
     cursor: n-resize;
 }
 
+.blue-span > span {
+    /* font-style: italic; */
+    font-weight: bold;
+    color: var(--f1-clr);
+}
+
 /* tab view */
 /* .tabview {
     margin: 0;
@@ -448,15 +463,6 @@ input[type="date"] {
     float: right;
 }
 
-.add-search tr {
-    background-color: #0000;
-}
-
-.add-search>div {
-    margin: 0 5px 5px 0;
-    padding: 2px 5px;
-}
-
 .add-search input {
     text-align: left;
     font-size: 16px;
@@ -466,30 +472,41 @@ input[type="date"] {
 }
 
 .add-search button {
-    margin: 0 3px;
     padding: 10px;
     width: 80px;
     background-color: var(--ctrl-bk-clr);
 }
 
-.add-search .loading {
-    width: 200px;
-    overflow: hidden;
+.add-search .search {
+    border-radius: 5px 0 0 5px;
+    height: 36px;
+    margin: 0 0 0 3px;
 }
 
+.add-search .drop {
+    border-radius: 0 5px 5px 0;
+    height: 36px;
+    background-color: var(--ctrl-bk-clr);
+}
+
+.drop {
+    display: flex;
+    width: 30px;
+    margin-left: 1px;
+}
+
+/* #add-search-button * {
+    overflow: inherit;
+} */
+
 .add-search .loader {
-    width: 15px;
-    height: 15px;
-    margin: auto;
-    float: none;
+    --loader-size: 15px;
+    width: 300px;
+    height: 30px;
 }
 
 #adding-list {
     padding: 10px;
-}
-
-#adding-list td {
-    padding: 10px 7px;
 }
 
 a:hover,
@@ -807,9 +824,6 @@ tr.high-light {
 }
 
 .search-bar .drop {
-    width: 30px;
-    text-align: center;
-    display: flex;
     border-radius: 0 5px 5px 0;
 }
 

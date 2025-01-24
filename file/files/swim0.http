@@ -538,49 +538,43 @@ Authorization: Bearer undefined
 ###
 # testing
 
-POST https://usaswimming.sisense.com/api/datasources/Public Person Search/jaql
+POST https://usaswimming.sisense.com/api/datasources/USA Swimming Times Elasticube/jaql
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZTgwMGM3MDYtOGJiMy0yMWM3LWIzY2UtMmExMDkwZmFlNzIyIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.QmD5DJe491URBKuNuXnADE-zaytc7vBPQYQKQh48hak
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjoiNjRhZjE4MGY5Nzg1MmIwMDJkZTU1ZDhkIiwiYXBpU2VjcmV0IjoiZTQ4YTM4YWQtZmE2Yi1hMDBhLTRiMzAtYmUwNDllNTBhMWMzIiwiYWxsb3dlZFRlbmFudHMiOlsiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIl0sInRlbmFudElkIjoiNjRhYzE5ZTEwZTkxNzgwMDFiYzM5YmVhIn0.9BdZJZbYI9E1v3tR81iszYm19U6om-ccy77uXVWvmNc
 
 {
   "metadata": [
     {
-      "title": "name",
-      "dim": "[Persons.FullName]",
-      "filter": {
-        "contains": "alexander"
+
+        "title": "$measure0_Swimmers",
+        "formula": "xyz",
+        "context": {
+          "xyz": {
+            "title": "# of unique PersonKey",
+            "dim": "[UsasSwimTime.PersonKey]",
+            "datatype": "numeric",
+            "agg": "count"
+          }
+        
       }
     },
     {
-      "title": "name",
-      "dim": "[Persons.FullName]",
-      "filter": {
-        "contains": "han"
-      },
-      "panel": "scope"
-    },
-    {
-      "title": "age",
-      "dim": "[Persons.Age]",
-      "filter": {
-        "to": 18
-      },
-      "sort": "asc"
-    },
-    {
-      "title": "clubName",
-      "dim": "[Persons.ClubName]"
-    },
-    {
-      "title": "lsc",
-      "dim": "[Persons.LscCode]"
-    },
-    {
-      "title": "pkey",
-      "dim": "[Persons.PersonKey]"
+
+        "title": "Days",
+        "dim": "[SeasonCalendar.CalendarDate (Calendar)]",
+        "datatype": "datetime",
+        "level": "days",
+        "filter": {
+          "from": "2025-01-02T08:00:00.000Z",
+          "to": "2025-01-23T08:00:00.000Z"
+        }
+
     }
   ],
-  "count": 5000
+  "datasource": {
+    "title": "USA Swimming Times Elasticube",
+  },
+  "count": 200
 }
 
 
