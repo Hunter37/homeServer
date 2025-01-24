@@ -2911,7 +2911,7 @@ const G = {};
                             let event = _eventIndexMap.get(`${dist} ${stroke} ${course}`);
                             let splashList = eventMap.get(event);
                             if (splashList) {
-                                let row = splashList.reduce((acc, row) => row.timeInt < acc.timeInt ? row : splashList[0]);
+                                let row = splashList.reduce((acc, row) => row.timeInt < acc.timeInt ? row : acc, splashList[0]);
 
                                 let delta = row.delta;
                                 let style = delta > 0 ? 'ad' : delta < 0 ? 'dp' : '';
