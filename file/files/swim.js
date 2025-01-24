@@ -5052,16 +5052,16 @@ const G = {};
 
         updateContent(html.join(''), loadingHash);
 
-        if (customDatePicker) {
-            await initDatepicker(page);
-        }
-
         if (data) {
             let table = document.getElementById('relay-table');
             table.data = data;
             data.key = key;
             data.exclude = [new Set(), new Set(), new Set(), new Set()];
             await updatePatchData('');
+        }
+
+        if (customDatePicker) {
+            await initDatepicker(page); // this will trigger onMeetDateChange, it will update selection table
         }
     }
 
