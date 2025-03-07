@@ -36,6 +36,25 @@ table Futures:LCM F:19-99 F:13-18 EVENT M:13-18 M:19-99
 2:20.99 2:26.19 200IM 2:12.79 2:08.19
 4:57.29 5:07.29 400IM 4:42.39 4:33.09
 
+meet Winter_Junior [2025 Speedo Winter Junior Championships (SCY)](https://www.usaswimming.org/times/time-standards) (12/10-12/13)
+
+table Winter_Junior:SCY:13-18 F:SCY F:LCM EVENT M:LCM M:SCY
+
+23.29 26.89 50FR 24.09 20.49
+50.39 58.19 100FR 52.59 44.89
+1:49.09 2:04.99 200FR 1:55.29 1:38.39
+4:53.59 4:26.69 400FR 4:04.99 4:28.79
+10:11.49 9:06.79 800FR 8:28.19 9:22.69
+17:02.19 17:26.79 1500FR 16:14.79 15:40.39
+55.09 1:04.79 100BK 58.79 49.19
+1:59.39 2:19.59 200BK 2:08.29 1:47.79
+1:03.09 1:13.79 100BR 1:05.89 55.49
+2:17.19 2:38.59 200BR 2:24.09 2:01.59
+54.69 1:02.69 100FL 56.49 48.69
+2:01.69 2:18.39 200FL 2:06.39 1:49.09
+2:02.19 2:22.09 200IM 2:09.29 1:49.59
+4:21.69 5:00.29 400IM 4:35.89 3:56.49
+
 meet Junior [2025 Speedo Junior National Championships](https://www.usaswimming.org/times/time-standards) (7/30-8/3 Irvine,CA)
 
 table Junior:SCY:13-18 F EVENT M
