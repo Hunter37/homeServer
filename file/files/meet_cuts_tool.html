@@ -127,7 +127,7 @@
 
       row = row
         .replace(/[a-z]/g, x => x.toUpperCase()).replace(/(\d)[SLY\+\-\*]+/g, '$1')
-        .replace(/-+/g, '-').replace(/X+/g, '-').replace(/N\.?\/?A\.?/g, '-')
+        .replace(/N \/ A/g, '-').replace(/-+/g, '-').replace(/X+/g, '-').replace(/N\.?\/?A\.?/g, '-')
         .replace(' SCY', '').replace(' LCM', '').replace(' SCM', '')
         .replace(/FR[A-Z]*/, 'FR').replace(/BA[A-Z]*/, 'BK').replace(/BR[A-Z]*/, 'BR').replace(/BU[A-Z]*/, 'FL').replace(/FLY?/, 'FL')
         .replace(/I[A-Z]*\.? ?M[A-Z]*\.?/, 'IM').replace(/M[A-Z]* R[ELAY]*/, 'MED-R').replace(/F[RE]* R[ELAY]*/, 'FR-R')
