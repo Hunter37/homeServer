@@ -145,7 +145,7 @@ const G = {};
     }
 
     function formatStandard(standard, short) {
-        if (standard == '"Slower than B"') {
+        if (standard.includes('Slower')) {
             return '';
         }
 
@@ -2415,6 +2415,14 @@ const G = {};
 
         // create deep map for course -> stroke -> distance -> [ events ]
         let [courseMap, ageList] = createTableData(data);
+
+        // update top button links
+        let swimmer = data.swimmer;
+        let firstEvent = courseMap.entries().next().value[1].entries().next().value[1].entries().next().value[1][0].event;
+        let params = getRankDataKey(convetToGenderString(swimmer.gender), getAgeKey(swimmer.age),
+            firstEvent, swimmer.zone, swimmer.lsc, swimmer.clubName);
+        TopButton.show('relay', params);
+        TopButton.show('rank', params);
 
         let tabView = new TabView('swimmerTabView');
         tabView.addTab('<p>Personal Best</p>', await createBestTimeTablePage(data.swimmer, courseMap));

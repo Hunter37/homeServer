@@ -1,3 +1,11 @@
+minify cmd:
+
+cd ./file/files
+docker run --rm -it -v "${PWD}:/workspace" xueweihan/html-js-minifier /workspace/min.sh 100
+
+
+
+old commands:
 https://github.com/javascript-obfuscator/javascript-obfuscator
 https://wwilsman.github.io/Datepicker.js/
 https://eslint.org/
