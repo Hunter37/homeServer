@@ -1,7 +1,7 @@
 minify cmd:
 
 cd ./file/files
-docker run --rm -it -v "${PWD}:/workspace" xueweihan/html-js-minifier /workspace/min.sh 100
+docker run --rm -it -v "${PWD}:/workspace" xueweihan/html-js-minifier /min.sh 100
 
 
 

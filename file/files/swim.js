@@ -1906,7 +1906,7 @@ const G = {};
     // test page
     async function test(params) {
         let tabView = new TabView('configTabView');
-        tabView.addTab('<p>About</p>', '<pre>set/xbday=10\nset/cache-ttl=86400\n\nset/use-proxy=true\nset/use-local-cache=true\nset/fetch-timeout=10000</pre>');
+        tabView.addTab('<p>About</p>', '<pre>set/cnstd=1\nset/xbday=10\nset/cache-ttl=86400\n\nset/use-proxy=true\nset/use-local-cache=true\nset/fetch-timeout=10000</pre>');
 
         updateContent(tabView.render(), 'test');
     }
@@ -5593,6 +5593,11 @@ WV|West Virginia|Southern|south-east
 WI|Wisconsin|Central|cent-north
 WY|Wyoming|Western|west-nw`;
         let lines = data.split('\n');
+
+        if (localStorage.getItem('cnstd')) {
+            lines.push('CN|中国|中国');
+        }
+
         let map = new Map();
         for (let line of lines) {
             let parts = line.split('|');
