@@ -5772,7 +5772,7 @@ WY|Wyoming|Western|west-nw`;
     async function getFileData(file) {
         let _getFileData = async () => {
             try {
-                let script = await loadScript(file);
+                let script = await loadScript(file + '?date=' + (new Date()).toJSON().substring(0, 10));
                 script.data = script.data || G.fileData;
                 delete G.fileData;
                 return script.data;
