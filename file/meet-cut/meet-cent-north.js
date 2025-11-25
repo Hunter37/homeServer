@@ -1,25 +1,27 @@
 (() => {
 G.fileData = `
-meet Spr_Sec [CZ SPEEDO NORTH SECTION SPRING CHAMPIONSHIPS](https://www.gomotionapp.com/team/cenzone/page/cz-events/speedo-sectional-meets) March 13-16, 2025(SCY) Rochester, MN
+# https://www.gomotionapp.com/team/ilslsc/page/events/time-standards
+
+meet Spr_Sec [CZ SPEEDO NORTH SECTION SPRING CHAMPIONSHIPS](https://www.gomotionapp.com/team/cenzone/page/cz-events/speedo-sectional-meets) March 12-15, 2026(SCY) Rochester, MN
 
 table Spr_Sec:11-18 F:LCM F:SCY EVENT M:SCY M:LCM
 
-28.99 25.49 50FR 22.79 26.19
-1:02.29 54.99 100FR 49.49 57.09
-2:14.09 1:58.89 200FR 1:48.49 2:04.49
+28.79 25.29 50FR 22.59 25.99
+1:01.79 54.49 100FR 48.99 56.59
+2:13.09 1:57.89 200FR 1:47.49 2:03.49
 4:42.39 5:14.99 400FR 4:52.89 4:22.19
 9:41.39 10:48.39 800FR 10:08.49 9:10.79
 18:36.49 18:16.49 1500FR 17:03.29 17:39.99
-1:10.99 1:00.99 100BK 56.59 1:04.89
-2:32.39 2:12.49 200BK 2:02.39 2:20.79
-1:20.49 1:09.99 100BR 1:04.09 1:13.29
-2:53.79 2:31.99 200BR 2:19.59 2:40.79
-1:08.59 1:00.09 100FL 54.49 1:01.99
-2:32.89 2:14.09 200FL 2:03.79 2:20.49
-2:32.29 2:13.99 200IM 2:01.99 2:20.39
+1:10.49 1:00.49 100BK 56.09 1:04.39
+2:31.39 2:11.49 200BK 2:01.39 2:19.79
+1:19.99 1:09.49 100BR 1:03.59 1:12.79
+2:52.79 2:30.99 200BR 2:18.59 2:39.79
+1:08.09 59.59 100FL 53.99 1:01.49
+2:31.89 2:13.09 200FL 2:02.79 2:19.49
+2:31.29 2:12.99 200IM 2:00.99 2:19.39
 5:24.39 4:43.99 400IM 4:23.99 5:01.89
 
-meet Sum_Sec [CZ SPEEDO NORTH SECTION SUMMER CHAMPIONSHIPS](https://www.gomotionapp.com/team/cenzone/page/cz-events/speedo-sectional-meets) July 10-13, 2025(LCM) Minneapolis, MN
+meet Sum_Sec [CZ SPEEDO NORTH SECTION SUMMER CHAMPIONSHIPS](https://www.gomotionapp.com/team/cenzone/page/cz-events/speedo-sectional-meets) July 9-12, 2026(LCM) Minneapolis, MN
 
 table Sum_Sec:11-18 F:LCM F:SCY EVENT M:SCY M:LCM
 
